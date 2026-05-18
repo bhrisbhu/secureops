@@ -389,6 +389,8 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
   const [adj, setAdj] = useState({ startTime:"", endTime:"", regularHours:"", statHours:"", absent:false, locationId:"", notes:"" });
   const [confirmEl, ask] = useConfirm();
   const [daySearch, setDaySearch] = useState("");
+  const [bulk, setBulk] = useState({ guardId:"", fromDate:"", toDate:"" });
+  const [bulkResult, setBulkResult] = useState(null); // { deleted, previewing }
 
   const dim = new Date(yr,mo+1,0).getDate();
   const fd = new Date(yr,mo,1).getDay();
@@ -492,7 +494,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
     <div>
       {confirmEl}
       <F style={{ marginBottom:"12px" }}>
-        {[["cal","📅 Calendar"],["sch","🔁 Schedules"]].map(([t,l])=><button key={t} style={{ ...S.bp, background:sub===t?"#1d4ed8":"transparent", color:sub===t?"#fff":"#4a8ab0", border:"1px solid #1e3a5f" }} onClick={()=>setSub(t)}>{l}</button>)}
+        {[["cal","📅 Calendar"],["sch","🔁 Schedules"],["bulk","🗑 Bulk Delete Hours"]].map(([t,l])=><button key={t} style={{ ...S.bp, background:sub===t?"#1d4ed8":"transparent", color:sub===t?"#fff":"#4a8ab0", border:"1px solid #1e3a5f" }} onClick={()=>{setSub(t);setBulkResult(null);}}>{l}</button>)}
       </F>
 
       {sub==="sch" && (
@@ -569,6 +571,125 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
         </div>
       )}
 
+      {sub==="bulk" && (
+        <div>
+          <div style={{ ...S.card, border:"1px solid #ef444444" }}>
+            <div style={S.ct}>🗑 Bulk Delete Employee Hours</div>
+            <div style={{ fontSize:"11px", color:"#5a8ab0", marginBottom:"14px", lineHeight:1.6 }}>
+              Select an employee and date range to preview and delete all hours in that period — whether they came from a recurring schedule or were manually entered.
+            </div>
+            <div style={S.g3}>
+              <Sel label="Employee *" value={bulk.guardId} onChange={e=>setBulk(p=>({...p,guardId:e.target.value}))}>
+                <option value="">Select employee…</option>
+                {guards.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
+              </Sel>
+              <Inp label="From Date *" type="date" value={bulk.fromDate} onChange={e=>setBulk(p=>({...p,fromDate:e.target.value}))}/>
+              <Inp label="To Date *" type="date" value={bulk.toDate} onChange={e=>setBulk(p=>({...p,toDate:e.target.value}))}/>
+            </div>
+
+            {bulk.guardId && bulk.fromDate && bulk.toDate && (() => {
+              const gName = guards.find(g=>g.id===bulk.guardId)?.name||"?";
+
+              // Walk every day in the range and collect any day that has hours
+              // from EITHER a schedule OR an override
+              const hits = [];
+              let d = new Date(bulk.fromDate + "T00:00:00");
+              const endD = new Date(bulk.toDate + "T00:00:00");
+              while (d <= endD) {
+                const ds = d.toISOString().slice(0,10);
+                const sh = effShift(ds, bulk.guardId, scs, ovs);
+                if (sh && !sh.absent && ((sh.regularHours||sh.hours||0) > 0 || (sh.statHours||0) > 0)) {
+                  const existingOv = ovs.find(o => o.date===ds && o.guardId===bulk.guardId);
+                  hits.push({
+                    date: ds,
+                    regularHours: sh.regularHours || sh.hours || 0,
+                    statHours: sh.statHours || 0,
+                    source: existingOv ? "override" : "schedule",
+                    ovId: existingOv?.id || null,
+                  });
+                }
+                d.setDate(d.getDate() + 1);
+              }
+
+              return (
+                <div style={{ marginTop:"14px" }}>
+                  <div style={{ fontSize:"10px", fontWeight:"700", color:"#5a8ab0", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"8px" }}>
+                    Preview — {hits.length} day{hits.length!==1?"s":""} found for {gName}
+                  </div>
+                  {hits.length === 0 ? (
+                    <div style={{ fontSize:"11px", color:"#3a6a8a", padding:"8px 0" }}>
+                      No hours found for this employee in the selected date range.
+                    </div>
+                  ) : (
+                    <div style={{ background:"#070d19", borderRadius:"7px", padding:"10px", maxHeight:"260px", overflowY:"auto" }}>
+                      {hits.map(h => (
+                        <div key={h.date} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:"1px solid #1e3a5f", fontSize:"11px" }}>
+                          <span style={{ color:"#dce8f5" }}>
+                            {h.date} <span style={{ color:"#3a6a8a" }}>({DAYS[pDate(h.date).getDay()]})</span>
+                          </span>
+                          <span style={{ display:"flex", gap:"8px", alignItems:"center" }}>
+                            <span style={{ color:"#34d399" }}>
+                              {(h.regularHours + h.statHours).toFixed(2)}h
+                              {h.statHours > 0 ? <span style={{ color:"#fbbf24" }}> (+{h.statHours}h stat)</span> : ""}
+                            </span>
+                            <span style={S.pill(h.source==="override" ? "#a78bfa" : "#3b82f6")}>
+                              {h.source==="override" ? "manual" : "schedule"}
+                            </span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {hits.length > 0 && (
+                    <button
+                      style={{ ...S.bd, marginTop:"12px", padding:"8px 20px", fontSize:"11px", borderRadius:"6px" }}
+                      onClick={() => ask(
+                        `Delete ${hits.length} day${hits.length!==1?"s":""} of hours for ${gName} between ${bulk.fromDate} and ${bulk.toDate}? This cannot be undone.`,
+                        () => {
+                          // For schedule-based days: add an "absent" override to zero them out
+                          // For override-based days: remove the existing override
+                          const newOvs = [...ovs];
+                          hits.forEach(h => {
+                            // Remove any existing override for this day
+                            const idx = newOvs.findIndex(o => o.date===h.date && o.guardId===bulk.guardId);
+                            if (idx !== -1) newOvs.splice(idx, 1);
+                            // If it came from a schedule, we need an absent override to hide it
+                            if (h.source === "schedule") {
+                              newOvs.push({
+                                id: uid(),
+                                date: h.date,
+                                guardId: bulk.guardId,
+                                locationId: "",
+                                startTime: "",
+                                endTime: "",
+                                regularHours: 0,
+                                statHours: 0,
+                                absent: true,
+                                notes: "bulk deleted",
+                              });
+                            }
+                          });
+                          setOvs(newOvs); save(K.ov, newOvs);
+                          setBulkResult({ deleted: hits.length, name: gName });
+                          setBulk({ guardId:"", fromDate:"", toDate:"" });
+                        }
+                      )}
+                    >
+                      🗑 Delete {hits.length} Day{hits.length!==1?"s":""}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
+            {bulkResult && (
+              <div style={{ marginTop:"12px", padding:"10px 14px", background:"#064e3b", borderRadius:"7px", border:"1px solid #059669", fontSize:"11px", color:"#6ee7b7" }}>
+                ✓ Deleted {bulkResult.deleted} day{bulkResult.deleted!==1?"s":""} of hours for {bulkResult.name}.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {sub==="cal" && (
         <div style={{ display:"grid", gridTemplateColumns:sel?"1fr 320px":"1fr", gap:"14px", alignItems:"start" }}>
           <div style={S.card}>
