@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, Fragment, useRef } from "react";
 
 // ─── font ─────────────────────────────────────────────────────────────────────
 const fontLink = document.createElement("link");
@@ -245,6 +245,130 @@ function Login({ onLogin }) {
   );
 }
 
+function MassWageUpdate({ guards, setGuards, ask }) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState("set");       // set | increase_fixed | increase_pct
+  const [value, setValue] = useState("");
+  const [scope, setScope] = useState("active");  // active | all
+  const [preview, setPreview] = useState(false);
+
+  const targetGuards = guards.filter(g =>
+    scope === "all" ? true : g.status === "Active"
+  );
+
+  function calcNew(currentWage) {
+    const cur = parseFloat(currentWage) || 0;
+    const val = parseFloat(value) || 0;
+    if (mode === "set")            return val;
+    if (mode === "increase_fixed") return Math.round((cur + val) * 100) / 100;
+    if (mode === "increase_pct")   return Math.round(cur * (1 + val / 100) * 100) / 100;
+    return cur;
+  }
+
+  function applyUpdate() {
+    const updated = guards.map(g => {
+      if (scope === "active" && g.status !== "Active") return g;
+      return { ...g, wage: String(calcNew(g.wage)) };
+    });
+    setGuards(updated); save(K.g, updated);
+    setOpen(false); setValue(""); setPreview(false);
+  }
+
+  const modeLabel = mode === "set" ? "Set all to $" : mode === "increase_fixed" ? "Increase by $" : "Increase by %";
+
+  return (
+    <div style={{ ...S.card, borderColor: open ? T.borderHi : T.border }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer" }} onClick={()=>setOpen(o=>!o)}>
+        <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+          <div style={{ width:"32px", height:"32px", borderRadius:"8px", background:T.blueGlow, border:`1px solid ${T.blue}30`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px" }}>💲</div>
+          <div>
+            <div style={{ fontWeight:"600", color:T.text, fontSize:"13px" }}>Mass Wage Update</div>
+            <div style={{ fontSize:"11px", color:T.textSub, marginTop:"1px" }}>Update hourly wage for multiple employees at once</div>
+          </div>
+        </div>
+        <span style={{ color:T.textSub, fontSize:"13px" }}>{open ? "▲" : "▼"}</span>
+      </div>
+
+      {open && (
+        <div style={{ marginTop:"16px", borderTop:`1px solid ${T.border}`, paddingTop:"16px" }}>
+          <div style={S.g3}>
+            <div>
+              <label style={S.lbl}>Update Type</label>
+              <select style={S.sel} value={mode} onChange={e=>{ setMode(e.target.value); setValue(""); setPreview(false); }}>
+                <option value="set">Set everyone to a specific wage</option>
+                <option value="increase_fixed">Increase everyone by a fixed $ amount</option>
+                <option value="increase_pct">Increase everyone by a percentage %</option>
+              </select>
+            </div>
+            <div>
+              <label style={S.lbl}>{modeLabel}</label>
+              <input style={S.inp} type="number" step="0.01" min="0" value={value}
+                onChange={e=>{ setValue(e.target.value); setPreview(false); }}
+                placeholder={mode==="increase_pct" ? "e.g. 5  (for 5%)" : "e.g. 17.20"}
+              />
+            </div>
+            <div>
+              <label style={S.lbl}>Apply To</label>
+              <select style={S.sel} value={scope} onChange={e=>{ setScope(e.target.value); setPreview(false); }}>
+                <option value="active">Active employees only ({guards.filter(g=>g.status==="Active").length})</option>
+                <option value="all">All employees ({guards.length})</option>
+              </select>
+            </div>
+          </div>
+
+          {value && parseFloat(value) > 0 && (
+            <div style={{ marginTop:"12px" }}>
+              <button style={{ ...S.bo, fontSize:"12px" }} onClick={()=>setPreview(p=>!p)}>
+                {preview ? "Hide Preview" : `Preview Changes (${targetGuards.length} employee${targetGuards.length!==1?"s":""})`}
+              </button>
+            </div>
+          )}
+
+          {preview && value && (
+            <div style={{ marginTop:"10px", background:T.bg, borderRadius:"8px", border:`1px solid ${T.border}`, overflow:"hidden" }}>
+              <table style={S.tbl}>
+                <thead><tr>{["Employee","Current Wage","New Wage","Change"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {targetGuards.map(g => {
+                    const cur = parseFloat(g.wage)||0;
+                    const nw  = calcNew(g.wage);
+                    const diff = nw - cur;
+                    return (
+                      <tr key={g.id}>
+                        <td style={S.td}><span style={{ fontWeight:"600", color:T.text }}>{g.name}</span></td>
+                        <td style={S.td}>{cur ? `$${cur.toFixed(2)}/hr` : "—"}</td>
+                        <td style={{ ...S.td, fontWeight:"700", color:T.green }}>${nw.toFixed(2)}/hr</td>
+                        <td style={S.td}>
+                          {diff !== 0 && <span style={{ color: diff>0 ? T.green : T.red, fontSize:"11px" }}>
+                            {diff > 0 ? "+" : ""}${diff.toFixed(2)}/hr
+                          </span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {value && parseFloat(value) > 0 && (
+            <div style={{ marginTop:"12px" }}>
+              <button style={S.bp} onClick={()=>
+                ask(
+                  `Update wages for ${targetGuards.length} employee${targetGuards.length!==1?"s":""}? This will overwrite their current hourly wages.`,
+                  applyUpdate
+                )
+              }>
+                Apply to {targetGuards.length} Employee{targetGuards.length!==1?"s":""}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMPLOYEES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -253,23 +377,35 @@ function Employees({ guards, setGuards }) {
   const [form, setForm] = useState(blank); const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState(""); const [exp, setExp] = useState(null);
   const [confirmEl, ask] = useConfirm();
+  const [saved, setSaved] = useState(false);
+  const formRef = useRef(null);
   const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
   function submit() {
     if (!form.name.trim()) return;
     const entry = { ...form, id: editing || uid() };
     const u = editing ? guards.map(g => g.id===editing ? entry : g) : [...guards, entry];
     setGuards(u); save(K.g, u); setForm(blank); setEditing(null);
+    if (editing) { setSaved(true); setTimeout(() => setSaved(false), 2500); }
   }
   const del = id => ask("Delete this employee? This cannot be undone.", () => { const u = guards.filter(g=>g.id!==id); setGuards(u); save(K.g,u); });
-  const edit = g => { setForm({...blank,...g}); setEditing(g.id); setExp(null); };
+  const edit = g => {
+    setForm({...blank,...g}); setEditing(g.id); setExp(null);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior:"smooth", block:"start" }), 50);
+  };
   const rows = guards.filter(g => g.name.toLowerCase().includes(search.toLowerCase())||(g.badge||"").includes(search));
   return (
     <div>
       {confirmEl}
+      {/* saved toast */}
+      {saved && (
+        <div style={{ position:"fixed", bottom:"28px", right:"28px", background:T.green, color:"#fff", padding:"12px 20px", borderRadius:"10px", fontSize:"13px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.4)", zIndex:999, display:"flex", alignItems:"center", gap:"8px" }}>
+          ✓ Changes saved
+        </div>
+      )}
       <F style={{ marginBottom:"14px", flexWrap:"wrap" }}>
         {[["Total",guards.length],["Active",guards.filter(g=>g.status==="Active").length],["Inactive",guards.filter(g=>g.status==="Inactive").length],["On Leave",guards.filter(g=>g.status==="On Leave").length]].map(([l,v])=><Stat key={l} label={l} value={v} />)}
       </F>
-      <div style={S.card}>
+      <div ref={formRef} style={S.card}>
         <div style={S.ct}>{editing?"Edit Employee":"Add Employee"}</div>
         <div style={S.g5}>
           <Inp label="Full Name *" value={form.name} onChange={f("name")} />
@@ -294,6 +430,10 @@ function Employees({ guards, setGuards }) {
           {editing && <button style={S.bo} onClick={()=>{setForm(blank);setEditing(null);}}>Cancel</button>}
         </F>
       </div>
+
+      {/* ── MASS WAGE UPDATE ── */}
+      <MassWageUpdate guards={guards} setGuards={setGuards} ask={ask} />
+
       <div style={S.card}>
         <F style={{ justifyContent:"space-between", marginBottom:"10px" }}>
           <div style={S.ct}>Employee Roster</div>
@@ -394,8 +534,8 @@ function Locations({ locs, setLocs }) {
         <div style={{ ...S.card, border:"1px solid #2563eb" }}>
           <div style={S.ct}>{editing?"Edit Location / Client":"New Location / Client"}</div>
           <div style={S.g3}>
-            <div><label style={S.lbl}>Location Name *</label><input style={S.inp} value={form.name} onChange={ff("name")} placeholder="e.g. Downtown Mall"/></div>
             <div><label style={S.lbl}>Client / Company Name</label><input style={S.inp} value={form.client} onChange={ff("client")} placeholder="e.g. ABC Corp"/></div>
+            <div><label style={S.lbl}>Location Name *</label><input style={S.inp} value={form.name} onChange={ff("name")} placeholder="e.g. Downtown Mall"/></div>
             <div><label style={S.lbl}>Contact Person</label><input style={S.inp} value={form.contactName} onChange={ff("contactName")} placeholder="John Smith"/></div>
           </div>
           <div style={{ ...S.g3, marginTop:"8px" }}>
@@ -997,92 +1137,270 @@ function History({ history, setHistory }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PAYMENTS
+// REVENUE
 // ═══════════════════════════════════════════════════════════════════════════════
-function Payments({ locs }) {
-  const [pays, setPays] = useState([]); const [rdy, setRdy] = useState(false);
-  const [fCl, setFCl] = useState("all"); const [fSd, setFSd] = useState(`${new Date().getFullYear()}-01-01`); const [fEd, setFEd] = useState(new Date().toISOString().slice(0,10));
-  const [show, setShow] = useState(false); const [editing, setEditing] = useState(null);
-  const blank = { locationId:"", clientName:"", billingStart:"", billingEnd:"", amountBilled:"", received:false, depositDate:"", notes:"" };
+function Revenue({ locs }) {
+  const [pays, setPays] = useState([]);
+  const [invs, setInvs] = useState([]);
+  const [rdy, setRdy] = useState(false);
+  const [fCl, setFCl] = useState("all");
+  const [fSd, setFSd] = useState(`${new Date().getFullYear()}-01-01`);
+  const [fEd, setFEd] = useState(new Date().toISOString().slice(0,10));
+  const [show, setShow] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const blank = { locationId:"", clientName:"", billingStart:"", billingEnd:"", amountBilled:"", received:false, depositDate:"", notes:"", fromInvoice:false };
   const [form, setForm] = useState(blank);
   const [confirmEl, ask] = useConfirm();
-  useEffect(()=>{(async()=>{const d=await load(K.pay);if(d)setPays(d);setRdy(true);})();},[]);
-  const savePays = u => { setPays(u); save(K.pay,u); };
-  const hst = a => parseFloat(a||0)*0.13;
-  const tot = a => parseFloat(a||0)+hst(a);
-  const dispCl = p => p.clientName||(locs.find(l=>l.id===p.locationId)?.client)||(locs.find(l=>l.id===p.locationId)?.name)||"—";
+
+  useEffect(() => {
+    (async () => {
+      const [d, iv] = await Promise.all([load(K.pay), load(K.inv)]);
+      if (d) setPays(d);
+      if (iv) setInvs(iv);
+      setRdy(true);
+    })();
+  }, []);
+
+  // Listen for invoice changes by polling storage key (simple cross-component sync)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const iv = await load(K.inv);
+      if (iv) setInvs(iv);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const savePays = u => { setPays(u); save(K.pay, u); };
+  const hst  = a => parseFloat(a||0) * 0.13;
+  const tot  = a => parseFloat(a||0) + hst(a);
+  const clientName = inv => inv.clientName || (locs.find(l=>l.id===inv.clientLocationId)?.client) || (locs.find(l=>l.id===inv.clientLocationId)?.name) || "—";
+
+  // Build merged records: manual pays + invoice-derived entries
+  // Invoice entries: paid invoices become received records; outstanding/overdue become pending
+  const invoiceRows = invs.map(inv => ({
+    id:           "inv_" + inv.id,
+    fromInvoice:  true,
+    invoiceId:    inv.id,
+    invoiceNum:   inv.number,
+    locationId:   inv.clientLocationId || "",
+    clientName:   clientName(inv),
+    billingStart: inv.date || "",
+    billingEnd:   inv.dueDate || "",
+    amountBilled: String(inv.afterDisc ?? inv.subtotal ?? 0),
+    hst:          inv.hstAmt || 0,
+    total:        inv.total || 0,
+    received:     inv.status === "paid",
+    depositDate:  inv.status === "paid" ? (inv.paidDate || inv.date || "") : "",
+    notes:        inv.summary || "",
+    status:       inv.status,
+    currency:     inv.currency || "CAD",
+  }));
+
+  // Manual pays that are NOT linked to an invoice
+  const manualRows = pays.filter(p => !p.fromInvoice || !invs.find(i => "inv_"+i.id === p.id));
+
+  // Merge: invoice rows take precedence; manual rows fill in the rest
+  const allRows = [...invoiceRows, ...manualRows];
+
+  const inRange = r => {
+    const s = r.billingStart || "";
+    return (!fSd || s >= fSd) && (!fEd || s <= fEd);
+  };
+  const byClient = r => fCl === "all" || r.locationId === fCl || r.clientName === fCl;
+  const filtered = allRows.filter(r => byClient(r) && inRange(r))
+    .sort((a,b) => (b.billingStart||"").localeCompare(a.billingStart||""));
+
+  const received    = filtered.filter(r => r.received);
+  const pending     = filtered.filter(r => !r.received);
+  const totalRcvd   = received.reduce((s,r) => s + (r.total || tot(r.amountBilled)), 0);
+  const totalPend   = pending.reduce((s,r)  => s + (r.total || tot(r.amountBilled)), 0);
+
   function submit() {
     if (!form.amountBilled) return;
-    const e={...form,id:editing||uid(),hst:hst(form.amountBilled),total:tot(form.amountBilled)};
-    savePays(editing?pays.map(p=>p.id===editing?e:p):[...pays,e]); setForm(blank); setEditing(null); setShow(false);
+    const e = { ...form, id:editing||uid(), hst:hst(form.amountBilled), total:tot(form.amountBilled), fromInvoice:false };
+    savePays(editing ? pays.map(p=>p.id===editing?e:p) : [...pays,e]);
+    setForm(blank); setEditing(null); setShow(false);
   }
-  const edit = p => { setForm({...blank,...p}); setEditing(p.id); setShow(true); };
-  const del = id => ask("Delete this payment record?", ()=>savePays(pays.filter(p=>p.id!==id)));
-  const toggleRcv = id => savePays(pays.map(p=>p.id===id?{...p,received:!p.received}:p));
-  const inRange = p => { const s=p.billingStart||""; return(!fSd||s>=fSd)&&(!fEd||s<=fEd); };
-  const filtered = pays.filter(p=>(fCl==="all"||p.locationId===fCl)&&inRange(p)).sort((a,b)=>(b.billingStart||"").localeCompare(a.billingStart||""));
-  const rcvd = filtered.filter(p=>p.received), outst = filtered.filter(p=>!p.received);
+  function editRow(r) {
+    if (r.fromInvoice) { alert("This record comes from an invoice. Edit the invoice directly in the Invoices tab."); return; }
+    setForm({...blank,...r}); setEditing(r.id); setShow(true);
+  }
+  function delRow(r) {
+    if (r.fromInvoice) { alert("This record is linked to an invoice. To remove it, delete the invoice in the Invoices tab."); return; }
+    ask("Delete this payment record?", () => savePays(pays.filter(p=>p.id!==r.id)));
+  }
+
   function doExport() {
-    mkCSV(`payments_${fSd}_${fEd}`,["Client","Billing Start","Billing End","Amount Billed","HST 13%","Total","Received","Deposit Date","Notes"],
-      filtered.map(p=>[dispCl(p),p.billingStart,p.billingEnd,parseFloat(p.amountBilled||0).toFixed(2),(p.hst||hst(p.amountBilled)).toFixed(2),(p.total||tot(p.amountBilled)).toFixed(2),p.received?"Yes":"No",p.depositDate||"",p.notes||""])
+    mkCSV(`revenue_${fSd}_${fEd}`,
+      ["Source","Invoice #","Client","Billing Start","Billing End","Billed","HST","Total","Currency","Status","Deposit Date","Notes"],
+      filtered.map(r=>[
+        r.fromInvoice?"Invoice":"Manual",
+        r.invoiceNum||"",
+        r.clientName,
+        r.billingStart, r.billingEnd,
+        parseFloat(r.amountBilled||0).toFixed(2),
+        (r.hst||hst(r.amountBilled)).toFixed(2),
+        (r.total||tot(r.amountBilled)).toFixed(2),
+        r.currency||"CAD",
+        r.received?"Received":"Pending",
+        r.depositDate||"", r.notes||""
+      ])
     );
   }
+
   if (!rdy) return <div style={S.card}><div style={S.empty}>Loading…</div></div>;
+
   return (
     <div>
       {confirmEl}
-      <F style={{ marginBottom:"12px", flexWrap:"wrap" }}>
-        {[["Total",filtered.length,"#e0f0ff"],["Received",rcvd.length,"#10b981"],["Outstanding",outst.length,"#f59e0b"],["Collected","$"+rcvd.reduce((s,p)=>s+(p.total||tot(p.amountBilled)),0).toFixed(2),"#10b981"],["Pending","$"+outst.reduce((s,p)=>s+(p.total||tot(p.amountBilled)),0).toFixed(2),"#f59e0b"]].map(([l,v,c])=><Stat key={l} label={l} value={v} color={c}/>)}
-      </F>
+
+      {/* stats */}
+      <div style={{ display:"flex", gap:"10px", marginBottom:"16px", flexWrap:"wrap" }}>
+        {[
+          ["Total Records", filtered.length, T.text],
+          ["Received",      received.length, T.green],
+          ["Pending",       pending.length,  T.amber],
+          ["Collected",     "$"+totalRcvd.toFixed(2), T.green],
+          ["Pending Value", "$"+totalPend.toFixed(2), T.amber],
+        ].map(([l,v,c]) => <Stat key={l} label={l} value={v} color={c} />)}
+      </div>
+
+      {/* filter bar */}
       <div style={S.card}>
-        <div style={S.ct}>Filter & Export</div>
+        <div style={S.ct}>Revenue Summary</div>
         <F style={{ alignItems:"flex-end", flexWrap:"wrap" }}>
           <Inp label="Period Start" type="date" value={fSd} onChange={e=>setFSd(e.target.value)}/>
-          <Inp label="Period End" type="date" value={fEd} onChange={e=>setFEd(e.target.value)}/>
-          <Sel label="Client" value={fCl} onChange={e=>setFCl(e.target.value)}><option value="all">All Clients</option>{locs.map(l=><option key={l.id} value={l.id}>{l.client||l.name}</option>)}</Sel>
+          <Inp label="Period End"   type="date" value={fEd} onChange={e=>setFEd(e.target.value)}/>
+          <Sel label="Client" value={fCl} onChange={e=>setFCl(e.target.value)}>
+            <option value="all">All Clients</option>
+            {locs.map(l=><option key={l.id} value={l.id}>{l.client||l.name}</option>)}
+          </Sel>
           <button style={{ ...S.bs, marginTop:"13px" }} onClick={doExport}>📊 Export Excel</button>
-          <button style={{ ...S.bp, marginTop:"13px" }} onClick={()=>{setForm(blank);setEditing(null);setShow(s=>!s);}}>+ Add Payment</button>
+          <button style={{ ...S.bp, marginTop:"13px" }} onClick={()=>{setForm(blank);setEditing(null);setShow(s=>!s);}}>+ Add Manual Entry</button>
         </F>
+        {/* revenue & HST stats for the selected period */}
+        <div style={{ display:"flex", gap:"9px", marginTop:"14px", flexWrap:"wrap" }}>
+          {(()=>{
+            const periodRows = allRows.filter(r => byClient(r) && inRange(r));
+            const rcvdRows   = periodRows.filter(r => r.received);
+            const pendRows   = periodRows.filter(r => !r.received);
+            const revTotal   = rcvdRows.reduce((s,r)=>s+(r.total||tot(r.amountBilled)),0);
+            const hstTotal   = rcvdRows.reduce((s,r)=>s+(r.hst||hst(r.amountBilled)),0);
+            const pendTotal  = pendRows.reduce((s,r)=>s+(r.total||tot(r.amountBilled)),0);
+            return [
+              ["Revenue Collected", "$"+revTotal.toFixed(2),  T.green],
+              ["HST Collected",     "$"+hstTotal.toFixed(2),  T.purple],
+              ["Pending",           "$"+pendTotal.toFixed(2), T.amber],
+              ["Total Records",     periodRows.length,         T.text],
+            ].map(([l,v,c])=>(
+              <div key={l} style={{ ...S.stat, flex:"1", minWidth:"120px", borderTop:`3px solid ${c}` }}>
+                <div style={{ ...S.sn, color:c, fontSize:"18px" }}>{v}</div>
+                <div style={S.sl}>{l}{fCl!=="all" ? " — Client" : ""}</div>
+              </div>
+            ));
+          })()}
+        </div>
+        <div style={{ fontSize:"11px", color:T.textMute, marginTop:"10px" }}>
+          💡 Invoice records appear automatically. Use "Add Manual Entry" only for payments that don't have an invoice.
+        </div>
       </div>
-      {show&&(
-        <div style={{ ...S.card, border:"1px solid #2563eb" }}>
-          <div style={S.ct}>{editing?"Edit Payment":"New Payment Entry"}</div>
+
+      {/* manual entry form */}
+      {show && (
+        <div style={{ ...S.card, border:`1px solid ${T.blue}` }}>
+          <div style={S.ct}>{editing ? "Edit Manual Entry" : "New Manual Payment Entry"}</div>
           <div style={S.g3}>
-            <Sel label="Client (Location)" value={form.locationId} onChange={e=>{const l=locs.find(x=>x.id===e.target.value);setForm(p=>({...p,locationId:e.target.value,clientName:l?l.client||l.name:p.clientName}))}}><option value="">Select…</option>{locs.map(l=><option key={l.id} value={l.id}>{l.name}{l.client?" — "+l.client:""}</option>)}</Sel>
+            <Sel label="Client" value={form.locationId} onChange={e=>{const l=locs.find(x=>x.id===e.target.value);setForm(p=>({...p,locationId:e.target.value,clientName:l?l.client||l.name:p.clientName}));}}>
+              <option value="">Select…</option>
+              {locs.map(l=><option key={l.id} value={l.id}>{l.client||l.name}</option>)}
+            </Sel>
             <Inp label="Client Name (override)" value={form.clientName} onChange={e=>setForm(p=>({...p,clientName:e.target.value}))} placeholder="Auto-filled"/>
             <Inp label="Amount Billed ($)" type="number" step="0.01" value={form.amountBilled} onChange={e=>setForm(p=>({...p,amountBilled:e.target.value}))} placeholder="0.00"/>
           </div>
-          {form.amountBilled&&<div style={{ fontSize:"11px", color:"#5a8ab0", margin:"6px 0" }}>HST (13%): <strong style={{ color:"#e0f0ff" }}>${hst(form.amountBilled).toFixed(2)}</strong> &nbsp; Total: <strong style={{ color:"#34d399" }}>${tot(form.amountBilled).toFixed(2)}</strong></div>}
+          {form.amountBilled && (
+            <div style={{ fontSize:"12px", color:T.textSub, margin:"8px 0" }}>
+              HST (13%): <strong style={{ color:T.text }}>${hst(form.amountBilled).toFixed(2)}</strong>
+              &nbsp;&nbsp; Total: <strong style={{ color:T.green }}>${tot(form.amountBilled).toFixed(2)}</strong>
+            </div>
+          )}
           <div style={{ ...S.g4, marginTop:"8px" }}>
             <Inp label="Billing Period Start" type="date" value={form.billingStart} onChange={e=>setForm(p=>({...p,billingStart:e.target.value}))}/>
-            <Inp label="Billing Period End" type="date" value={form.billingEnd} onChange={e=>setForm(p=>({...p,billingEnd:e.target.value}))}/>
-            <Inp label="Deposit Date" type="date" value={form.depositDate} onChange={e=>setForm(p=>({...p,depositDate:e.target.value}))}/>
-            <div style={{ display:"flex", flexDirection:"column", justifyContent:"flex-end" }}><label style={{ display:"flex", alignItems:"center", gap:"6px", fontSize:"11px", color:"#10b981", cursor:"pointer", padding:"7px 0" }}><input type="checkbox" checked={form.received} onChange={e=>setForm(p=>({...p,received:e.target.checked}))} style={{ width:"14px", height:"14px" }}/>Payment Received</label></div>
+            <Inp label="Billing Period End"   type="date" value={form.billingEnd}   onChange={e=>setForm(p=>({...p,billingEnd:e.target.value}))}/>
+            <Inp label="Deposit Date"         type="date" value={form.depositDate}  onChange={e=>setForm(p=>({...p,depositDate:e.target.value}))}/>
+            <div style={{ display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
+              <label style={{ display:"flex", alignItems:"center", gap:"6px", fontSize:"12px", color:T.green, cursor:"pointer", paddingBottom:"8px" }}>
+                <input type="checkbox" checked={form.received} onChange={e=>setForm(p=>({...p,received:e.target.checked}))} style={{ width:"14px", height:"14px" }}/>
+                Payment Received
+              </label>
+            </div>
           </div>
           <div style={{ marginTop:"8px" }}><label style={S.lbl}>Notes</label><textarea style={S.ta} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} placeholder="Optional…"/></div>
-          <F style={{ marginTop:"9px" }}><button style={S.bp} onClick={submit}>Save</button><button style={S.bo} onClick={()=>{setShow(false);setEditing(null);}}>Cancel</button></F>
+          <F style={{ marginTop:"10px" }}>
+            <button style={S.bp} onClick={submit}>Save</button>
+            <button style={S.bo} onClick={()=>{setShow(false);setEditing(null);}}>Cancel</button>
+          </F>
         </div>
       )}
+
+      {/* records table */}
       <div style={S.card}>
-        <div style={S.ct}>Payment Records ({filtered.length})</div>
-        {filtered.length===0?<div style={S.empty}>No records for selected filters.</div>:<div style={{ overflowX:"auto" }}><table style={S.tbl}><thead><tr>{["Client","Billing Period","Billed","HST","Total","Received","Deposit",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-        <tbody>{filtered.map(p=><tr key={p.id} style={{ background:p.received?"#06150e":"transparent" }}>
-          <td style={S.td}><strong style={{ color:"#e0f0ff" }}>{dispCl(p)}</strong></td>
-          <td style={S.td}><span style={{ fontSize:"10px" }}>{p.billingStart||"—"}{p.billingEnd&&p.billingEnd!==p.billingStart?` → ${p.billingEnd}`:""}</span></td>
-          <td style={S.td}>${parseFloat(p.amountBilled||0).toFixed(2)}</td>
-          <td style={S.td}>${(p.hst||hst(p.amountBilled)).toFixed(2)}</td>
-          <td style={S.td}><strong style={{ color:"#34d399" }}>${(p.total||tot(p.amountBilled)).toFixed(2)}</strong></td>
-          <td style={S.td}><label style={{ display:"flex", alignItems:"center", gap:"4px", cursor:"pointer" }}><input type="checkbox" checked={p.received} onChange={()=>toggleRcv(p.id)}/><span style={{ fontSize:"9px", color:p.received?"#10b981":"#f59e0b", fontWeight:"700" }}>{p.received?"Received":"Pending"}</span></label></td>
-          <td style={S.td}>{p.depositDate||"—"}</td>
-          <td style={S.td}><F><button style={S.bsm("#60a5fa")} onClick={()=>edit(p)}>Edit</button><button style={S.bd} onClick={()=>del(p.id)}>✕</button></F></td>
-        </tr>)}</tbody></table></div>}
-        {filtered.length>0&&<div style={{ marginTop:"10px", borderTop:"1px solid #1e3a5f", paddingTop:"8px", display:"flex", gap:"14px", fontSize:"10px", flexWrap:"wrap", color:"#5a8ab0" }}>
-          <span>Billed: <strong style={{ color:"#e0f0ff" }}>${filtered.reduce((s,p)=>s+parseFloat(p.amountBilled||0),0).toFixed(2)}</strong></span>
-          <span>HST: <strong style={{ color:"#e0f0ff" }}>${filtered.reduce((s,p)=>s+(p.hst||hst(p.amountBilled)),0).toFixed(2)}</strong></span>
-          <span>Total: <strong style={{ color:"#34d399" }}>${filtered.reduce((s,p)=>s+(p.total||tot(p.amountBilled)),0).toFixed(2)}</strong></span>
-          <span>Collected: <strong style={{ color:"#10b981" }}>${rcvd.reduce((s,p)=>s+(p.total||tot(p.amountBilled)),0).toFixed(2)}</strong></span>
-          <span>Outstanding: <strong style={{ color:"#f59e0b" }}>${outst.reduce((s,p)=>s+(p.total||tot(p.amountBilled)),0).toFixed(2)}</strong></span>
-        </div>}
+        <div style={S.ct}>Revenue Records ({filtered.length})</div>
+        {filtered.length === 0 ? (
+          <div style={S.empty}>No records for the selected filters.</div>
+        ) : (
+          <div style={{ overflowX:"auto" }}>
+            <table style={S.tbl}>
+              <thead>
+                <tr>{["Source","Client","Billing Period","Billed","HST","Total","Status","Deposit Date",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {filtered.map(r => {
+                  const isInv = r.fromInvoice;
+                  const rowBg = r.received ? "#030f07" : r.status==="overdue" ? "#1a0505" : "transparent";
+                  const statusCol = r.received ? T.green : r.status==="overdue" ? T.red : T.amber;
+                  const statusLabel = r.received ? "Received" : r.status==="overdue" ? "Overdue" : "Pending";
+                  return (
+                    <tr key={r.id} style={{ background:rowBg }}>
+                      <td style={S.td}>
+                        <div style={{ display:"flex", flexDirection:"column", gap:"2px" }}>
+                          <span style={S.pill(isInv ? T.blue : T.purple)}>{isInv ? "Invoice" : "Manual"}</span>
+                          {isInv && r.invoiceNum && <span style={{ fontSize:"10px", color:T.textMute }}>{r.invoiceNum}</span>}
+                        </div>
+                      </td>
+                      <td style={S.td}><strong style={{ color:T.text }}>{r.clientName}</strong></td>
+                      <td style={S.td}>
+                        <span style={{ fontSize:"11px" }}>
+                          {r.billingStart||"—"}{r.billingEnd && r.billingEnd!==r.billingStart ? ` → ${r.billingEnd}` : ""}
+                        </span>
+                      </td>
+                      <td style={S.td}>{r.currency||"CAD"} ${parseFloat(r.amountBilled||0).toFixed(2)}</td>
+                      <td style={S.td}>${(r.hst||hst(r.amountBilled)).toFixed(2)}</td>
+                      <td style={S.td}><strong style={{ color:T.green }}>${(r.total||tot(r.amountBilled)).toFixed(2)}</strong></td>
+                      <td style={S.td}><span style={S.pill(statusCol)}>{statusLabel}</span></td>
+                      <td style={S.td}>{r.depositDate||"—"}</td>
+                      <td style={S.td}>
+                        <F>
+                          {!isInv && <button style={S.bsm(T.blue)} onClick={()=>editRow(r)}>Edit</button>}
+                          {isInv && <span style={{ fontSize:"10px", color:T.textMute }}>via Invoice</span>}
+                          <button style={S.bd} onClick={()=>delRow(r)}>✕</button>
+                        </F>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {filtered.length > 0 && (
+          <div style={{ marginTop:"12px", borderTop:`1px solid ${T.border}`, paddingTop:"10px", display:"flex", gap:"16px", fontSize:"11px", flexWrap:"wrap", color:T.textSub }}>
+            <span>Billed: <strong style={{ color:T.text }}>${filtered.reduce((s,r)=>s+parseFloat(r.amountBilled||0),0).toFixed(2)}</strong></span>
+            <span>HST: <strong style={{ color:T.text }}>${filtered.reduce((s,r)=>s+(r.hst||hst(r.amountBilled)),0).toFixed(2)}</strong></span>
+            <span>Total: <strong style={{ color:T.green }}>${filtered.reduce((s,r)=>s+(r.total||tot(r.amountBilled)),0).toFixed(2)}</strong></span>
+            <span>Collected: <strong style={{ color:T.green }}>${received.reduce((s,r)=>s+(r.total||tot(r.amountBilled)),0).toFixed(2)}</strong></span>
+            <span>Pending: <strong style={{ color:T.amber }}>${pending.reduce((s,r)=>s+(r.total||tot(r.amountBilled)),0).toFixed(2)}</strong></span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1218,8 +1536,12 @@ function addDays(dateStr, n) {
 
 function printInvoiceHTML(inv) {
   const sub = inv.items.reduce((s,it) => s+(parseFloat(it.qty)||0)*(parseFloat(it.price)||0), 0);
-  const hstAmt = inv.hst ? sub*0.13 : 0;
-  const tot = sub + hstAmt;
+  const discVal = parseFloat(inv.discount)||0;
+  const discAmt = inv.discountType==="percent" ? sub*(discVal/100) : discVal;
+  const afterDisc = Math.max(0, sub - discAmt);
+  const hstAmt = inv.hst ? afterDisc*0.13 : 0;
+  const tot = afterDisc + hstAmt;
+  const cur = inv.currency||"CAD";
   const itemRows = inv.items.map(it => {
     const amt = (parseFloat(it.qty)||0)*(parseFloat(it.price)||0);
     return `<tr>
@@ -1279,8 +1601,10 @@ function printInvoiceHTML(inv) {
     <div>
       <h4>Bill To</h4>
       <p><strong>${inv.clientName||"—"}</strong></p>
+      ${inv.clientContact ? `<p style="color:#555">Attn: ${inv.clientContact}</p>` : ""}
       ${inv.clientAddress ? `<p style="color:#555">${inv.clientAddress}</p>` : ""}
       ${inv.clientEmail ? `<p style="color:#555">${inv.clientEmail}</p>` : ""}
+      ${inv.clientPhone ? `<p style="color:#555">${inv.clientPhone}</p>` : ""}
     </div>
     <div>
       <h4>Invoice Details</h4>
@@ -1293,11 +1617,13 @@ function printInvoiceHTML(inv) {
     <tbody>${itemRows}</tbody>
   </table>
   <div class="totals-wrap">
-    <div class="tot-row"><span>Subtotal</span><span>$${sub.toFixed(2)}</span></div>
-    ${inv.hst ? `<div class="tot-row"><span>HST (13%)</span><span>$${hstAmt.toFixed(2)}</span></div>` : ""}
-    <div class="tot-row final"><span>Total</span><span>$${tot.toFixed(2)}</span></div>
+    <div class="tot-row"><span>Subtotal</span><span>${cur} $${sub.toFixed(2)}</span></div>
+    ${discAmt>0 ? `<div class="tot-row"><span>Discount${inv.discountNote?" — "+inv.discountNote:""}${inv.discountType==="percent"?" ("+discVal+"%)":""}</span><span style="color:#059669">− ${cur} $${discAmt.toFixed(2)}</span></div>` : ""}
+    ${inv.hst ? `<div class="tot-row"><span>HST (13%)</span><span>${cur} $${hstAmt.toFixed(2)}</span></div>` : ""}
+    <div class="tot-row final"><span>Total (${cur})</span><span>$${tot.toFixed(2)}</span></div>
   </div>
   ${inv.notes ? `<div class="notes-box"><strong>Notes:</strong> ${inv.notes}</div>` : ""}
+  ${inv.attachments&&inv.attachments.length>0 ? `<div class="notes-box" style="margin-top:12px"><strong>Attachments:</strong> ${inv.attachments.map(a=>a.name).join(", ")}</div>` : ""}
   <div class="footer">Generated by SecureOps &nbsp;|&nbsp; ${new Date().toLocaleDateString()}</div>
   </body></html>`;
   const w = window.open("","_blank","width=900,height=720");
@@ -1318,17 +1644,15 @@ function Invoices({ locs }) {
   const [coSaved, setCoSaved] = useState(false);
   const [logoB64, setLogoB64] = useState("");
 
-  // dashboard filters
-  const [fyStart, setFyStart] = useState(`${new Date().getFullYear()}-01-01`);
-  const [fyEnd,   setFyEnd]   = useState(`${new Date().getFullYear()}-12-31`);
-  const [fClient, setFClient] = useState("all");
-
   const blankForm = () => ({
     number:"", date:new Date().toISOString().slice(0,10), dueDate:"", summary:"",
     clientLocationId:"", clientName:"", clientAddress:"", clientEmail:"",
+    clientPhone:"", clientContact:"",
     items:[{ desc:"Security Services", qty:1, price:"" }],
     hst:true, notes:"", status:"outstanding",
-    // company fields merged in at submit time from co profile
+    discount:"", discountType:"percent", discountNote:"",
+    currency:"CAD",
+    attachments:[],
   });
   const [form, setForm] = useState(blankForm());
 
@@ -1361,8 +1685,11 @@ function Invoices({ locs }) {
   function calcTotals(f) {
     const src = f || form;
     const sub = src.items.reduce((s,it)=>s+(parseFloat(it.qty)||0)*(parseFloat(it.price)||0), 0);
-    const hstAmt = src.hst ? sub*0.13 : 0;
-    return { sub, hstAmt, total:sub+hstAmt };
+    const discVal = parseFloat(src.discount)||0;
+    const discAmt = src.discountType==="percent" ? sub*(discVal/100) : discVal;
+    const afterDisc = Math.max(0, sub - discAmt);
+    const hstAmt = src.hst ? afterDisc*0.13 : 0;
+    return { sub, discAmt, afterDisc, hstAmt, total:afterDisc+hstAmt };
   }
 
   function setItem(i, k, v) { const items=[...form.items]; items[i]={...items[i],[k]:v}; setForm(p=>({...p,items})); }
@@ -1371,8 +1698,8 @@ function Invoices({ locs }) {
 
   function submit() {
     if (!form.clientName.trim()&&!form.clientLocationId) { alert("Please select or enter a client."); return; }
-    const { sub, hstAmt, total } = calcTotals();
-    const entry = { ...form, ...co, logo:logoB64, id:editing||uid(), subtotal:sub, hstAmt, total };
+    const { sub, discAmt, afterDisc, hstAmt, total } = calcTotals();
+    const entry = { ...form, ...co, logo:logoB64, id:editing||uid(), subtotal:sub, discAmt, afterDisc, hstAmt, total };
     saveInvs(editing ? invs.map(x=>x.id===editing?entry:x) : [...invs,entry]);
     setEditing(null); setView("list");
   }
@@ -1382,16 +1709,10 @@ function Invoices({ locs }) {
 
   const clientLabel = inv => inv.clientName||(locs.find(l=>l.id===inv.clientLocationId)?.client)||(locs.find(l=>l.id===inv.clientLocationId)?.name)||"—";
 
-  // stats
-  const inPeriod    = inv => (inv.date||"") >= fyStart && (inv.date||"") <= fyEnd;
-  const byClient    = inv => fClient==="all" || inv.clientLocationId===fClient;
+  // stats (all-time, no period filter needed here — see Revenue page for period breakdown)
   const outstanding = invs.filter(x=>x.status==="outstanding");
   const overdue     = invs.filter(x=>x.status==="overdue");
   const paid        = invs.filter(x=>x.status==="paid");
-  const fyRevenue   = paid.filter(inPeriod).reduce((s,x)=>s+(x.total||0),0);
-  const clientRev   = invs.filter(inPeriod).filter(byClient).filter(x=>x.status==="paid").reduce((s,x)=>s+(x.total||0),0);
-  const clientHST   = invs.filter(inPeriod).filter(byClient).filter(x=>x.status==="paid").reduce((s,x)=>s+(x.hstAmt||0),0);
-  const periodInvs  = invs.filter(inPeriod).filter(byClient);
 
   if (!rdy) return <div style={S.card}><div style={S.empty}>Loading…</div></div>;
 
@@ -1411,39 +1732,24 @@ function Invoices({ locs }) {
       {view==="dashboard" && (
         <div>
           <div style={{ display:"flex", gap:"9px", marginBottom:"14px", flexWrap:"wrap" }}>
-            {[["Outstanding",outstanding.length,"#f59e0b"],["Overdue",overdue.length,"#ef4444"],["Paid (All Time)",paid.length,"#10b981"],["FY Revenue","$"+fyRevenue.toFixed(2),"#3b82f6"]].map(([l,v,c])=>(
-              <div key={l} style={{ ...S.stat, flex:"1", minWidth:"110px", borderColor:c+"44" }}>
-                <div style={{ ...S.sn, color:c, fontSize:"18px" }}>{v}</div><div style={S.sl}>{l}</div>
+            {[["Outstanding",outstanding.length,"#f59e0b"],["Overdue",overdue.length,"#ef4444"],["Paid (All Time)",paid.length,"#10b981"],["Total Invoices",invs.length,T.text]].map(([l,v,c])=>(
+              <div key={l} style={{ ...S.stat, flex:"1", minWidth:"110px", borderTop:`3px solid ${c}` }}>
+                <div style={{ ...S.sn, color:c, fontSize:"20px" }}>{v}</div><div style={S.sl}>{l}</div>
               </div>
             ))}
           </div>
-          <div style={S.card}>
-            <div style={S.ct}>Revenue & HST Filter</div>
-            <div style={{ display:"flex", gap:"9px", flexWrap:"wrap", alignItems:"flex-end" }}>
-              <div><label style={S.lbl}>Period Start</label><input style={S.inp} type="date" value={fyStart} onChange={e=>setFyStart(e.target.value)}/></div>
-              <div><label style={S.lbl}>Period End</label><input style={S.inp} type="date" value={fyEnd} onChange={e=>setFyEnd(e.target.value)}/></div>
-              <div><label style={S.lbl}>Client</label>
-                <select style={{ ...S.sel, minWidth:"160px" }} value={fClient} onChange={e=>setFClient(e.target.value)}>
-                  <option value="all">All Clients</option>
-                  {locs.map(l=><option key={l.id} value={l.id}>{l.client||l.name}</option>)}
-                </select>
-              </div>
-            </div>
-            <div style={{ display:"flex", gap:"9px", marginTop:"12px", flexWrap:"wrap" }}>
-              {[["Revenue in Period","$"+clientRev.toFixed(2),"#3b82f6"],["HST Collected","$"+clientHST.toFixed(2),"#a78bfa"],["Invoices in Period",periodInvs.length,"#e0f0ff"],["Outstanding",periodInvs.filter(x=>x.status==="outstanding").length,"#f59e0b"],["Overdue",periodInvs.filter(x=>x.status==="overdue").length,"#ef4444"]].map(([l,v,c])=>(
-                <div key={l} style={{ ...S.stat, flex:"1", minWidth:"110px", borderColor:c+"44" }}>
-                  <div style={{ ...S.sn, color:c, fontSize:"17px" }}>{v}</div><div style={S.sl}>{l}{fClient!=="all"?" — Client":""}</div>
-                </div>
-              ))}
+          <div style={{ ...S.card, background:T.surface2, border:`1px solid ${T.borderHi}` }}>
+            <div style={{ fontSize:"12px", color:T.textSub }}>
+              💡 For revenue totals, HST collected, and period breakdowns — visit the <strong style={{ color:T.blue }}>Revenue</strong> page in the sidebar.
             </div>
           </div>
           {overdue.length>0&&<div style={S.card}><div style={S.ct}>🔴 Overdue Invoices</div>
             <table style={S.tbl}><thead><tr>{["Invoice #","Client","Date","Due","Total",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-            <tbody>{overdue.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:"#e0f0ff" }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}>{inv.dueDate||"—"}</td><td style={S.td}><strong style={{ color:"#ef4444" }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"paid")}>Mark Paid</button><button style={S.bsm("#60a5fa")} onClick={()=>startEdit(inv)}>Edit</button></div></td></tr>)}</tbody>
+            <tbody>{overdue.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:T.text }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}>{inv.dueDate||"—"}</td><td style={S.td}><strong style={{ color:T.red }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm(T.green)} onClick={()=>setStatus(inv.id,"paid")}>Mark Paid</button><button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button></div></td></tr>)}</tbody>
             </table></div>}
           {outstanding.length>0&&<div style={S.card}><div style={S.ct}>🟡 Outstanding Invoices</div>
             <table style={S.tbl}><thead><tr>{["Invoice #","Client","Date","Due","Total",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-            <tbody>{outstanding.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:"#e0f0ff" }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}>{inv.dueDate||"—"}</td><td style={S.td}><strong style={{ color:"#f59e0b" }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"paid")}>Mark Paid</button><button style={S.bsm("#ef4444")} onClick={()=>setStatus(inv.id,"overdue")}>Overdue</button><button style={S.bsm("#60a5fa")} onClick={()=>startEdit(inv)}>Edit</button></div></td></tr>)}</tbody>
+            <tbody>{outstanding.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:T.text }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}>{inv.dueDate||"—"}</td><td style={S.td}><strong style={{ color:T.amber }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm(T.green)} onClick={()=>setStatus(inv.id,"paid")}>Mark Paid</button><button style={S.bsm(T.red)} onClick={()=>setStatus(inv.id,"overdue")}>Overdue</button><button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button></div></td></tr>)}</tbody>
             </table></div>}
         </div>
       )}
@@ -1541,33 +1847,49 @@ function Invoices({ locs }) {
                 </select>
               </div>
             </div>
-            <div style={{ marginTop:"8px" }}>
-              <label style={S.lbl}>Invoice Summary / Description <span style={{ color:"#3a6a8a", fontWeight:"400", textTransform:"none" }}>(appears on PDF under invoice number)</span></label>
-              <input style={S.inp} value={form.summary} onChange={e=>setForm(p=>({...p,summary:e.target.value}))} placeholder="e.g. Security Services — Downtown Mall — May 1–15, 2026"/>
+            <div style={{ ...S.g2, marginTop:"8px" }}>
+              <div>
+                <label style={S.lbl}>Currency</label>
+                <select style={S.sel} value={form.currency||"CAD"} onChange={e=>setForm(p=>({...p,currency:e.target.value}))}>
+                  {["CAD","USD","EUR","GBP","AUD","CHF","JPY","MXN","AED","SGD"].map(c=>(
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={S.lbl}>Invoice Summary / Description</label>
+                <input style={S.inp} value={form.summary} onChange={e=>setForm(p=>({...p,summary:e.target.value}))} placeholder="e.g. Security Services — Downtown Mall — May 1–15, 2026"/>
+              </div>
             </div>
           </div>
 
-          {/* client — auto-fill from locations + saved per invoice */}
+          {/* client — auto-fill from locations */}
           <div style={S.card}>
             <div style={S.ct}>Client / Bill To</div>
-            <div style={S.g3}>
-              <div><label style={S.lbl}>Select Client (from Locations)</label>
+            <div style={S.g2}>
+              <div><label style={S.lbl}>Select Client</label>
                 <select style={S.sel} value={form.clientLocationId} onChange={e=>{
                   const l=locs.find(x=>x.id===e.target.value);
-                  setForm(p=>({...p, clientLocationId:e.target.value,
-                    clientName: l?l.client||l.name:p.clientName,
-                    clientAddress: l?.clientAddress||p.clientAddress,
-                    clientEmail: l?.contactEmail||p.clientEmail,
+                  setForm(p=>({...p,
+                    clientLocationId:e.target.value,
+                    clientName:      l ? l.client||l.name : p.clientName,
+                    clientAddress:   l?.clientAddress||p.clientAddress,
+                    clientEmail:     l?.contactEmail||p.clientEmail,
+                    clientPhone:     l?.contactPhone||p.clientPhone,
+                    clientContact:   l?.contactName||p.clientContact,
                   }));
                 }}>
                   <option value="">Select…</option>
-                  {locs.map(l=><option key={l.id} value={l.id}>{l.name}{l.client?" — "+l.client:""}</option>)}
+                  {locs.map(l=><option key={l.id} value={l.id}>{l.client||l.name}</option>)}
                 </select>
               </div>
-              <div><label style={S.lbl}>Client Name</label><input style={S.inp} value={form.clientName} onChange={e=>setForm(p=>({...p,clientName:e.target.value}))} placeholder="Auto-filled or type"/></div>
-              <div><label style={S.lbl}>Client Email</label><input style={S.inp} value={form.clientEmail} onChange={e=>setForm(p=>({...p,clientEmail:e.target.value}))}/></div>
+              <div><label style={S.lbl}>Contact Person</label><input style={S.inp} value={form.clientContact} onChange={e=>setForm(p=>({...p,clientContact:e.target.value}))} placeholder="Auto-filled from Locations"/></div>
             </div>
-            <div style={{ marginTop:"8px" }}><label style={S.lbl}>Client Address</label><input style={S.inp} value={form.clientAddress} onChange={e=>setForm(p=>({...p,clientAddress:e.target.value}))}/></div>
+            <div style={{ ...S.g3, marginTop:"8px" }}>
+              <div><label style={S.lbl}>Client Phone</label><input style={S.inp} value={form.clientPhone} onChange={e=>setForm(p=>({...p,clientPhone:e.target.value}))} placeholder="Auto-filled"/></div>
+              <div><label style={S.lbl}>Client Email</label><input style={S.inp} value={form.clientEmail} onChange={e=>setForm(p=>({...p,clientEmail:e.target.value}))} placeholder="Auto-filled"/></div>
+              <div><label style={S.lbl}>Client Address</label><input style={S.inp} value={form.clientAddress} onChange={e=>setForm(p=>({...p,clientAddress:e.target.value}))}/></div>
+            </div>
           </div>
 
           {/* line items */}
@@ -1591,14 +1913,27 @@ function Invoices({ locs }) {
               </tbody>
             </table>
             <button style={{ ...S.bo, marginTop:"8px", fontSize:"9px" }} onClick={addItem}>+ Add Line Item</button>
-            <div style={{ marginTop:"14px", maxWidth:"280px", marginLeft:"auto", background:"#070d19", borderRadius:"7px", padding:"12px" }}>
-              {(()=>{ const {sub,hstAmt,total}=calcTotals(); return (<>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:"11px", marginBottom:"5px", color:"#5a8ab0" }}><span>Subtotal</span><span>${sub.toFixed(2)}</span></div>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:"11px", marginBottom:"7px", alignItems:"center" }}>
-                  <label style={{ display:"flex", alignItems:"center", gap:"5px", cursor:"pointer", color:"#5a8ab0" }}><input type="checkbox" checked={form.hst} onChange={e=>setForm(p=>({...p,hst:e.target.checked}))}/>HST (13%)</label>
-                  <span style={{ color:"#5a8ab0" }}>${hstAmt.toFixed(2)}</span>
+            <div style={{ marginTop:"14px", maxWidth:"320px", marginLeft:"auto", background:T.bg, borderRadius:"8px", padding:"14px", border:`1px solid ${T.border}` }}>
+              {(()=>{ const {sub,discAmt,afterDisc,hstAmt,total}=calcTotals(); const cur=form.currency||"CAD"; return (<>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:"12px", marginBottom:"6px", color:T.textSub }}><span>Subtotal</span><span>{cur} ${sub.toFixed(2)}</span></div>
+                {/* discount */}
+                <div style={{ marginBottom:"8px", padding:"10px", background:T.surface, borderRadius:"6px", border:`1px solid ${T.border}` }}>
+                  <div style={{ fontSize:"11px", fontWeight:"600", color:T.textSub, marginBottom:"6px" }}>Discount (optional)</div>
+                  <div style={{ display:"flex", gap:"6px", alignItems:"center" }}>
+                    <select style={{ ...S.sel, width:"90px", fontSize:"11px", padding:"5px 8px" }} value={form.discountType} onChange={e=>setForm(p=>({...p,discountType:e.target.value}))}>
+                      <option value="percent">%</option>
+                      <option value="fixed">$ Fixed</option>
+                    </select>
+                    <input style={{ ...S.inp, width:"80px", fontSize:"11px", padding:"5px 8px" }} type="number" min="0" step="0.01" value={form.discount} onChange={e=>setForm(p=>({...p,discount:e.target.value}))} placeholder="0"/>
+                    <input style={{ ...S.inp, flex:1, fontSize:"11px", padding:"5px 8px" }} value={form.discountNote} onChange={e=>setForm(p=>({...p,discountNote:e.target.value}))} placeholder="Reason (optional)"/>
+                  </div>
+                  {discAmt>0&&<div style={{ fontSize:"11px", color:T.green, marginTop:"5px" }}>− {cur} ${discAmt.toFixed(2)} off</div>}
                 </div>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:"14px", fontWeight:"800", color:"#e0f0ff", borderTop:"1px solid #1e3a5f", paddingTop:"7px" }}><span>Total</span><span>${total.toFixed(2)}</span></div>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:"12px", marginBottom:"6px", alignItems:"center" }}>
+                  <label style={{ display:"flex", alignItems:"center", gap:"5px", cursor:"pointer", color:T.textSub }}><input type="checkbox" checked={form.hst} onChange={e=>setForm(p=>({...p,hst:e.target.checked}))}/>HST (13%)</label>
+                  <span style={{ color:T.textSub }}>{cur} ${hstAmt.toFixed(2)}</span>
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:"15px", fontWeight:"800", color:T.text, borderTop:`1px solid ${T.border}`, paddingTop:"8px" }}><span>Total ({cur})</span><span>${total.toFixed(2)}</span></div>
               </>); })()}
             </div>
           </div>
@@ -1609,9 +1944,35 @@ function Invoices({ locs }) {
             <textarea style={S.ta} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} placeholder="e.g. Please make cheques payable to SecureOps Inc. Payment due within 30 days."/>
           </div>
 
+          {/* attachments */}
+          <div style={S.card}>
+            <div style={S.ct}>Attachments</div>
+            <div style={{ fontSize:"12px", color:T.textSub, marginBottom:"10px" }}>
+              Attach supporting documents to this invoice (e.g. timesheets, schedules). File names will appear on the PDF. Files are stored locally and will need to be sent alongside the PDF.
+            </div>
+            <label style={{ ...S.bo, cursor:"pointer", display:"inline-block", fontSize:"12px" }}>
+              + Add Attachment
+              <input type="file" multiple style={{ display:"none" }} onChange={e=>{
+                const files = Array.from(e.target.files).map(f=>({ name:f.name, size:f.size }));
+                setForm(p=>({ ...p, attachments:[...(p.attachments||[]), ...files] }));
+                e.target.value="";
+              }}/>
+            </label>
+            {(form.attachments||[]).length > 0 && (
+              <div style={{ marginTop:"10px" }}>
+                {form.attachments.map((a,i)=>(
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 10px", background:T.bg, borderRadius:"6px", marginBottom:"5px", border:`1px solid ${T.border}` }}>
+                    <div style={{ fontSize:"12px", color:T.text }}>📎 {a.name} <span style={{ color:T.textMute, fontSize:"10px" }}>({(a.size/1024).toFixed(1)} KB)</span></div>
+                    <button style={S.bd} onClick={()=>setForm(p=>({...p,attachments:p.attachments.filter((_,j)=>j!==i)}))}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
             <button style={S.bp} onClick={submit}>Save Invoice</button>
-            <button style={{ ...S.bsm("#a78bfa"), padding:"7px 13px", fontSize:"10px" }} onClick={()=>{ const {sub,hstAmt,total}=calcTotals(); printInvoiceHTML({...form,...co,logo:logoB64,subtotal:sub,hstAmt,total}); }}>🖨 Preview PDF</button>
+            <button style={{ ...S.bsm("#a78bfa"), padding:"7px 13px", fontSize:"10px" }} onClick={()=>{ const {sub,discAmt,afterDisc,hstAmt,total}=calcTotals(); printInvoiceHTML({...form,...co,logo:logoB64,subtotal:sub,discAmt,afterDisc,hstAmt,total}); }}>🖨 Preview PDF</button>
             <button style={S.bo} onClick={()=>setView(editing?"list":"dashboard")}>Cancel</button>
             {editing&&<button style={S.bd} onClick={()=>delInv(editing)}>Delete Invoice</button>}
           </div>
@@ -1631,7 +1992,7 @@ const TABS = [
   { id:"rep",  label:"Reports",    icon:"📊", section:"Operations" },
   { id:"his",  label:"History",    icon:"🗂",  section:"Operations" },
   { id:"inv",  label:"Invoices",   icon:"🧾", section:"Finance" },
-  { id:"pay",  label:"Payments",   icon:"💰", section:"Finance" },
+  { id:"pay",  label:"Revenue",    icon:"💰", section:"Finance" },
   { id:"sal",  label:"Sales",      icon:"🎯", section:"Finance" },
 ];
 
@@ -1642,7 +2003,7 @@ const PAGE_META = {
   rep: { title:"Reports", subtitle:"Export hours by location and time period" },
   his: { title:"History", subtitle:"Saved period reports" },
   inv: { title:"Invoices", subtitle:"Create and manage client invoices" },
-  pay: { title:"Payments", subtitle:"Track payment receipts for accounting" },
+  pay: { title:"Revenue", subtitle:"Invoice payments, pending collections, and revenue tracking" },
   sal: { title:"Sales", subtitle:"Lead pipeline and client acquisition" },
 };
 
@@ -1719,7 +2080,7 @@ export default function App() {
         {tab==="rep" && <Reports guards={guards} locs={locs} scs={scs} ovs={ovs} history={history} setHistory={setHistory} />}
         {tab==="his" && <History history={history} setHistory={setHistory} />}
         {tab==="inv" && <Invoices locs={locs} />}
-        {tab==="pay" && <Payments locs={locs} />}
+        {tab==="pay" && <Revenue locs={locs} />}
         {tab==="sal" && <Sales />}
       </main>
     </div>
