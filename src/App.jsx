@@ -487,8 +487,16 @@ function Locations({ locs, setLocs }) {
   const ff = k => e => setForm(p=>({...p,[k]:e.target.value}));
 
   function submit() {
-    if (!form.name.trim()) return;
-    const entry = { ...form, id: editing || uid() };
+    if (!form.client.trim() && !form.name.trim()) {
+      alert("Please enter at least a Client / Company Name.");
+      return;
+    }
+    // If location name left blank, use client name as the location name
+    const entry = {
+      ...form,
+      id: editing || uid(),
+      name: form.name.trim() || form.client.trim(),
+    };
     const u = editing ? locs.map(l=>l.id===editing?entry:l) : [...locs, entry];
     setLocs(u); save(K.l, u); setForm(blankL); setEditing(null); setShowForm(false);
   }
@@ -534,8 +542,8 @@ function Locations({ locs, setLocs }) {
         <div style={{ ...S.card, border:"1px solid #2563eb" }}>
           <div style={S.ct}>{editing?"Edit Location / Client":"New Location / Client"}</div>
           <div style={S.g3}>
-            <div><label style={S.lbl}>Client / Company Name</label><input style={S.inp} value={form.client} onChange={ff("client")} placeholder="e.g. ABC Corp"/></div>
-            <div><label style={S.lbl}>Location Name *</label><input style={S.inp} value={form.name} onChange={ff("name")} placeholder="e.g. Downtown Mall"/></div>
+            <div><label style={S.lbl}>Client / Company Name *</label><input style={S.inp} value={form.client} onChange={ff("client")} placeholder="e.g. ABC Corp"/></div>
+            <div><label style={S.lbl}>Location Name <span style={{ color:T.textMute, fontWeight:"400", textTransform:"none" }}>(optional — uses client name if blank)</span></label><input style={S.inp} value={form.name} onChange={ff("name")} placeholder="e.g. Downtown Mall"/></div>
             <div><label style={S.lbl}>Contact Person</label><input style={S.inp} value={form.contactName} onChange={ff("contactName")} placeholder="John Smith"/></div>
           </div>
           <div style={{ ...S.g3, marginTop:"8px" }}>
