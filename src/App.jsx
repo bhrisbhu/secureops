@@ -1,8 +1,15 @@
 import { useState, useEffect, Fragment } from "react";
 
+// ─── font ─────────────────────────────────────────────────────────────────────
+const fontLink = document.createElement("link");
+fontLink.rel = "stylesheet";
+fontLink.href = "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap";
+document.head.appendChild(fontLink);
+
 // ─── storage ──────────────────────────────────────────────────────────────────
 const K = { g:"so_g", l:"so_l", sc:"so_sc", ov:"so_ov", hi:"so_hi", pay:"so_pay", leads:"so_lds", inv:"so_inv", co:"so_co" };
-import { load, save } from './supabase.js';
+const load = async k => { try { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; } catch { return null; } };
+const save = async (k, v) => { try { await window.storage.set(k, JSON.stringify(v)); } catch {} };
 
 // ─── utils ────────────────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -56,59 +63,138 @@ function mkCSV(fname, headers, rows) {
   a.download = fname+".csv"; a.click();
 }
 
+// ─── design tokens ────────────────────────────────────────────────────────────
+const T = {
+  bg:       "#0c0f1a",   // page background
+  surface:  "#111827",   // card surface
+  surface2: "#1a2235",   // elevated surface
+  border:   "#1f2d45",   // default border
+  borderHi: "#2d4a6e",   // highlighted border
+  blue:     "#3b82f6",   // primary accent
+  blueDim:  "#1d4ed8",   // darker blue
+  blueGlow: "#3b82f620", // blue glow bg
+  text:     "#f0f6ff",   // primary text
+  textSub:  "#8da3c0",   // secondary text
+  textMute: "#3d5470",   // muted text
+  green:    "#10b981",
+  amber:    "#f59e0b",
+  red:      "#ef4444",
+  purple:   "#a78bfa",
+};
+
 // ─── styles ───────────────────────────────────────────────────────────────────
 const S = {
-  app: { minHeight:"100vh", background:"#070d19", color:"#dce8f5", fontFamily:"monospace" },
-  hdr: { background:"#0a1628", borderBottom:"1px solid #1e3a5f", padding:"0 16px", display:"flex", alignItems:"center", gap:"10px", minHeight:"52px", flexWrap:"wrap" },
-  logo: { fontSize:"14px", fontWeight:"700", color:"#e0f0ff", letterSpacing:"2px", marginRight:"8px" },
-  nb: a => ({ padding:"4px 9px", borderRadius:"4px", border:"none", cursor:"pointer", fontSize:"9px", fontWeight:"700", textTransform:"uppercase", letterSpacing:"0.5px", background:a?"#1d4ed8":"transparent", color:a?"#fff":"#4a8ab0" }),
-  main: { maxWidth:"1200px", margin:"0 auto", padding:"20px 14px" },
-  card: { background:"#0a1628", borderRadius:"10px", border:"1px solid #1e3a5f", padding:"16px", marginBottom:"14px" },
-  ct: { fontSize:"10px", fontWeight:"700", color:"#5a8ab0", marginBottom:"12px", textTransform:"uppercase", letterSpacing:"1px" },
-  lbl: { display:"block", fontSize:"9px", fontWeight:"700", color:"#3a6a8a", marginBottom:"3px", textTransform:"uppercase", letterSpacing:"0.5px" },
-  inp: { width:"100%", background:"#070d19", border:"1px solid #1e3a5f", borderRadius:"5px", padding:"7px 9px", color:"#dce8f5", fontSize:"11px", outline:"none", boxSizing:"border-box" },
-  sel: { width:"100%", background:"#070d19", border:"1px solid #1e3a5f", borderRadius:"5px", padding:"7px 9px", color:"#dce8f5", fontSize:"11px", outline:"none", boxSizing:"border-box" },
-  ta: { width:"100%", background:"#070d19", border:"1px solid #1e3a5f", borderRadius:"5px", padding:"7px 9px", color:"#dce8f5", fontSize:"11px", outline:"none", boxSizing:"border-box", resize:"vertical", minHeight:"56px" },
-  bp: { background:"#1d4ed8", color:"#fff", border:"none", borderRadius:"5px", padding:"7px 13px", fontWeight:"700", fontSize:"10px", cursor:"pointer" },
-  bs: { background:"#064e3b", color:"#6ee7b7", border:"1px solid #059669", borderRadius:"5px", padding:"7px 12px", fontWeight:"700", fontSize:"10px", cursor:"pointer" },
-  bo: { background:"transparent", color:"#5a8ab0", border:"1px solid #1e3a5f", borderRadius:"5px", padding:"6px 12px", fontWeight:"700", fontSize:"10px", cursor:"pointer" },
-  bd: { background:"transparent", color:"#f87171", border:"1px solid #7f1d1d", borderRadius:"4px", padding:"3px 7px", fontSize:"9px", cursor:"pointer" },
-  bsm: c => ({ background:"transparent", color:c||"#5a8ab0", border:`1px solid ${c||"#1e3a5f"}`, borderRadius:"4px", padding:"2px 7px", fontSize:"9px", cursor:"pointer", fontWeight:"700" }),
+  app: { minHeight:"100vh", background:T.bg, color:T.text, fontFamily:"'Plus Jakarta Sans', -apple-system, 'Segoe UI', sans-serif", fontSize:"14px" },
+
+  // sidebar
+  sidebar: { position:"fixed", top:0, left:0, bottom:0, width:"220px", background:T.surface, borderRight:`1px solid ${T.border}`, display:"flex", flexDirection:"column", zIndex:100, boxShadow:"4px 0 24px rgba(0,0,0,0.4)" },
+  sidebarLogo: { padding:"24px 20px 20px", borderBottom:`1px solid ${T.border}`, display:"flex", alignItems:"center", gap:"10px" },
+  sidebarLogoIcon: { width:"32px", height:"32px", background:"linear-gradient(135deg,#1d4ed8,#3b82f6)", borderRadius:"8px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px", boxShadow:"0 2px 8px #3b82f640" },
+  sidebarLogoText: { fontSize:"15px", fontWeight:"700", color:T.text, letterSpacing:"0.5px" },
+  sidebarNav: { flex:1, padding:"12px 10px", overflowY:"auto" },
+  sidebarSection: { fontSize:"9px", fontWeight:"700", color:T.textMute, textTransform:"uppercase", letterSpacing:"1.5px", padding:"8px 10px 4px" },
+  navItem: active => ({
+    display:"flex", alignItems:"center", gap:"10px", padding:"9px 12px", borderRadius:"8px",
+    cursor:"pointer", border:"none", width:"100%", textAlign:"left", fontSize:"13px", fontWeight:"500",
+    transition:"all 0.15s",
+    background: active ? T.blueGlow : "transparent",
+    color: active ? T.blue : T.textSub,
+    borderLeft: active ? `2px solid ${T.blue}` : "2px solid transparent",
+    marginBottom:"2px",
+  }),
+  navIcon: { fontSize:"15px", width:"20px", textAlign:"center" },
+  sidebarBottom: { padding:"12px 10px", borderTop:`1px solid ${T.border}` },
+  signOutBtn: { display:"flex", alignItems:"center", gap:"10px", padding:"9px 12px", borderRadius:"8px", cursor:"pointer", border:"none", width:"100%", textAlign:"left", fontSize:"13px", fontWeight:"500", background:"transparent", color:"#f87171", transition:"all 0.15s" },
+
+  // main content
+  main: { marginLeft:"220px", padding:"28px 32px", maxWidth:"1100px" },
+  pageTitle: { fontSize:"22px", fontWeight:"700", color:T.text, marginBottom:"6px", letterSpacing:"-0.3px" },
+  pageSubtitle: { fontSize:"13px", color:T.textSub, marginBottom:"24px" },
+
+  // cards
+  card: { background:T.surface, borderRadius:"12px", border:`1px solid ${T.border}`, padding:"20px", marginBottom:"16px", boxShadow:"0 1px 3px rgba(0,0,0,0.3)" },
+  cardElevated: { background:T.surface2, borderRadius:"12px", border:`1px solid ${T.borderHi}`, padding:"20px", marginBottom:"16px", boxShadow:"0 4px 16px rgba(0,0,0,0.4)" },
+  ct: { fontSize:"11px", fontWeight:"700", color:T.textSub, marginBottom:"14px", textTransform:"uppercase", letterSpacing:"1px", display:"flex", alignItems:"center", gap:"6px" },
+
+  // form elements
+  lbl: { display:"block", fontSize:"11px", fontWeight:"600", color:T.textSub, marginBottom:"5px" },
+  inp: { width:"100%", background:T.bg, border:`1px solid ${T.border}`, borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box", transition:"border-color 0.15s" },
+  sel: { width:"100%", background:T.bg, border:`1px solid ${T.border}`, borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box" },
+  ta: { width:"100%", background:T.bg, border:`1px solid ${T.border}`, borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box", resize:"vertical", minHeight:"72px", lineHeight:"1.5" },
+
+  // buttons
+  bp: { background:"linear-gradient(135deg,#1d4ed8,#2563eb)", color:"#fff", border:"none", borderRadius:"8px", padding:"9px 18px", fontWeight:"600", fontSize:"13px", cursor:"pointer", boxShadow:"0 2px 8px #3b82f630", transition:"all 0.15s" },
+  bs: { background:"#052e16", color:"#6ee7b7", border:`1px solid #065f46`, borderRadius:"8px", padding:"9px 16px", fontWeight:"600", fontSize:"13px", cursor:"pointer", transition:"all 0.15s" },
+  bo: { background:"transparent", color:T.textSub, border:`1px solid ${T.border}`, borderRadius:"8px", padding:"8px 16px", fontWeight:"600", fontSize:"13px", cursor:"pointer", transition:"all 0.15s" },
+  bd: { background:"transparent", color:T.red, border:`1px solid #7f1d1d`, borderRadius:"6px", padding:"5px 10px", fontSize:"12px", cursor:"pointer", transition:"all 0.15s" },
+  bsm: c => ({ background:"transparent", color:c||T.textSub, border:`1px solid ${c||T.border}`, borderRadius:"6px", padding:"4px 10px", fontSize:"11px", cursor:"pointer", fontWeight:"600", transition:"all 0.15s" }),
+
+  // table
   tbl: { width:"100%", borderCollapse:"collapse" },
-  th: { textAlign:"left", padding:"6px 9px", fontSize:"8px", fontWeight:"700", color:"#3a6a8a", textTransform:"uppercase", borderBottom:"1px solid #1e3a5f" },
-  td: { padding:"7px 9px", fontSize:"11px", borderBottom:"1px solid #0a1628" },
-  stat: { background:"#0a1628", border:"1px solid #1e3a5f", borderRadius:"8px", padding:"12px", textAlign:"center" },
-  sn: { fontSize:"20px", fontWeight:"800", color:"#e0f0ff" },
-  sl: { fontSize:"8px", color:"#3a6a8a", marginTop:"2px", textTransform:"uppercase", letterSpacing:"0.5px" },
-  g2: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"9px" },
-  g3: { display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"9px" },
-  g4: { display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:"9px" },
-  g5: { display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr", gap:"9px" },
-  row: { display:"flex", gap:"7px", alignItems:"center", flexWrap:"wrap" },
-  empty: { textAlign:"center", padding:"28px", color:"#3a6a8a", fontSize:"11px" },
-  pill: c => ({ display:"inline-block", padding:"2px 7px", borderRadius:"20px", fontSize:"8px", fontWeight:"700", background:c+"22", color:c, border:`1px solid ${c}44` }),
+  th: { textAlign:"left", padding:"10px 14px", fontSize:"11px", fontWeight:"600", color:T.textMute, textTransform:"uppercase", letterSpacing:"0.8px", borderBottom:`1px solid ${T.border}`, background:T.surface },
+  td: { padding:"12px 14px", fontSize:"13px", borderBottom:`1px solid ${T.border}`, transition:"background 0.1s" },
+
+  // stat cards
+  stat: { background:T.surface, border:`1px solid ${T.border}`, borderRadius:"12px", padding:"18px 20px", textAlign:"left", boxShadow:"0 1px 3px rgba(0,0,0,0.2)" },
+  sn: { fontSize:"28px", fontWeight:"800", color:T.text, letterSpacing:"-1px", lineHeight:1 },
+  sl: { fontSize:"11px", color:T.textSub, marginTop:"6px", fontWeight:"500" },
+
+  // grids
+  g2: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" },
+  g3: { display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"12px" },
+  g4: { display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:"12px" },
+  g5: { display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr", gap:"12px" },
+  row: { display:"flex", gap:"8px", alignItems:"center", flexWrap:"wrap" },
+  empty: { textAlign:"center", padding:"40px 20px", color:T.textMute, fontSize:"13px" },
+
+  // pills / badges
+  pill: c => ({ display:"inline-flex", alignItems:"center", padding:"3px 10px", borderRadius:"20px", fontSize:"11px", fontWeight:"600", background:c+"18", color:c, border:`1px solid ${c}30` }),
+
+  // divider
+  divider: { height:"1px", background:T.border, margin:"16px 0" },
 };
-const F = ({ children, style, ...p }) => <div style={{ display:"flex", gap:"7px", alignItems:"center", flexWrap:"wrap", ...style }} {...p}>{children}</div>;
-const Inp = ({ label, style, ...p }) => <div><label style={S.lbl}>{label}</label><input style={{ ...S.inp, ...style }} {...p} /></div>;
-const Sel = ({ label, children, ...p }) => <div><label style={S.lbl}>{label}</label><select style={S.sel} {...p}>{children}</select></div>;
-const Stat = ({ label, value, color, min="90px" }) => <div style={{ ...S.stat, flex:"1", minWidth:min, borderColor:(color||"#1e3a5f")+"66" }}><div style={{ ...S.sn, color:color||"#e0f0ff", fontSize:"18px" }}>{value}</div><div style={S.sl}>{label}</div></div>;
+
+// ─── shared components ────────────────────────────────────────────────────────
+const F = ({ children, style, ...p }) => <div style={{ display:"flex", gap:"8px", alignItems:"center", flexWrap:"wrap", ...style }} {...p}>{children}</div>;
+
+const Inp = ({ label, style, ...p }) => (
+  <div>
+    {label && <label style={S.lbl}>{label}</label>}
+    <input style={{ ...S.inp, ...style }} {...p} />
+  </div>
+);
+
+const Sel = ({ label, children, ...p }) => (
+  <div>
+    {label && <label style={S.lbl}>{label}</label>}
+    <select style={S.sel} {...p}>{children}</select>
+  </div>
+);
+
+const Stat = ({ label, value, color, min="120px", icon }) => (
+  <div style={{ ...S.stat, flex:"1", minWidth:min, borderTop:`3px solid ${color||T.border}` }}>
+    {icon && <div style={{ fontSize:"20px", marginBottom:"8px" }}>{icon}</div>}
+    <div style={{ ...S.sn, color:color||T.text }}>{value}</div>
+    <div style={S.sl}>{label}</div>
+  </div>
+);
 
 // ─── confirm dialog ───────────────────────────────────────────────────────────
 function Confirm({ msg, onYes, onNo }) {
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.65)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999 }}>
-      <div style={{ background:"#0a1628", border:"1px solid #ef4444", borderRadius:"10px", padding:"24px 28px", maxWidth:"340px", textAlign:"center" }}>
-        <div style={{ fontSize:"22px", marginBottom:"10px" }}>⚠️</div>
-        <div style={{ fontSize:"13px", color:"#dce8f5", marginBottom:"18px", lineHeight:1.5 }}>{msg}</div>
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, backdropFilter:"blur(4px)" }}>
+      <div style={{ background:T.surface2, border:`1px solid ${T.red}40`, borderRadius:"16px", padding:"28px 32px", maxWidth:"380px", width:"90%", boxShadow:"0 20px 60px rgba(0,0,0,0.6)", textAlign:"center" }}>
+        <div style={{ width:"48px", height:"48px", borderRadius:"50%", background:"#ef444418", border:"1px solid #ef444430", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", fontSize:"22px" }}>⚠️</div>
+        <div style={{ fontSize:"14px", color:T.text, marginBottom:"6px", fontWeight:"600" }}>Are you sure?</div>
+        <div style={{ fontSize:"13px", color:T.textSub, marginBottom:"24px", lineHeight:1.6 }}>{msg}</div>
         <div style={{ display:"flex", gap:"10px", justifyContent:"center" }}>
-          <button style={{ ...S.bd, padding:"7px 18px", fontSize:"11px" }} onClick={onYes}>Yes, Delete</button>
-          <button style={{ ...S.bo, padding:"7px 18px", fontSize:"11px" }} onClick={onNo}>Cancel</button>
+          <button style={{ ...S.bd, padding:"9px 22px", fontSize:"13px", borderRadius:"8px" }} onClick={onYes}>Yes, Delete</button>
+          <button style={{ ...S.bo, padding:"9px 22px", fontSize:"13px" }} onClick={onNo}>Cancel</button>
         </div>
       </div>
     </div>
   );
 }
-// useConfirm hook — returns [confirmEl, askConfirm(msg, onYes)]
 function useConfirm() {
   const [state, setState] = useState(null);
   const ask = (msg, onYes) => setState({ msg, onYes });
@@ -124,20 +210,37 @@ function useConfirm() {
 // LOGIN
 // ═══════════════════════════════════════════════════════════════════════════════
 function Login({ onLogin }) {
-  const [u, setU] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState("");
-  const go = () => { if (u==="security"&&p==="security") onLogin(); else { setErr("Invalid credentials."); setP(""); } };
+  const [u, setU] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState(""); const [loading, setLoading] = useState(false);
+  const go = () => {
+    setLoading(true);
+    setTimeout(() => {
+      if (u==="security"&&p==="security") onLogin();
+      else { setErr("Invalid username or password."); setP(""); setLoading(false); }
+    }, 400);
+  };
   return (
-    <div style={{ minHeight:"100vh", background:"#070d19", display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <div style={{ background:"#0a1628", border:"1px solid #1e3a5f", borderRadius:"12px", padding:"40px 34px", width:"300px" }}>
-        <div style={{ textAlign:"center", marginBottom:"26px" }}>
-          <div style={{ fontSize:"36px" }}>🛡</div>
-          <div style={{ fontSize:"18px", fontWeight:"800", color:"#e0f0ff", letterSpacing:"3px", marginTop:"6px" }}>SECURE<span style={{ color:"#3b82f6" }}>OPS</span></div>
-          <div style={{ fontSize:"9px", color:"#3a6a8a", marginTop:"4px", letterSpacing:"2px" }}>SECURITY MANAGEMENT</div>
+    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Plus Jakarta Sans',-apple-system,'Segoe UI',sans-serif" }}>
+      <div style={{ width:"100%", maxWidth:"400px", padding:"0 20px" }}>
+        <div style={{ textAlign:"center", marginBottom:"40px" }}>
+          <div style={{ width:"56px", height:"56px", background:"linear-gradient(135deg,#1d4ed8,#3b82f6)", borderRadius:"14px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"26px", margin:"0 auto 16px", boxShadow:"0 8px 32px #3b82f640" }}>🛡</div>
+          <div style={{ fontSize:"24px", fontWeight:"700", color:T.text, letterSpacing:"-0.5px" }}>SecureOps</div>
+          <div style={{ fontSize:"13px", color:T.textSub, marginTop:"4px" }}>Business Administration Platform</div>
         </div>
-        <div style={{ marginBottom:"10px" }}><label style={S.lbl}>Username</label><input style={S.inp} value={u} onChange={e=>setU(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} autoFocus /></div>
-        <div style={{ marginBottom:"16px" }}><label style={S.lbl}>Password</label><input style={S.inp} type="password" value={p} onChange={e=>setP(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} /></div>
-        {err && <div style={{ color:"#f87171", fontSize:"10px", textAlign:"center", marginBottom:"10px" }}>{err}</div>}
-        <button style={{ ...S.bp, width:"100%", padding:"9px", fontSize:"12px" }} onClick={go}>Sign In</button>
+        <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:"16px", padding:"32px", boxShadow:"0 20px 60px rgba(0,0,0,0.5)" }}>
+          <div style={{ fontSize:"16px", fontWeight:"600", color:T.text, marginBottom:"24px" }}>Sign in to your account</div>
+          <div style={{ marginBottom:"16px" }}>
+            <label style={S.lbl}>Username</label>
+            <input style={{ ...S.inp, padding:"11px 14px" }} value={u} onChange={e=>setU(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} autoFocus placeholder="Enter username"/>
+          </div>
+          <div style={{ marginBottom:"24px" }}>
+            <label style={S.lbl}>Password</label>
+            <input style={{ ...S.inp, padding:"11px 14px" }} type="password" value={p} onChange={e=>setP(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} placeholder="Enter password"/>
+          </div>
+          {err && <div style={{ background:"#ef444412", border:"1px solid #ef444430", borderRadius:"8px", padding:"10px 14px", fontSize:"13px", color:"#fca5a5", marginBottom:"16px" }}>{err}</div>}
+          <button style={{ ...S.bp, width:"100%", padding:"12px", fontSize:"14px", borderRadius:"10px", opacity:loading?0.7:1 }} onClick={go} disabled={loading}>
+            {loading ? "Signing in…" : "Sign In"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -226,13 +329,18 @@ function Employees({ guards, setGuards }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // LOCATIONS
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// Build a self-contained Leaflet map as an HTML blob for use inside an iframe
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LOCATIONS
+// ═══════════════════════════════════════════════════════════════════════════════
 function Locations({ locs, setLocs }) {
   const blankL = { name:"", client:"", contactName:"", contactEmail:"", contactPhone:"", clientAddress:"", contractStart:"", contractEnd:"", notes:"", rates:[] };
   const [form, setForm] = useState(blankL);
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  // billing rate sub-form
   const blankRate = { effectiveDate:"", rate:"", notes:"" };
   const [rateForm, setRateForm] = useState(blankRate);
   const [confirmEl, ask] = useConfirm();
@@ -264,7 +372,6 @@ function Locations({ locs, setLocs }) {
     });
   }
 
-  // current rate = most recent rate whose effectiveDate <= today
   function currentRate(loc) {
     const today = new Date().toISOString().slice(0,10);
     const past = (loc.rates||[]).filter(r=>r.effectiveDate<=today).sort((a,b)=>b.effectiveDate.localeCompare(a.effectiveDate));
@@ -274,6 +381,8 @@ function Locations({ locs, setLocs }) {
   return (
     <div>
       {confirmEl}
+
+      {/* ── TOOLBAR ── */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"12px" }}>
         <span style={{ fontSize:"11px", color:"#5a8ab0" }}>{locs.length} location{locs.length!==1?"s":""}</span>
         <button style={S.bp} onClick={()=>{setForm(blankL);setEditing(null);setShowForm(s=>!s);}}>
@@ -281,6 +390,7 @@ function Locations({ locs, setLocs }) {
         </button>
       </div>
 
+      {/* ── FORM ── */}
       {showForm && (
         <div style={{ ...S.card, border:"1px solid #2563eb" }}>
           <div style={S.ct}>{editing?"Edit Location / Client":"New Location / Client"}</div>
@@ -292,7 +402,7 @@ function Locations({ locs, setLocs }) {
           <div style={{ ...S.g3, marginTop:"8px" }}>
             <div><label style={S.lbl}>Contact Email</label><input style={S.inp} type="email" value={form.contactEmail} onChange={ff("contactEmail")}/></div>
             <div><label style={S.lbl}>Contact Phone</label><input style={S.inp} type="tel" value={form.contactPhone} onChange={ff("contactPhone")}/></div>
-            <div><label style={S.lbl}>Client Address</label><input style={S.inp} value={form.clientAddress} onChange={ff("clientAddress")}/></div>
+            <div><label style={S.lbl}>Client Address</label><input style={S.inp} value={form.clientAddress} onChange={ff("clientAddress")} placeholder="123 Main St, Toronto, ON"/></div>
           </div>
           <div style={{ ...S.g2, marginTop:"8px" }}>
             <div><label style={S.lbl}>Contract Start Date</label><input style={S.inp} type="date" value={form.contractStart} onChange={ff("contractStart")}/></div>
@@ -306,7 +416,7 @@ function Locations({ locs, setLocs }) {
         </div>
       )}
 
-      {/* locations list */}
+      {/* ── LOCATION CARDS ── */}
       {locs.length===0 ? <div style={S.card}><div style={S.empty}>No locations added yet.</div></div> :
         locs.map(l => {
           const cr = currentRate(l);
@@ -314,34 +424,34 @@ function Locations({ locs, setLocs }) {
           const contractExpired = l.contractEnd && l.contractEnd < new Date().toISOString().slice(0,10);
           return (
             <div key={l.id} style={S.card}>
-              {/* header row */}
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:"8px" }}>
                 <div style={{ cursor:"pointer", flex:1 }} onClick={()=>setExpanded(isExp?null:l.id)}>
-                  <div style={{ fontWeight:"700", color:"#e0f0ff", fontSize:"13px" }}>{l.name}</div>
-                  {l.client && <div style={{ fontSize:"11px", color:"#5a8ab0", marginTop:"1px" }}>Client: {l.client}</div>}
-                  <div style={{ display:"flex", gap:"10px", marginTop:"4px", flexWrap:"wrap" }}>
-                    {cr && <span style={S.pill("#10b981")}>Current Rate: ${parseFloat(cr.rate).toFixed(2)}/hr</span>}
-                    {l.contractEnd && <span style={S.pill(contractExpired?"#ef4444":"#3b82f6")}>{contractExpired?"Contract Expired":"Contract Until"}: {l.contractEnd}</span>}
+                  <div style={{ fontWeight:"700", color:"#e0f0ff", fontSize:"13px" }}>
+                    {l.name}
                   </div>
+                  {l.client && <div style={{ fontSize:"11px", color:"#5a8ab0", marginTop:"1px" }}>Client: {l.client}</div>}
+                  {l.clientAddress && <div style={{ fontSize:"10px", color:"#3a6a8a", marginTop:"1px" }}>{l.clientAddress}</div>}
+                  <div style={{ display:"flex", gap:"8px", marginTop:"4px", flexWrap:"wrap" }}>
+                    {cr && <span style={S.pill("#10b981")}>Rate: ${parseFloat(cr.rate).toFixed(2)}/hr</span>}
+                    {l.contractEnd && <span style={S.pill(contractExpired?"#ef4444":"#3b82f6")}>{contractExpired?"Expired":"Until"}: {l.contractEnd}</span>}
+</div>
                 </div>
-                <div style={{ display:"flex", gap:"5px" }}>
+                <div style={{ display:"flex", gap:"5px", flexWrap:"wrap" }}>
                   <button style={S.bsm()} onClick={()=>edit(l)}>Edit</button>
                   <button style={S.bd} onClick={()=>del(l.id)}>Delete</button>
                   <button style={S.bsm()} onClick={()=>setExpanded(isExp?null:l.id)}>{isExp?"▲":"▼"}</button>
                 </div>
               </div>
 
-              {/* expanded details */}
               {isExp && (
                 <div style={{ marginTop:"12px", borderTop:"1px solid #1e3a5f", paddingTop:"12px" }}>
                   <div style={{ display:"flex", gap:"20px", fontSize:"11px", color:"#5a8ab0", flexWrap:"wrap", marginBottom:"14px" }}>
-                    {[["Contact",l.contactName],["Email",l.contactEmail],["Phone",l.contactPhone],["Address",l.clientAddress],["Contract Start",l.contractStart],["Contract End",l.contractEnd]].map(([label,val])=>val?(
+                    {[["Contact",l.contactName],["Email",l.contactEmail],["Phone",l.contactPhone],["Contract Start",l.contractStart],["Contract End",l.contractEnd]].map(([label,val])=>val?(
                       <div key={label}><span style={{ color:"#3a6a8a" }}>{label}: </span>{val}</div>
                     ):null)}
-                    {l.notes && <div style={{ width:"100%" }}><span style={{ color:"#3a6a8a" }}>Notes: </span>{l.notes}</div>}
+{l.notes && <div style={{ width:"100%" }}><span style={{ color:"#3a6a8a" }}>Notes: </span>{l.notes}</div>}
                   </div>
 
-                  {/* billing rate history */}
                   <div style={{ background:"#070d19", borderRadius:"7px", padding:"12px" }}>
                     <div style={{ fontSize:"10px", fontWeight:"700", color:"#5a8ab0", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"8px" }}>Billing Rate History</div>
                     {(l.rates||[]).length===0 && <div style={{ fontSize:"11px", color:"#3a6a8a", marginBottom:"8px" }}>No rates recorded yet.</div>}
@@ -355,7 +465,6 @@ function Locations({ locs, setLocs }) {
                         <button style={S.bd} onClick={()=>delRate(l.id,r.id)}>✕</button>
                       </div>
                     ))}
-                    {/* add new rate */}
                     <div style={{ marginTop:"10px" }}>
                       <div style={{ fontSize:"9px", color:"#3a6a8a", marginBottom:"5px", textTransform:"uppercase", letterSpacing:"0.5px" }}>Add New Rate</div>
                       <div style={{ display:"flex", gap:"7px", flexWrap:"wrap", alignItems:"flex-end" }}>
@@ -1517,11 +1626,26 @@ function Invoices({ locs }) {
 // APP ROOT
 // ═══════════════════════════════════════════════════════════════════════════════
 const TABS = [
-  {id:"emp",label:"🪪 Employees"},{id:"loc",label:"📍 Locations"},
-  {id:"cal",label:"📅 Calendar"},{id:"rep",label:"📊 Reports"},
-  {id:"his",label:"🗂 History"},{id:"inv",label:"🧾 Invoices"},
-  {id:"pay",label:"💰 Payments"},{id:"sal",label:"🎯 Sales"},
+  { id:"emp",  label:"Employees",  icon:"👤", section:"Operations" },
+  { id:"loc",  label:"Locations",  icon:"📍", section:"Operations" },
+  { id:"cal",  label:"Calendar",   icon:"📅", section:"Operations" },
+  { id:"rep",  label:"Reports",    icon:"📊", section:"Operations" },
+  { id:"his",  label:"History",    icon:"🗂",  section:"Operations" },
+  { id:"inv",  label:"Invoices",   icon:"🧾", section:"Finance" },
+  { id:"pay",  label:"Payments",   icon:"💰", section:"Finance" },
+  { id:"sal",  label:"Sales",      icon:"🎯", section:"Finance" },
 ];
+
+const PAGE_META = {
+  emp: { title:"Employees", subtitle:"Manage your employee records and personnel information" },
+  loc: { title:"Locations", subtitle:"Client sites, contracts, and billing rates" },
+  cal: { title:"Calendar", subtitle:"Schedules, shifts, and daily attendance" },
+  rep: { title:"Reports", subtitle:"Export hours by location and time period" },
+  his: { title:"History", subtitle:"Saved period reports" },
+  inv: { title:"Invoices", subtitle:"Create and manage client invoices" },
+  pay: { title:"Payments", subtitle:"Track payment receipts for accounting" },
+  sal: { title:"Sales", subtitle:"Lead pipeline and client acquisition" },
+};
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -1542,18 +1666,54 @@ export default function App() {
   }, []);
 
   if (!loggedIn) return <Login onLogin={() => setLoggedIn(true)} />;
-  if (!loaded) return <div style={{ ...S.app, display:"flex", alignItems:"center", justifyContent:"center", height:"100vh" }}><div style={{ color:"#3a6a8a", letterSpacing:"2px" }}>LOADING…</div></div>;
+  if (!loaded) return (
+    <div style={{ ...S.app, display:"flex", alignItems:"center", justifyContent:"center", height:"100vh" }}>
+      <div style={{ textAlign:"center" }}>
+        <div style={{ width:"40px", height:"40px", background:"linear-gradient(135deg,#1d4ed8,#3b82f6)", borderRadius:"10px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"20px", margin:"0 auto 16px" }}>🛡</div>
+        <div style={{ color:T.textSub, fontSize:"13px" }}>Loading SecureOps…</div>
+      </div>
+    </div>
+  );
+
+  const sections = ["Operations", "Finance"];
+  const meta = PAGE_META[tab];
 
   return (
     <div style={S.app}>
-      <header style={S.hdr}>
-        <div style={S.logo}>🛡 SECURE<span style={{ color:"#3b82f6" }}>OPS</span></div>
-        <nav style={{ display:"flex", gap:"2px", marginLeft:"auto", flexWrap:"wrap" }}>
-          {TABS.map(t => <button key={t.id} style={S.nb(tab===t.id)} onClick={() => setTab(t.id)}>{t.label}</button>)}
-          <button style={{ ...S.nb(false), color:"#f87171", marginLeft:"6px" }} onClick={() => setLoggedIn(false)}>Sign Out</button>
+      {/* ── SIDEBAR ── */}
+      <aside style={S.sidebar}>
+        <div style={S.sidebarLogo}>
+          <div style={S.sidebarLogoIcon}>🛡</div>
+          <div>
+            <div style={S.sidebarLogoText}>SecureOps</div>
+            <div style={{ fontSize:"10px", color:T.textMute }}>Management</div>
+          </div>
+        </div>
+        <nav style={S.sidebarNav}>
+          {sections.map(section => (
+            <div key={section}>
+              <div style={S.sidebarSection}>{section}</div>
+              {TABS.filter(t=>t.section===section).map(t => (
+                <button key={t.id} style={S.navItem(tab===t.id)} onClick={() => setTab(t.id)}>
+                  <span style={S.navIcon}>{t.icon}</span>
+                  <span>{t.label}</span>
+                </button>
+              ))}
+            </div>
+          ))}
         </nav>
-      </header>
+        <div style={S.sidebarBottom}>
+          <button style={S.signOutBtn} onClick={() => setLoggedIn(false)}>
+            <span style={S.navIcon}>↩</span>
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ── MAIN CONTENT ── */}
       <main style={S.main}>
+        <div style={S.pageTitle}>{meta.title}</div>
+        <div style={S.pageSubtitle}>{meta.subtitle}</div>
         {tab==="emp" && <Employees guards={guards} setGuards={setGuards} />}
         {tab==="loc" && <Locations locs={locs} setLocs={setLocs} />}
         {tab==="cal" && <Calendar guards={guards} locs={locs} scs={scs} setScs={setScs} ovs={ovs} setOvs={setOvs} />}
