@@ -8,8 +8,7 @@ document.head.appendChild(fontLink);
 
 // ─── storage ──────────────────────────────────────────────────────────────────
 const K = { g:"so_g", l:"so_l", sc:"so_sc", ov:"so_ov", hi:"so_hi", pay:"so_pay", leads:"so_lds", inv:"so_inv", co:"so_co" };
-const load = async k => { try { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; } catch { return null; } };
-const save = async (k, v) => { try { await window.storage.set(k, JSON.stringify(v)); } catch {} };
+import { load, save } from './supabase.js';
 
 // ─── utils ────────────────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).slice(2, 9);
