@@ -483,6 +483,8 @@ function Locations({ locs, setLocs }) {
   const blankRate = { effectiveDate:"", rate:"", notes:"" };
   const [rateForm, setRateForm] = useState(blankRate);
   const [confirmEl, ask] = useConfirm();
+  const [saved, setSaved] = useState(false);
+  const formRef = useRef(null);
 
   const ff = k => e => setForm(p=>({...p,[k]:e.target.value}));
 
@@ -491,16 +493,20 @@ function Locations({ locs, setLocs }) {
       alert("Please enter at least a Client / Company Name.");
       return;
     }
-    // If location name left blank, use client name as the location name
     const entry = {
       ...form,
       id: editing || uid(),
       name: form.name.trim() || form.client.trim(),
     };
     const u = editing ? locs.map(l=>l.id===editing?entry:l) : [...locs, entry];
-    setLocs(u); save(K.l, u); setForm(blankL); setEditing(null); setShowForm(false);
+    setLocs(u); save(K.l, u); setForm(blankL);
+    if (editing) { setSaved(true); setTimeout(()=>setSaved(false), 2500); }
+    setEditing(null); setShowForm(false);
   }
-  function edit(l) { setForm({...blankL,...l, rates:l.rates||[]}); setEditing(l.id); setShowForm(true); setExpanded(null); }
+  function edit(l) {
+    setForm({...blankL,...l, rates:l.rates||[]}); setEditing(l.id); setShowForm(true); setExpanded(null);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior:"smooth", block:"start" }), 50);
+  }
   function del(id) { ask("Delete this location/client? This cannot be undone.", () => { const u=locs.filter(l=>l.id!==id); setLocs(u); save(K.l,u); }); }
 
   function addRate(locId) {
@@ -528,9 +534,14 @@ function Locations({ locs, setLocs }) {
   return (
     <div>
       {confirmEl}
+      {saved && (
+        <div style={{ position:"fixed", bottom:"28px", right:"28px", background:T.green, color:"#fff", padding:"12px 20px", borderRadius:"10px", fontSize:"13px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.4)", zIndex:999, display:"flex", alignItems:"center", gap:"8px" }}>
+          ✓ Changes saved
+        </div>
+      )}
 
       {/* ── TOOLBAR ── */}
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"12px" }}>
+      <div ref={formRef} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"12px" }}>
         <span style={{ fontSize:"11px", color:"#5a8ab0" }}>{locs.length} location{locs.length!==1?"s":""}</span>
         <button style={S.bp} onClick={()=>{setForm(blankL);setEditing(null);setShowForm(s=>!s);}}>
           {showForm?"Cancel":"+ Add Location"}
