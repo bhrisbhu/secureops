@@ -21,6 +21,7 @@ const dStr = (y,m,d) => `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStar
 const pDate = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); };
 const toMin = t => { if (!t) return 0; const [h,m] = t.split(":").map(Number); return h*60+(m||0); };
 const calcH = (s,e) => { let a=toMin(s),b=toMin(e); if(b<=a)b+=1440; return Math.round((b-a)/60*100)/100; };
+const shiftLabel = t => { if(!t)return""; const m=toMin(t); if(m>=960)return"🌆 Evening"; if(m<480)return"🌙 Overnight"; return""; };
 
 function effShift(ds, gid, scs, ovs) {
   const dow = pDate(ds).getDay();
@@ -773,7 +774,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
               <Inp label="Shift Start" type="time" value={sf.startTime} onChange={e=>setSf(p=>({...p,startTime:e.target.value}))} />
               <Inp label="Shift End" type="time" value={sf.endTime} onChange={e=>setSf(p=>({...p,endTime:e.target.value}))} />
             </div>
-            {sf.startTime&&sf.endTime&&<div style={{ marginTop:"4px", fontSize:"10px", color:"#5a8ab0" }}>→ {calcH(sf.startTime,sf.endTime)}h {toMin(sf.endTime)<toMin(sf.startTime)?"(overnight)":""}</div>}
+            {sf.startTime&&sf.endTime&&<div style={{ marginTop:"4px", fontSize:"10px", color:"#5a8ab0" }}>→ {calcH(sf.startTime,sf.endTime)}h {shiftLabel(sf.startTime) ? <span style={{ marginLeft:"4px" }}>{shiftLabel(sf.startTime)}</span> : ""}</div>}
             <div style={{ ...S.g2, marginTop:"9px" }}>
               <div>
                 <label style={{ ...S.lbl, color:"#60a5fa" }}>Effective From * <span style={{ color:"#3a6a8a", textTransform:"none", fontWeight:"400" }}>(schedule starts on this date)</span></label>
@@ -813,7 +814,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
                         <td style={S.td}><span style={{ color:gc(gIdx(sc.guardId)), fontWeight:"700" }}>{gName(sc.guardId)}</span></td>
                         <td style={S.td}>{lName(sc.locationId)}</td>
                         <td style={S.td}>{sc.days.map(d=>DAYS[d]).join(", ")}</td>
-                        <td style={S.td}>{sc.startTime}–{sc.endTime}{toMin(sc.endTime)<toMin(sc.startTime)?" 🌙":""}</td>
+                        <td style={S.td}>{sc.startTime}–{sc.endTime}{shiftLabel(sc.startTime) ? " "+shiftLabel(sc.startTime) : ""}</td>
                         <td style={S.td}>{sc.hours}h</td>
                         <td style={S.td}>
                           <span style={S.pill(isActive&&!isPast ? "#60a5fa" : "#3a6a8a")}>
