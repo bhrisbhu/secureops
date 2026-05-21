@@ -660,8 +660,8 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
   const [daySearch, setDaySearch] = useState("");
   const [bulk, setBulk] = useState({ guardId:"", fromDate:"", toDate:"" });
   const [bulkResult, setBulkResult] = useState(null);
-  // Mass stat holiday tool
   const [statDate, setStatDate] = useState("");
+  const [scSearch, setScSearch] = useState("");
 
   const dim = new Date(yr,mo+1,0).getDate();
   const fd = new Date(yr,mo,1).getDay();
@@ -864,44 +864,52 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
             <button style={{ ...S.bp, marginTop:"9px" }} onClick={addSc}>Save Schedule</button>
           </div>
           <div style={S.card}>
-            <div style={S.ct}>All Recurring Schedules ({scs.length})</div>
-            {scs.length===0 ? <div style={S.empty}>None.</div> : (
-              <table style={S.tbl}>
-                <thead><tr>{["Employee","Location","Days","Shift","Hours","Active From","Active To",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-                <tbody>
-                  {[...scs].sort((a,b)=>{
-                    const na=guards.find(g=>g.id===a.guardId)?.name||"";
-                    const nb=guards.find(g=>g.id===b.guardId)?.name||"";
-                    return na!==nb ? na.localeCompare(nb) : (a.effectiveFrom||"").localeCompare(b.effectiveFrom||"");
-                  }).map(sc => {
-                    const today = new Date().toISOString().slice(0,10);
-                    const isActive = (!sc.effectiveFrom||today>=sc.effectiveFrom) && (!sc.effectiveTo||today<=sc.effectiveTo);
-                    const isPast   = sc.effectiveTo && today > sc.effectiveTo;
-                    return (
-                      <tr key={sc.id} style={{ opacity: isPast ? 0.5 : 1 }}>
-                        <td style={S.td}><span style={{ color:gc(gIdx(sc.guardId)), fontWeight:"700" }}>{gName(sc.guardId)}</span></td>
-                        <td style={S.td}>{lName(sc.locationId)}</td>
-                        <td style={S.td}>{sc.days.map(d=>DAYS[d]).join(", ")}</td>
-                        <td style={S.td}>{sc.startTime}–{sc.endTime}{shiftLabel(sc.startTime) ? " "+shiftLabel(sc.startTime) : ""}</td>
-                        <td style={S.td}>{sc.hours}h</td>
-                        <td style={S.td}>
-                          <span style={S.pill(isActive&&!isPast ? "#60a5fa" : "#3a6a8a")}>
-                            {sc.effectiveFrom||"—"}
-                          </span>
-                        </td>
-                        <td style={S.td}>
-                          {sc.effectiveTo
-                            ? <span style={S.pill(isPast?"#6b7280":"#f59e0b")}>{sc.effectiveTo}{isPast?" (ended)":""}</span>
-                            : <span style={S.pill("#10b981")}>Ongoing</span>
-                          }
-                        </td>
-                        <td style={S.td}><button style={S.bd} onClick={()=>delSc(sc.id)}>Remove</button></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"12px" }}>
+              <div style={S.ct}>All Recurring Schedules ({scs.length})</div>
+              {scs.length > 0 && (
+                <input style={{ ...S.inp, width:"200px" }} placeholder="Search employee or location…"
+                  value={scSearch} onChange={e=>setScSearch(e.target.value)}/>
+              )}
+            </div>
+            {scs.length===0 ? <div style={S.empty}>None.</div> : (() => {
+              const q = scSearch.toLowerCase();
+              const filtered = [...scs].filter(sc =>
+                !q ||
+                (guards.find(g=>g.id===sc.guardId)?.name||"").toLowerCase().includes(q) ||
+                (locs.find(l=>l.id===sc.locationId)?.name||"").toLowerCase().includes(q) ||
+                (locs.find(l=>l.id===sc.locationId)?.client||"").toLowerCase().includes(q)
+              ).sort((a,b)=>{
+                const na=guards.find(g=>g.id===a.guardId)?.name||"";
+                const nb=guards.find(g=>g.id===b.guardId)?.name||"";
+                return na!==nb ? na.localeCompare(nb) : (a.effectiveFrom||"").localeCompare(b.effectiveFrom||"");
+              });
+              return filtered.length === 0 ? (
+                <div style={S.empty}>No schedules match "{scSearch}"</div>
+              ) : (
+                <table style={S.tbl}>
+                  <thead><tr>{["Employee","Location","Days","Shift","Hours","Active From","Active To",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {filtered.map(sc => {
+                      const today = new Date().toISOString().slice(0,10);
+                      const isActive = (!sc.effectiveFrom||today>=sc.effectiveFrom) && (!sc.effectiveTo||today<=sc.effectiveTo);
+                      const isPast   = sc.effectiveTo && today > sc.effectiveTo;
+                      return (
+                        <tr key={sc.id} style={{ opacity: isPast ? 0.5 : 1 }}>
+                          <td style={S.td}><span style={{ color:gc(gIdx(sc.guardId)), fontWeight:"700" }}>{gName(sc.guardId)}</span></td>
+                          <td style={S.td}>{lName(sc.locationId)}</td>
+                          <td style={S.td}>{sc.days.map(d=>DAYS[d]).join(", ")}</td>
+                          <td style={S.td}>{sc.startTime}–{sc.endTime}{shiftLabel(sc.startTime) ? " "+shiftLabel(sc.startTime) : ""}</td>
+                          <td style={S.td}>{sc.hours}h</td>
+                          <td style={S.td}><span style={S.pill(isActive&&!isPast ? T.blue : T.textMute)}>{sc.effectiveFrom||"—"}</span></td>
+                          <td style={S.td}>{sc.effectiveTo ? <span style={S.pill(isPast?"#6b7280":T.amber)}>{sc.effectiveTo}{isPast?" (ended)":""}</span> : <span style={S.pill(T.green)}>Ongoing</span>}</td>
+                          <td style={S.td}><button style={S.bd} onClick={()=>delSc(sc.id)}>Remove</button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -1184,7 +1192,39 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
         </div>
       )}
       {sub==="cal" && (
-        <div style={{ display:"grid", gridTemplateColumns:sel?"1fr 320px":"1fr", gap:"14px", alignItems:"start" }}>
+        <div>
+          {/* ── UNSCHEDULED EMPLOYEE ALERT ── */}
+          {(() => {
+            const activeGuards = guards.filter(g => g.status === "Active");
+            const unscheduled = activeGuards.filter(g => {
+              // Check if this employee has any shift in the current month
+              for (let d = 1; d <= dim; d++) {
+                const ds = dStr(yr, mo, d);
+                const sh = effShift(ds, g.id, scs, ovs);
+                if (sh && !sh.absent && ((sh.regularHours||sh.hours||0) + (sh.statHours||0)) > 0) return false;
+              }
+              return true;
+            });
+            if (unscheduled.length === 0) return null;
+            return (
+              <div style={{ background:"#1a0f02", border:`1px solid ${T.amber}66`, borderRadius:"10px", padding:"12px 16px", marginBottom:"14px", display:"flex", alignItems:"flex-start", gap:"10px" }}>
+                <span style={{ fontSize:"18px", marginTop:"1px" }}>⚠️</span>
+                <div>
+                  <div style={{ fontWeight:"700", color:T.amber, fontSize:"13px", marginBottom:"4px" }}>
+                    {unscheduled.length} active employee{unscheduled.length!==1?" are":" is"} unscheduled in {MONTHS[mo]} {yr}
+                  </div>
+                  <div style={{ fontSize:"12px", color:T.textSub, lineHeight:1.6 }}>
+                    {unscheduled.map(g=>g.name).join(", ")}
+                  </div>
+                  <div style={{ fontSize:"11px", color:T.textMute, marginTop:"4px" }}>
+                    Go to the 🔁 Schedules tab to create a recurring schedule, or click a day on the calendar to add them manually.
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div style={{ display:"grid", gridTemplateColumns:sel?"1fr 320px":"1fr", gap:"14px", alignItems:"start" }}>
           <div style={S.card}>
             <F style={{ justifyContent:"space-between", marginBottom:"12px" }}>
               <button style={S.bo} onClick={prev}>‹</button>
@@ -1258,6 +1298,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
               </div>
             </div>
           )}
+          </div>
         </div>
       )}
     </div>
