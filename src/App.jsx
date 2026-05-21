@@ -654,10 +654,14 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
   const [sf, setSf] = useState({ guardId:"", locationId:"", days:[], startTime:"", endTime:"", effectiveFrom:"", effectiveTo:"" });
   const [adjG, setAdjG] = useState(null);
   const [adj, setAdj] = useState({ startTime:"", endTime:"", regularHours:"", statHours:"", absent:false, locationId:"", notes:"" });
+  const [adjSaved, setAdjSaved] = useState(false);
+  const [scSaved, setScSaved] = useState(false);
   const [confirmEl, ask] = useConfirm();
   const [daySearch, setDaySearch] = useState("");
   const [bulk, setBulk] = useState({ guardId:"", fromDate:"", toDate:"" });
-  const [bulkResult, setBulkResult] = useState(null); // { deleted, previewing }
+  const [bulkResult, setBulkResult] = useState(null);
+  // Mass stat holiday tool
+  const [statDate, setStatDate] = useState("");
 
   const dim = new Date(yr,mo+1,0).getDate();
   const fd = new Date(yr,mo,1).getDay();
@@ -673,6 +677,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
     }
     const u = [...scs, { ...sf, id:uid(), hours:calcH(sf.startTime,sf.endTime), days:sf.days.map(Number) }];
     setScs(u); save(K.sc,u); setSf({ guardId:"",locationId:"",days:[],startTime:"",endTime:"",effectiveFrom:"",effectiveTo:"" });
+    setScSaved(true); setTimeout(()=>setScSaved(false), 2500);
   };
   const delSc = id => ask(
     "Remove this recurring schedule?\n\nAll past days from this schedule will be permanently saved so your historical hours are not lost.",
@@ -736,6 +741,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
     const base = ovs.filter(o=>!(o.date===ds&&o.guardId===adjG.id));
     const ov = { id:uid(), date:ds, guardId:adjG.id, locationId:adj.locationId, startTime:adj.startTime, endTime:adj.endTime, regularHours:adj.absent?0:(parseFloat(adj.regularHours)||0), statHours:adj.absent?0:(parseFloat(adj.statHours)||0), absent:adj.absent, notes:adj.notes };
     const u=[...base,ov]; setOvs(u); save(K.ov,u); setAdjG(null);
+    setAdjSaved(true); setTimeout(()=>setAdjSaved(false), 2500);
   };
   const remAdj = gid => ask("Reset this day's adjustment back to scheduled hours?", ()=>{ const ds=dStr(yr,mo,sel); const u=ovs.filter(o=>!(o.date===ds&&o.guardId===gid)); setOvs(u); save(K.ov,u); });
 
@@ -760,8 +766,70 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
   return (
     <div>
       {confirmEl}
+
+      {/* ── SAVED TOASTS ── */}
+      {adjSaved && (
+        <div style={{ position:"fixed", bottom:"28px", right:"28px", background:T.green, color:"#fff", padding:"12px 20px", borderRadius:"10px", fontSize:"13px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.4)", zIndex:9998, display:"flex", alignItems:"center", gap:"8px" }}>
+          ✓ Hours saved
+        </div>
+      )}
+      {scSaved && (
+        <div style={{ position:"fixed", bottom:"28px", right:"28px", background:T.blue, color:"#fff", padding:"12px 20px", borderRadius:"10px", fontSize:"13px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.4)", zIndex:9998, display:"flex", alignItems:"center", gap:"8px" }}>
+          ✓ Schedule created
+        </div>
+      )}
+
+      {/* ── ADJUST MODAL ── */}
+      {adjG && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9990, backdropFilter:"blur(3px)" }}>
+          <div style={{ background:T.surface2, border:`1px solid ${T.blue}`, borderRadius:"14px", padding:"24px 28px", width:"100%", maxWidth:"460px", boxShadow:"0 20px 60px rgba(0,0,0,0.6)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"16px" }}>
+              <div style={{ fontWeight:"700", color:T.text, fontSize:"15px" }}>
+                Adjust: <span style={{ color:gc(gIdx(adjG.id)) }}>{adjG.name}</span>
+              </div>
+              <div style={{ fontSize:"12px", color:T.textSub }}>{selDs} ({selDs ? DAYS[new Date(selDs+"T00:00:00").getDay()] : ""})</div>
+            </div>
+            <label style={{ display:"flex", alignItems:"center", gap:"8px", fontSize:"13px", color:T.text, cursor:"pointer", marginBottom:"14px" }}>
+              <input type="checkbox" checked={adj.absent} onChange={e=>setAdj(p=>({...p,absent:e.target.checked}))} style={{ width:"16px", height:"16px" }}/>
+              Mark as Absent (no hours)
+            </label>
+            {!adj.absent && (
+              <div>
+                <div style={S.g2}>
+                  <Inp label="Shift Start" type="time" value={adj.startTime} onChange={e=>setAdj(p=>({...p,startTime:e.target.value}))}/>
+                  <Inp label="Shift End"   type="time" value={adj.endTime}   onChange={e=>setAdj(p=>({...p,endTime:e.target.value}))}/>
+                </div>
+                <div style={{ ...S.g2, marginTop:"10px" }}>
+                  <Inp label="Regular Hours" type="number" step="0.5" value={adj.regularHours} onChange={e=>setAdj(p=>({...p,regularHours:e.target.value}))} placeholder="0"/>
+                  <div>
+                    <label style={{ ...S.lbl, color:T.amber }}>Stat Holiday Hours (1.5×)</label>
+                    <input style={{ ...S.inp, borderColor:"#92400e" }} type="number" step="0.5" value={adj.statHours} onChange={e=>setAdj(p=>({...p,statHours:e.target.value}))} placeholder="0"/>
+                  </div>
+                </div>
+                <div style={{ marginTop:"6px", fontSize:"11px", color:T.textMute }}>
+                  Night shift crossing into stat? Enter only the hours <em>after midnight</em> on the stat day as stat hours.
+                </div>
+                <div style={{ marginTop:"10px" }}>
+                  <Sel label="Location" value={adj.locationId} onChange={e=>setAdj(p=>({...p,locationId:e.target.value}))}>
+                    <option value="">Select…</option>
+                    {locs.map(l=><option key={l.id} value={l.id}>{l.name}</option>)}
+                  </Sel>
+                </div>
+                <div style={{ marginTop:"10px" }}>
+                  <Inp label="Notes" value={adj.notes} onChange={e=>setAdj(p=>({...p,notes:e.target.value}))} placeholder="Reason for adjustment…"/>
+                </div>
+              </div>
+            )}
+            <F style={{ marginTop:"16px" }}>
+              <button style={S.bp} onClick={saveAdj}>Save Hours</button>
+              <button style={S.bo} onClick={()=>setAdjG(null)}>Cancel</button>
+            </F>
+          </div>
+        </div>
+      )}
+
       <F style={{ marginBottom:"12px" }}>
-        {[["cal","📅 Calendar"],["sch","🔁 Schedules"],["bulk","🗑 Bulk Delete Hours"]].map(([t,l])=><button key={t} style={{ ...S.bp, background:sub===t?"#1d4ed8":"transparent", color:sub===t?"#fff":"#4a8ab0", border:"1px solid #1e3a5f" }} onClick={()=>{setSub(t);setBulkResult(null);}}>{l}</button>)}
+        {[["cal","📅 Calendar"],["sch","🔁 Schedules"],["stat","⭐ Stat Holiday"],["bulk","🗑 Bulk Delete Hours"]].map(([t,l])=><button key={t} style={{ ...S.bp, background:sub===t?"#1d4ed8":"transparent", color:sub===t?"#fff":"#4a8ab0", border:"1px solid #1e3a5f" }} onClick={()=>{setSub(t);setBulkResult(null);}}>{l}</button>)}
       </F>
 
       {sub==="sch" && (
@@ -834,6 +902,164 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
                 </tbody>
               </table>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── STAT HOLIDAY MASS ADJUST ── */}
+      {sub==="stat" && (
+        <div>
+          <div style={{ ...S.card, border:`1px solid ${T.amber}44` }}>
+            <div style={S.ct}>⭐ Mass Stat Holiday — Apply to All Working Employees</div>
+            <div style={{ fontSize:"12px", color:T.textSub, marginBottom:"14px", lineHeight:1.7 }}>
+              Select a statutory holiday date. The tool finds employees working <strong style={{ color:T.text }}>on</strong> the stat day, 
+              plus any night-shift employees whose shift <strong style={{ color:T.text }}>started the day before and crosses midnight</strong> into the stat holiday.
+              Hours are automatically split: regular hours before midnight, stat hours after midnight.
+            </div>
+            <div style={{ maxWidth:"260px" }}>
+              <label style={S.lbl}>Statutory Holiday Date *</label>
+              <input style={S.inp} type="date" value={statDate} onChange={e=>{ setStatDate(e.target.value); }}/>
+            </div>
+
+            {statDate && (() => {
+              // Helper dates
+              const prevDate = (() => { const d=new Date(statDate+"T00:00:00"); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); })();
+              const nextDate = (() => { const d=new Date(statDate+"T00:00:00"); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
+
+              // 1. Employees scheduled ON the stat day itself
+              const statShifts = shiftsOn(statDate, guards, scs, ovs)
+                .filter(s => !s.absent && ((s.regularHours||s.hours||0)+(s.statHours||0))>0);
+
+              // 2. Employees with a shift starting the PREVIOUS day that crosses midnight INTO the stat day
+              const prevShifts = shiftsOn(prevDate, guards, scs, ovs)
+                .filter(s => !s.absent && s.startTime && s.endTime && toMin(s.endTime) < toMin(s.startTime));
+              const crossingIn = prevShifts
+                .filter(s => !statShifts.find(x=>x.guardId===s.guardId))
+                .map(s => {
+                  const statMins = toMin(s.endTime);
+                  const regularMins = (1440 - toMin(s.startTime));
+                  return { ...s, isCrossingIn:true, prevDate, regularHoursOnPrev:Math.round(regularMins/60*100)/100, statHoursOnStat:Math.round(statMins/60*100)/100 };
+                })
+                .filter(s => s.statHoursOnStat > 0);
+
+              // 3. Employees with a shift starting ON the stat day that crosses midnight INTO the next day
+              //    These get: stat hours on the stat day (start → midnight), regular hours on next day (midnight → end)
+              const crossingOut = statShifts
+                .filter(s => s.startTime && s.endTime && toMin(s.endTime) < toMin(s.startTime));
+
+              const totalEligible = statShifts.length + crossingIn.length;
+
+              return (
+                <div style={{ marginTop:"14px" }}>
+                  <div style={{ fontSize:"11px", fontWeight:"600", color:T.textSub, marginBottom:"10px" }}>
+                    {totalEligible} employee{totalEligible!==1?"s":""} affected by stat holiday on {statDate}
+                    {crossingOut.length>0 && <span style={{ color:T.amber, marginLeft:"8px" }}>({crossingOut.length} shift{crossingOut.length!==1?"s":""} cross into {nextDate})</span>}
+                  </div>
+                  {totalEligible === 0 ? (
+                    <div style={{ fontSize:"12px", color:T.textMute }}>No employees scheduled on or crossing into this date.</div>
+                  ) : (
+                    <>
+                      <div style={{ background:T.bg, borderRadius:"8px", border:`1px solid ${T.border}`, overflow:"hidden", marginBottom:"12px" }}>
+                        <table style={S.tbl}>
+                          <thead><tr>{["Employee","Shift","Type","Stat Hrs ★ (stat day)","Reg Hrs (next day)"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+                          <tbody>
+                            {/* Employees working on the stat day — shift stays within stat day */}
+                            {statShifts.filter(s => !crossingOut.find(x=>x.guardId===s.guardId)).map(s => {
+                              const total = (s.regularHours||s.hours||0)+(s.statHours||0);
+                              return (
+                                <tr key={"stat_"+s.guardId}>
+                                  <td style={S.td}><span style={{ fontWeight:"700", color:gc(gIdx(s.guardId)) }}>{s.guard.name}</span></td>
+                                  <td style={S.td}>{s.startTime&&s.endTime?`${s.startTime}–${s.endTime}`:"—"}</td>
+                                  <td style={S.td}><span style={S.pill(T.amber)}>On stat day</span></td>
+                                  <td style={S.td}><span style={{ color:T.amber, fontWeight:"700" }}>{total.toFixed(2)}h ★</span></td>
+                                  <td style={S.td}><span style={{ color:T.textMute }}>—</span></td>
+                                </tr>
+                              );
+                            })}
+                            {/* Employees on stat day whose shift crosses INTO the next regular day */}
+                            {crossingOut.map(s => {
+                              const statMins = 1440 - toMin(s.startTime); // from start to midnight
+                              const regMins  = toMin(s.endTime);          // from midnight to end
+                              const statH = Math.round(statMins/60*100)/100;
+                              const regH  = Math.round(regMins/60*100)/100;
+                              return (
+                                <tr key={"out_"+s.guardId} style={{ background:"#140d05" }}>
+                                  <td style={S.td}><span style={{ fontWeight:"700", color:gc(gIdx(s.guardId)) }}>{s.guard.name}</span></td>
+                                  <td style={S.td}>{s.startTime}–{s.endTime} <span style={{ fontSize:"9px", color:T.textMute }}>(ends {nextDate})</span></td>
+                                  <td style={S.td}><span style={S.pill(T.amber)}>🌅 Crosses into {nextDate}</span></td>
+                                  <td style={S.td}><span style={{ color:T.amber, fontWeight:"700" }}>{statH.toFixed(2)}h ★</span></td>
+                                  <td style={S.td}><span style={{ color:T.textSub }}>{regH.toFixed(2)}h reg (on {nextDate})</span></td>
+                                </tr>
+                              );
+                            })}
+                            {/* Employees crossing IN from previous night */}
+                            {crossingIn.map(s => (
+                              <tr key={"cross_"+s.guardId} style={{ background:"#0d1a10" }}>
+                                <td style={S.td}><span style={{ fontWeight:"700", color:gc(gIdx(s.guardId)) }}>{s.guard.name}</span></td>
+                                <td style={S.td}>{s.startTime}–{s.endTime} <span style={{ fontSize:"9px", color:T.textMute }}>(starts {prevDate})</span></td>
+                                <td style={S.td}><span style={S.pill(T.purple)}>🌙 Crosses from {prevDate}</span></td>
+                                <td style={S.td}><span style={{ color:T.amber, fontWeight:"700" }}>{s.statHoursOnStat.toFixed(2)}h ★</span></td>
+                                <td style={S.td}><span style={{ color:T.textSub }}>{s.regularHoursOnPrev.toFixed(2)}h reg (on {prevDate})</span></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <button
+                        style={{ ...S.bp, background:"linear-gradient(135deg,#92400e,#b45309)", boxShadow:"0 2px 8px #f59e0b30" }}
+                        onClick={() => ask(
+                          `Apply stat hours to ${totalEligible} employee${totalEligible!==1?"s":""}? Hours will be split automatically for shifts crossing midnight.`,
+                          () => {
+                            const newOvs = [...ovs];
+
+                            // Employees working fully within the stat day
+                            statShifts.filter(s=>!crossingOut.find(x=>x.guardId===s.guardId)).forEach(s => {
+                              const total = (s.regularHours||s.hours||0)+(s.statHours||0);
+                              const idx = newOvs.findIndex(o=>o.date===statDate&&o.guardId===s.guardId);
+                              if (idx!==-1) newOvs.splice(idx,1);
+                              newOvs.push({ id:uid(), date:statDate, guardId:s.guardId, locationId:s.locationId||"", startTime:s.startTime||"", endTime:s.endTime||"", regularHours:0, statHours:total, absent:false, notes:`Stat holiday — ${statDate}` });
+                            });
+
+                            // Employees on stat day crossing INTO next regular day
+                            crossingOut.forEach(s => {
+                              const statMins = 1440 - toMin(s.startTime);
+                              const regMins  = toMin(s.endTime);
+                              const statH = Math.round(statMins/60*100)/100;
+                              const regH  = Math.round(regMins/60*100)/100;
+                              // Stat day: from start to midnight
+                              const idx = newOvs.findIndex(o=>o.date===statDate&&o.guardId===s.guardId);
+                              if (idx!==-1) newOvs.splice(idx,1);
+                              newOvs.push({ id:uid(), date:statDate, guardId:s.guardId, locationId:s.locationId||"", startTime:s.startTime||"", endTime:"23:59", regularHours:0, statHours:statH, absent:false, notes:`Stat holiday — ${statDate} (shift crosses into ${nextDate})` });
+                              // Next day: from midnight to shift end
+                              const nIdx = newOvs.findIndex(o=>o.date===nextDate&&o.guardId===s.guardId);
+                              if (nIdx!==-1) newOvs.splice(nIdx,1);
+                              newOvs.push({ id:uid(), date:nextDate, guardId:s.guardId, locationId:s.locationId||"", startTime:"00:00", endTime:s.endTime||"", regularHours:regH, statHours:0, absent:false, notes:`Regular hours — continuation of stat shift from ${statDate}` });
+                            });
+
+                            // Employees crossing IN from previous night
+                            crossingIn.forEach(s => {
+                              const prevIdx = newOvs.findIndex(o=>o.date===prevDate&&o.guardId===s.guardId);
+                              if (prevIdx!==-1) newOvs.splice(prevIdx,1);
+                              newOvs.push({ id:uid(), date:prevDate, guardId:s.guardId, locationId:s.locationId||"", startTime:s.startTime||"", endTime:"23:59", regularHours:s.regularHoursOnPrev, statHours:0, absent:false, notes:`Night shift — stat holiday split (regular portion)` });
+                              const statIdx = newOvs.findIndex(o=>o.date===statDate&&o.guardId===s.guardId);
+                              if (statIdx!==-1) newOvs.splice(statIdx,1);
+                              newOvs.push({ id:uid(), date:statDate, guardId:s.guardId, locationId:s.locationId||"", startTime:"00:00", endTime:s.endTime||"", regularHours:0, statHours:s.statHoursOnStat, absent:false, notes:`Stat holiday — ${statDate} (crossed from night shift on ${prevDate})` });
+                            });
+
+                            setOvs(newOvs); save(K.ov, newOvs);
+                            setAdjSaved(true); setTimeout(()=>setAdjSaved(false), 2500);
+                            setStatDate("");
+                          }
+                        )}
+                      >
+                        ⭐ Apply Stat Hours to {totalEligible} Employee{totalEligible!==1?"s":""}
+                      </button>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -1030,19 +1256,6 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
                   <select style={S.sel} value="" onChange={e=>{ if(e.target.value){ const g=guards.find(x=>x.id===e.target.value); if(g) openAdj(g); } }}><option value="">Select…</option>{unsch.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
                 </div>
               </div>
-              {adjG && (
-                <div style={{ ...S.card, border:"1px solid #2563eb" }}>
-                  <div style={S.ct}>Adjust: {adjG.name}</div>
-                  <label style={{ display:"flex", alignItems:"center", gap:"5px", fontSize:"10px", color:"#e0f0ff", cursor:"pointer", marginBottom:"9px" }}><input type="checkbox" checked={adj.absent} onChange={e=>setAdj(p=>({...p,absent:e.target.checked}))}/>Mark Absent</label>
-                  {!adj.absent&&<div>
-                    <div style={S.g2}><Inp label="Start" type="time" value={adj.startTime} onChange={e=>setAdj(p=>({...p,startTime:e.target.value}))}/><Inp label="End" type="time" value={adj.endTime} onChange={e=>setAdj(p=>({...p,endTime:e.target.value}))}/></div>
-                    <div style={{ ...S.g2, marginTop:"7px" }}><Inp label="Regular Hours" type="number" step="0.5" value={adj.regularHours} onChange={e=>setAdj(p=>({...p,regularHours:e.target.value}))} placeholder="0"/><div><label style={{ ...S.lbl, color:"#fbbf24" }}>Stat Hours (1.5×)</label><input style={{ ...S.inp, borderColor:"#92400e" }} type="number" step="0.5" value={adj.statHours} onChange={e=>setAdj(p=>({...p,statHours:e.target.value}))} placeholder="0"/></div></div>
-                    <div style={{ marginTop:"7px" }}><Sel label="Location" value={adj.locationId} onChange={e=>setAdj(p=>({...p,locationId:e.target.value}))}><option value="">Select…</option>{locs.map(l=><option key={l.id} value={l.id}>{l.name}</option>)}</Sel></div>
-                    <div style={{ marginTop:"7px" }}><Inp label="Notes" value={adj.notes} onChange={e=>setAdj(p=>({...p,notes:e.target.value}))} placeholder="Reason…"/></div>
-                  </div>}
-                  <F style={{ marginTop:"9px" }}><button style={S.bp} onClick={saveAdj}>Save</button><button style={S.bo} onClick={()=>setAdjG(null)}>Cancel</button></F>
-                </div>
-              )}
             </div>
           )}
         </div>
