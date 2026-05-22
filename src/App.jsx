@@ -65,29 +65,40 @@ function mkCSV(fname, headers, rows) {
 
 // ─── design tokens ────────────────────────────────────────────────────────────
 const T = {
-  bg:       "#0c0f1a",   // page background
-  surface:  "#111827",   // card surface
-  surface2: "#1a2235",   // elevated surface
-  border:   "#1f2d45",   // default border
-  borderHi: "#2d4a6e",   // highlighted border
-  blue:     "#3b82f6",   // primary accent
+  bg:       "#f7f8fc",   // page background — pearl off-white
+  surface:  "#ffffff",   // card surface — pure white
+  surface2: "#f0f4fb",   // elevated / secondary surface
+  border:   "#e2e8f0",   // default border — soft grey
+  borderHi: "#bfcfe8",   // highlighted border
+  blue:     "#2563eb",   // primary accent
   blueDim:  "#1d4ed8",   // darker blue
-  blueGlow: "#3b82f620", // blue glow bg
-  text:     "#f0f6ff",   // primary text
-  textSub:  "#8da3c0",   // secondary text
-  textMute: "#3d5470",   // muted text
-  green:    "#10b981",
-  amber:    "#f59e0b",
-  red:      "#ef4444",
-  purple:   "#a78bfa",
+  blueGlow: "#2563eb14", // blue glow bg
+  text:     "#0f172a",   // primary text — near black
+  textSub:  "#475569",   // secondary text — slate
+  textMute: "#94a3b8",   // muted text — light slate
+  green:    "#059669",
+  amber:    "#d97706",
+  red:      "#dc2626",
+  purple:   "#7c3aed",
 };
 
 // ─── styles ───────────────────────────────────────────────────────────────────
 const S = {
-  app: { minHeight:"100vh", background:T.bg, color:T.text, fontFamily:"'Plus Jakarta Sans', -apple-system, 'Segoe UI', sans-serif", fontSize:"14px" },
+  app: {
+    minHeight:"100vh",
+    background:T.bg,
+    backgroundImage:[
+      "radial-gradient(ellipse 80% 40% at 50% -10%, #dbeafe88 0%, transparent 70%)",
+      "radial-gradient(circle, #cbd5e133 1px, transparent 1px)",
+    ].join(", "),
+    backgroundSize:"100% 100%, 26px 26px",
+    color:T.text,
+    fontFamily:"'Plus Jakarta Sans', -apple-system, 'Segoe UI', sans-serif",
+    fontSize:"14px",
+  },
 
   // sidebar
-  sidebar: { position:"fixed", top:0, left:0, bottom:0, width:"220px", background:T.surface, borderRight:`1px solid ${T.border}`, display:"flex", flexDirection:"column", zIndex:100, boxShadow:"4px 0 24px rgba(0,0,0,0.4)" },
+  sidebar: { position:"fixed", top:0, left:0, bottom:0, width:"220px", background:T.surface, borderRight:`1px solid ${T.border}`, display:"flex", flexDirection:"column", zIndex:100, boxShadow:"2px 0 16px rgba(0,0,0,0.07)" },
   sidebarLogo: { padding:"24px 20px 20px", borderBottom:`1px solid ${T.border}`, display:"flex", alignItems:"center", gap:"10px" },
   sidebarLogoIcon: { width:"32px", height:"32px", background:"linear-gradient(135deg,#1d4ed8,#3b82f6)", borderRadius:"8px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px", boxShadow:"0 2px 8px #3b82f640" },
   sidebarLogoText: { fontSize:"15px", fontWeight:"700", color:T.text, letterSpacing:"0.5px" },
@@ -104,7 +115,7 @@ const S = {
   }),
   navIcon: { fontSize:"15px", width:"20px", textAlign:"center" },
   sidebarBottom: { padding:"12px 10px", borderTop:`1px solid ${T.border}` },
-  signOutBtn: { display:"flex", alignItems:"center", gap:"10px", padding:"9px 12px", borderRadius:"8px", cursor:"pointer", border:"none", width:"100%", textAlign:"left", fontSize:"13px", fontWeight:"500", background:"transparent", color:"#f87171", transition:"all 0.15s" },
+  signOutBtn: { display:"flex", alignItems:"center", gap:"10px", padding:"9px 12px", borderRadius:"8px", cursor:"pointer", border:"none", width:"100%", textAlign:"left", fontSize:"13px", fontWeight:"500", background:"transparent", color:"#dc2626", transition:"all 0.15s" },
 
   // main content
   main: { marginLeft:"220px", padding:"28px 32px", maxWidth:"1100px" },
@@ -112,30 +123,30 @@ const S = {
   pageSubtitle: { fontSize:"13px", color:T.textSub, marginBottom:"24px" },
 
   // cards
-  card: { background:T.surface, borderRadius:"12px", border:`1px solid ${T.border}`, padding:"20px", marginBottom:"16px", boxShadow:"0 1px 3px rgba(0,0,0,0.3)" },
-  cardElevated: { background:T.surface2, borderRadius:"12px", border:`1px solid ${T.borderHi}`, padding:"20px", marginBottom:"16px", boxShadow:"0 4px 16px rgba(0,0,0,0.4)" },
-  ct: { fontSize:"11px", fontWeight:"700", color:T.textSub, marginBottom:"14px", textTransform:"uppercase", letterSpacing:"1px", display:"flex", alignItems:"center", gap:"6px" },
+  card: { background:T.surface, borderRadius:"12px", border:`1px solid ${T.border}`, padding:"20px", marginBottom:"16px", boxShadow:"0 1px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)" },
+  cardElevated: { background:T.surface, borderRadius:"12px", border:`1px solid ${T.borderHi}`, padding:"20px", marginBottom:"16px", boxShadow:"0 4px 16px rgba(0,0,0,0.1)" },
+  ct: { fontSize:"11px", fontWeight:"700", color:T.textMute, marginBottom:"14px", textTransform:"uppercase", letterSpacing:"1px", display:"flex", alignItems:"center", gap:"6px" },
 
   // form elements
   lbl: { display:"block", fontSize:"11px", fontWeight:"600", color:T.textSub, marginBottom:"5px" },
-  inp: { width:"100%", background:T.bg, border:`1px solid ${T.border}`, borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box", transition:"border-color 0.15s" },
-  sel: { width:"100%", background:T.bg, border:`1px solid ${T.border}`, borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box" },
-  ta: { width:"100%", background:T.bg, border:`1px solid ${T.border}`, borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box", resize:"vertical", minHeight:"72px", lineHeight:"1.5" },
+  inp: { width:"100%", background:"#f8faff", border:`1px solid ${T.border}`, borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box", transition:"border-color 0.15s" },
+  sel: { width:"100%", background:"#f8faff", border:`1px solid ${T.border}`, borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box" },
+  ta: { width:"100%", background:"#f8faff", border:`1px solid ${T.border}`, borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box", resize:"vertical", minHeight:"72px", lineHeight:"1.5" },
 
   // buttons
-  bp: { background:"linear-gradient(135deg,#1d4ed8,#2563eb)", color:"#fff", border:"none", borderRadius:"8px", padding:"9px 18px", fontWeight:"600", fontSize:"13px", cursor:"pointer", boxShadow:"0 2px 8px #3b82f630", transition:"all 0.15s" },
-  bs: { background:"#052e16", color:"#6ee7b7", border:`1px solid #065f46`, borderRadius:"8px", padding:"9px 16px", fontWeight:"600", fontSize:"13px", cursor:"pointer", transition:"all 0.15s" },
+  bp: { background:"linear-gradient(135deg,#1d4ed8,#2563eb)", color:"#fff", border:"none", borderRadius:"8px", padding:"9px 18px", fontWeight:"600", fontSize:"13px", cursor:"pointer", boxShadow:"0 2px 8px #2563eb30", transition:"all 0.15s" },
+  bs: { background:"#f0fdf4", color:"#15803d", border:`1px solid #bbf7d0`, borderRadius:"8px", padding:"9px 16px", fontWeight:"600", fontSize:"13px", cursor:"pointer", transition:"all 0.15s" },
   bo: { background:"transparent", color:T.textSub, border:`1px solid ${T.border}`, borderRadius:"8px", padding:"8px 16px", fontWeight:"600", fontSize:"13px", cursor:"pointer", transition:"all 0.15s" },
-  bd: { background:"transparent", color:T.red, border:`1px solid #7f1d1d`, borderRadius:"6px", padding:"5px 10px", fontSize:"12px", cursor:"pointer", transition:"all 0.15s" },
-  bsm: c => ({ background:"transparent", color:c||T.textSub, border:`1px solid ${c||T.border}`, borderRadius:"6px", padding:"4px 10px", fontSize:"11px", cursor:"pointer", fontWeight:"600", transition:"all 0.15s" }),
+  bd: { background:"transparent", color:"#dc2626", border:`1px solid #fecaca`, borderRadius:"6px", padding:"5px 10px", fontSize:"12px", cursor:"pointer", transition:"all 0.15s" },
+  bsm: c => ({ background:"transparent", color:c||T.textSub, border:`1px solid ${c ? c+"44" : T.border}`, borderRadius:"6px", padding:"4px 10px", fontSize:"11px", cursor:"pointer", fontWeight:"600", transition:"all 0.15s" }),
 
   // table
   tbl: { width:"100%", borderCollapse:"collapse" },
-  th: { textAlign:"left", padding:"10px 14px", fontSize:"11px", fontWeight:"600", color:T.textMute, textTransform:"uppercase", letterSpacing:"0.8px", borderBottom:`1px solid ${T.border}`, background:T.surface },
+  th: { textAlign:"left", padding:"10px 14px", fontSize:"11px", fontWeight:"600", color:T.textMute, textTransform:"uppercase", letterSpacing:"0.8px", borderBottom:`1px solid ${T.border}`, background:"#f8faff" },
   td: { padding:"12px 14px", fontSize:"13px", borderBottom:`1px solid ${T.border}`, transition:"background 0.1s" },
 
   // stat cards
-  stat: { background:T.surface, border:`1px solid ${T.border}`, borderRadius:"12px", padding:"18px 20px", textAlign:"left", boxShadow:"0 1px 3px rgba(0,0,0,0.2)" },
+  stat: { background:T.surface, border:`1px solid ${T.border}`, borderRadius:"12px", padding:"18px 20px", textAlign:"left", boxShadow:"0 1px 3px rgba(0,0,0,0.06)" },
   sn: { fontSize:"28px", fontWeight:"800", color:T.text, letterSpacing:"-1px", lineHeight:1 },
   sl: { fontSize:"11px", color:T.textSub, marginTop:"6px", fontWeight:"500" },
 
@@ -182,9 +193,9 @@ const Stat = ({ label, value, color, min="120px", icon }) => (
 // ─── confirm dialog ───────────────────────────────────────────────────────────
 function Confirm({ msg, onYes, onNo }) {
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, backdropFilter:"blur(4px)" }}>
-      <div style={{ background:T.surface2, border:`1px solid ${T.red}40`, borderRadius:"16px", padding:"28px 32px", maxWidth:"380px", width:"90%", boxShadow:"0 20px 60px rgba(0,0,0,0.6)", textAlign:"center" }}>
-        <div style={{ width:"48px", height:"48px", borderRadius:"50%", background:"#ef444418", border:"1px solid #ef444430", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", fontSize:"22px" }}>⚠️</div>
+    <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.4)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, backdropFilter:"blur(4px)" }}>
+      <div style={{ background:T.surface, border:`1px solid #fecaca`, borderRadius:"16px", padding:"28px 32px", maxWidth:"380px", width:"90%", boxShadow:"0 20px 60px rgba(0,0,0,0.15)", textAlign:"center" }}>
+        <div style={{ width:"48px", height:"48px", borderRadius:"50%", background:"#fef2f2", border:"1px solid #fecaca", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", fontSize:"22px" }}>⚠️</div>
         <div style={{ fontSize:"14px", color:T.text, marginBottom:"6px", fontWeight:"600" }}>Are you sure?</div>
         <div style={{ fontSize:"13px", color:T.textSub, marginBottom:"24px", lineHeight:1.6 }}>{msg}</div>
         <div style={{ display:"flex", gap:"10px", justifyContent:"center" }}>
@@ -219,14 +230,14 @@ function Login({ onLogin }) {
     }, 400);
   };
   return (
-    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Plus Jakarta Sans',-apple-system,'Segoe UI',sans-serif" }}>
+    <div style={{ minHeight:"100vh", background:T.bg, backgroundImage:["radial-gradient(ellipse 80% 40% at 50% -10%, #dbeafe88 0%, transparent 70%)","radial-gradient(circle, #cbd5e133 1px, transparent 1px)"].join(", "), backgroundSize:"100% 100%, 26px 26px", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Plus Jakarta Sans',-apple-system,'Segoe UI',sans-serif" }}>
       <div style={{ width:"100%", maxWidth:"400px", padding:"0 20px" }}>
         <div style={{ textAlign:"center", marginBottom:"40px" }}>
           <div style={{ width:"56px", height:"56px", background:"linear-gradient(135deg,#1d4ed8,#3b82f6)", borderRadius:"14px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"26px", margin:"0 auto 16px", boxShadow:"0 8px 32px #3b82f640" }}>🛡</div>
           <div style={{ fontSize:"24px", fontWeight:"700", color:T.text, letterSpacing:"-0.5px" }}>SecureOps</div>
           <div style={{ fontSize:"13px", color:T.textSub, marginTop:"4px" }}>Business Administration Platform</div>
         </div>
-        <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:"16px", padding:"32px", boxShadow:"0 20px 60px rgba(0,0,0,0.5)" }}>
+        <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:"16px", padding:"32px", boxShadow:"0 8px 40px rgba(0,0,0,0.1)" }}>
           <div style={{ fontSize:"16px", fontWeight:"600", color:T.text, marginBottom:"24px" }}>Sign in to your account</div>
           <div style={{ marginBottom:"16px" }}>
             <label style={S.lbl}>Username</label>
@@ -236,7 +247,7 @@ function Login({ onLogin }) {
             <label style={S.lbl}>Password</label>
             <input style={{ ...S.inp, padding:"11px 14px" }} type="password" value={p} onChange={e=>setP(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} placeholder="Enter password"/>
           </div>
-          {err && <div style={{ background:"#ef444412", border:"1px solid #ef444430", borderRadius:"8px", padding:"10px 14px", fontSize:"13px", color:"#fca5a5", marginBottom:"16px" }}>{err}</div>}
+          {err && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"8px", padding:"10px 14px", fontSize:"13px", color:"#dc2626", marginBottom:"16px" }}>{err}</div>}
           <button style={{ ...S.bp, width:"100%", padding:"12px", fontSize:"14px", borderRadius:"10px", opacity:loading?0.7:1 }} onClick={go} disabled={loading}>
             {loading ? "Signing in…" : "Sign In"}
           </button>
@@ -446,7 +457,7 @@ function Employees({ guards, setGuards }) {
             <tbody>
               {rows.map((g,i) => (
                 <Fragment key={g.id}>
-                  <tr style={{ background: exp===g.id?"#091420":"transparent" }}>
+                  <tr style={{ background: exp===g.id?"#f8faff":"transparent" }}>
                     <td style={S.td}><span style={{ color:gc(i), cursor:"pointer", fontWeight:"700" }} onClick={()=>setExp(exp===g.id?null:g.id)}>{g.name}</span></td>
                     <td style={S.td}>{g.badge||"—"}</td><td style={S.td}>{g.dob||"—"}</td>
                     <td style={S.td}>{g.startDate||"—"}</td>
@@ -455,7 +466,7 @@ function Employees({ guards, setGuards }) {
                     <td style={S.td}><span style={S.pill(g.status==="Active"?"#10b981":g.status==="On Leave"?"#f59e0b":"#6b7280")}>{g.status}</span></td>
                     <td style={S.td}><F><button style={S.bsm()} onClick={()=>edit(g)}>Edit</button><button style={S.bd} onClick={()=>del(g.id)}>✕</button></F></td>
                   </tr>
-                  {exp===g.id && <tr><td colSpan={8} style={{ ...S.td, background:"#091420" }}><F style={{ fontSize:"10px", color:"#5a8ab0" }}>{[["Email",g.email],["SIN",g.sin],["Address",g.address],["Notes",g.notes]].map(([l,v])=><span key={l}><span style={{ color:"#3a6a8a" }}>{l}: </span>{v||"—"}</span>)}</F></td></tr>}
+                  {exp===g.id && <tr><td colSpan={8} style={{ ...S.td, background:"#f8faff" }}><F style={{ fontSize:"10px", color:"#475569" }}>{[["Email",g.email],["SIN",g.sin],["Address",g.address],["Notes",g.notes]].map(([l,v])=><span key={l}><span style={{ color:"#94a3b8" }}>{l}: </span>{v||"—"}</span>)}</F></td></tr>}
                 </Fragment>
               ))}
             </tbody>
@@ -543,7 +554,7 @@ function Locations({ locs, setLocs }) {
 
       {/* ── TOOLBAR ── */}
       <div ref={formRef} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"12px" }}>
-        <span style={{ fontSize:"11px", color:"#5a8ab0" }}>{locs.length} location{locs.length!==1?"s":""}</span>
+        <span style={{ fontSize:"11px", color:"#475569" }}>{locs.length} location{locs.length!==1?"s":""}</span>
         <button style={S.bp} onClick={()=>{setForm(blankL);setEditing(null);setShowForm(s=>!s);}}>
           {showForm?"Cancel":"+ Add Location"}
         </button>
@@ -551,7 +562,7 @@ function Locations({ locs, setLocs }) {
 
       {/* ── FORM ── */}
       {showForm && (
-        <div style={{ ...S.card, border:"1px solid #2563eb" }}>
+        <div style={{ ...S.card, border:"1px solid #bfdbfe" }}>
           <div style={S.ct}>{editing?"Edit Location / Client":"New Location / Client"}</div>
           <div style={S.g3}>
             <div><label style={S.lbl}>Client / Company Name *</label><input style={S.inp} value={form.client} onChange={ff("client")} placeholder="e.g. ABC Corp"/></div>
@@ -585,11 +596,11 @@ function Locations({ locs, setLocs }) {
             <div key={l.id} style={S.card}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:"8px" }}>
                 <div style={{ cursor:"pointer", flex:1 }} onClick={()=>setExpanded(isExp?null:l.id)}>
-                  <div style={{ fontWeight:"700", color:"#e0f0ff", fontSize:"13px" }}>
+                  <div style={{ fontWeight:"700", color:"#0f172a", fontSize:"13px" }}>
                     {l.name}
                   </div>
-                  {l.client && <div style={{ fontSize:"11px", color:"#5a8ab0", marginTop:"1px" }}>Client: {l.client}</div>}
-                  {l.clientAddress && <div style={{ fontSize:"10px", color:"#3a6a8a", marginTop:"1px" }}>{l.clientAddress}</div>}
+                  {l.client && <div style={{ fontSize:"11px", color:"#475569", marginTop:"1px" }}>Client: {l.client}</div>}
+                  {l.clientAddress && <div style={{ fontSize:"10px", color:"#94a3b8", marginTop:"1px" }}>{l.clientAddress}</div>}
                   <div style={{ display:"flex", gap:"8px", marginTop:"4px", flexWrap:"wrap" }}>
                     {cr && <span style={S.pill("#10b981")}>Rate: ${parseFloat(cr.rate).toFixed(2)}/hr</span>}
                     {l.contractEnd && <span style={S.pill(contractExpired?"#ef4444":"#3b82f6")}>{contractExpired?"Expired":"Until"}: {l.contractEnd}</span>}
@@ -603,29 +614,29 @@ function Locations({ locs, setLocs }) {
               </div>
 
               {isExp && (
-                <div style={{ marginTop:"12px", borderTop:"1px solid #1e3a5f", paddingTop:"12px" }}>
-                  <div style={{ display:"flex", gap:"20px", fontSize:"11px", color:"#5a8ab0", flexWrap:"wrap", marginBottom:"14px" }}>
+                <div style={{ marginTop:"12px", borderTop:"1px solid #e2e8f0", paddingTop:"12px" }}>
+                  <div style={{ display:"flex", gap:"20px", fontSize:"11px", color:"#475569", flexWrap:"wrap", marginBottom:"14px" }}>
                     {[["Contact",l.contactName],["Email",l.contactEmail],["Phone",l.contactPhone],["Contract Start",l.contractStart],["Contract End",l.contractEnd]].map(([label,val])=>val?(
-                      <div key={label}><span style={{ color:"#3a6a8a" }}>{label}: </span>{val}</div>
+                      <div key={label}><span style={{ color:"#94a3b8" }}>{label}: </span>{val}</div>
                     ):null)}
-{l.notes && <div style={{ width:"100%" }}><span style={{ color:"#3a6a8a" }}>Notes: </span>{l.notes}</div>}
+{l.notes && <div style={{ width:"100%" }}><span style={{ color:"#94a3b8" }}>Notes: </span>{l.notes}</div>}
                   </div>
 
-                  <div style={{ background:"#070d19", borderRadius:"7px", padding:"12px" }}>
-                    <div style={{ fontSize:"10px", fontWeight:"700", color:"#5a8ab0", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"8px" }}>Billing Rate History</div>
-                    {(l.rates||[]).length===0 && <div style={{ fontSize:"11px", color:"#3a6a8a", marginBottom:"8px" }}>No rates recorded yet.</div>}
+                  <div style={{ background:"#f8faff", borderRadius:"7px", padding:"12px" }}>
+                    <div style={{ fontSize:"10px", fontWeight:"700", color:"#475569", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"8px" }}>Billing Rate History</div>
+                    {(l.rates||[]).length===0 && <div style={{ fontSize:"11px", color:"#94a3b8", marginBottom:"8px" }}>No rates recorded yet.</div>}
                     {(l.rates||[]).sort((a,b)=>b.effectiveDate.localeCompare(a.effectiveDate)).map(r=>(
-                      <div key={r.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:"1px solid #1e3a5f" }}>
+                      <div key={r.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:"1px solid #e2e8f0" }}>
                         <div>
                           <span style={{ fontWeight:"700", color:"#34d399" }}>${parseFloat(r.rate).toFixed(2)}/hr</span>
-                          <span style={{ fontSize:"10px", color:"#5a8ab0", marginLeft:"10px" }}>Effective: {r.effectiveDate}</span>
-                          {r.notes && <span style={{ fontSize:"10px", color:"#3a6a8a", marginLeft:"8px" }}>— {r.notes}</span>}
+                          <span style={{ fontSize:"10px", color:"#475569", marginLeft:"10px" }}>Effective: {r.effectiveDate}</span>
+                          {r.notes && <span style={{ fontSize:"10px", color:"#94a3b8", marginLeft:"8px" }}>— {r.notes}</span>}
                         </div>
                         <button style={S.bd} onClick={()=>delRate(l.id,r.id)}>✕</button>
                       </div>
                     ))}
                     <div style={{ marginTop:"10px" }}>
-                      <div style={{ fontSize:"9px", color:"#3a6a8a", marginBottom:"5px", textTransform:"uppercase", letterSpacing:"0.5px" }}>Add New Rate</div>
+                      <div style={{ fontSize:"9px", color:"#94a3b8", marginBottom:"5px", textTransform:"uppercase", letterSpacing:"0.5px" }}>Add New Rate</div>
                       <div style={{ display:"flex", gap:"7px", flexWrap:"wrap", alignItems:"flex-end" }}>
                         <div><label style={S.lbl}>Effective Date</label><input style={{ ...S.inp, width:"140px" }} type="date" value={rateForm.effectiveDate} onChange={e=>setRateForm(p=>({...p,effectiveDate:e.target.value}))}/></div>
                         <div><label style={S.lbl}>Rate ($/hr)</label><input style={{ ...S.inp, width:"100px" }} type="number" step="0.01" value={rateForm.rate} onChange={e=>setRateForm(p=>({...p,rate:e.target.value}))} placeholder="23.00"/></div>
@@ -781,8 +792,8 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
 
       {/* ── ADJUST MODAL ── */}
       {adjG && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9990, backdropFilter:"blur(3px)" }}>
-          <div style={{ background:T.surface2, border:`1px solid ${T.blue}`, borderRadius:"14px", padding:"24px 28px", width:"100%", maxWidth:"460px", boxShadow:"0 20px 60px rgba(0,0,0,0.6)" }}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.4)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9990, backdropFilter:"blur(3px)" }}>
+          <div style={{ background:T.surface, border:`1px solid ${T.blue}44`, borderRadius:"14px", padding:"24px 28px", width:"100%", maxWidth:"460px", boxShadow:"0 20px 60px rgba(0,0,0,0.15)" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"16px" }}>
               <div style={{ fontWeight:"700", color:T.text, fontSize:"15px" }}>
                 Adjust: <span style={{ color:gc(gIdx(adjG.id)) }}>{adjG.name}</span>
@@ -803,7 +814,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
                   <Inp label="Regular Hours" type="number" step="0.5" value={adj.regularHours} onChange={e=>setAdj(p=>({...p,regularHours:e.target.value}))} placeholder="0"/>
                   <div>
                     <label style={{ ...S.lbl, color:T.amber }}>Stat Holiday Hours (1.5×)</label>
-                    <input style={{ ...S.inp, borderColor:"#92400e" }} type="number" step="0.5" value={adj.statHours} onChange={e=>setAdj(p=>({...p,statHours:e.target.value}))} placeholder="0"/>
+                    <input style={{ ...S.inp, borderColor:"#fcd34d" }} type="number" step="0.5" value={adj.statHours} onChange={e=>setAdj(p=>({...p,statHours:e.target.value}))} placeholder="0"/>
                   </div>
                 </div>
                 <div style={{ marginTop:"6px", fontSize:"11px", color:T.textMute }}>
@@ -829,7 +840,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
       )}
 
       <F style={{ marginBottom:"12px" }}>
-        {[["cal","📅 Calendar"],["sch","🔁 Schedules"],["stat","⭐ Stat Holiday"],["bulk","🗑 Bulk Delete Hours"]].map(([t,l])=><button key={t} style={{ ...S.bp, background:sub===t?"#1d4ed8":"transparent", color:sub===t?"#fff":"#4a8ab0", border:"1px solid #1e3a5f" }} onClick={()=>{setSub(t);setBulkResult(null);}}>{l}</button>)}
+        {[["cal","📅 Calendar"],["sch","🔁 Schedules"],["stat","⭐ Stat Holiday"],["bulk","🗑 Bulk Delete Hours"]].map(([t,l])=><button key={t} style={{ ...S.bp, background:sub===t?"#1d4ed8":"transparent", color:sub===t?"#fff":"#4a8ab0", border:"1px solid #e2e8f0" }} onClick={()=>{setSub(t);setBulkResult(null);}}>{l}</button>)}
       </F>
 
       {sub==="sch" && (
@@ -842,23 +853,23 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
               <Inp label="Shift Start" type="time" value={sf.startTime} onChange={e=>setSf(p=>({...p,startTime:e.target.value}))} />
               <Inp label="Shift End" type="time" value={sf.endTime} onChange={e=>setSf(p=>({...p,endTime:e.target.value}))} />
             </div>
-            {sf.startTime&&sf.endTime&&<div style={{ marginTop:"4px", fontSize:"10px", color:"#5a8ab0" }}>→ {calcH(sf.startTime,sf.endTime)}h {shiftLabel(sf.startTime) ? <span style={{ marginLeft:"4px" }}>{shiftLabel(sf.startTime)}</span> : ""}</div>}
+            {sf.startTime&&sf.endTime&&<div style={{ marginTop:"4px", fontSize:"10px", color:"#475569" }}>→ {calcH(sf.startTime,sf.endTime)}h {shiftLabel(sf.startTime) ? <span style={{ marginLeft:"4px" }}>{shiftLabel(sf.startTime)}</span> : ""}</div>}
             <div style={{ ...S.g2, marginTop:"9px" }}>
               <div>
-                <label style={{ ...S.lbl, color:"#60a5fa" }}>Effective From * <span style={{ color:"#3a6a8a", textTransform:"none", fontWeight:"400" }}>(schedule starts on this date)</span></label>
+                <label style={{ ...S.lbl, color:"#60a5fa" }}>Effective From * <span style={{ color:"#94a3b8", textTransform:"none", fontWeight:"400" }}>(schedule starts on this date)</span></label>
                 <input style={{ ...S.inp, borderColor:"#2563eb" }} type="date" value={sf.effectiveFrom} onChange={e=>setSf(p=>({...p,effectiveFrom:e.target.value}))}/>
               </div>
               <div>
-                <label style={{ ...S.lbl, color:"#f59e0b" }}>Effective To <span style={{ color:"#3a6a8a", textTransform:"none", fontWeight:"400" }}>(leave blank = ongoing)</span></label>
-                <input style={{ ...S.inp, borderColor:"#92400e" }} type="date" value={sf.effectiveTo} onChange={e=>setSf(p=>({...p,effectiveTo:e.target.value}))}/>
+                <label style={{ ...S.lbl, color:"#f59e0b" }}>Effective To <span style={{ color:"#94a3b8", textTransform:"none", fontWeight:"400" }}>(leave blank = ongoing)</span></label>
+                <input style={{ ...S.inp, borderColor:"#fcd34d" }} type="date" value={sf.effectiveTo} onChange={e=>setSf(p=>({...p,effectiveTo:e.target.value}))}/>
               </div>
             </div>
             <div style={{ marginTop:"9px" }}><label style={S.lbl}>Recurring Days</label>
-              <F style={{ marginTop:"4px" }}>{DAYS.map((d,i)=><button key={i} onClick={()=>togDay(i)} style={{ padding:"5px 9px", borderRadius:"4px", cursor:"pointer", fontWeight:"700", fontSize:"10px", background:sf.days.includes(i)?"#1d4ed8":"#0a1628", color:sf.days.includes(i)?"#fff":"#4a8ab0", border:`1px solid ${sf.days.includes(i)?"#3b82f6":"#1e3a5f"}` }}>{d}</button>)}</F>
+              <F style={{ marginTop:"4px" }}>{DAYS.map((d,i)=><button key={i} onClick={()=>togDay(i)} style={{ padding:"5px 9px", borderRadius:"4px", cursor:"pointer", fontWeight:"700", fontSize:"10px", background:sf.days.includes(i)?"#1d4ed8":"#ffffff", color:sf.days.includes(i)?"#fff":"#4a8ab0", border:`1px solid ${sf.days.includes(i)?"#3b82f6":"#e2e8f0"}` }}>{d}</button>)}</F>
             </div>
-            <div style={{ marginTop:"9px", padding:"10px", background:"#070d19", borderRadius:"6px", fontSize:"10px", color:"#3a6a8a", lineHeight:1.6 }}>
-              💡 <strong style={{ color:"#5a8ab0" }}>How date ranges work:</strong> The calendar only shows this schedule on days within the Effective From / To window. 
-              Deleting a schedule <strong style={{ color:"#e0f0ff" }}>never</strong> changes past days — only overrides (manual adjustments) can do that.
+            <div style={{ marginTop:"9px", padding:"10px", background:"#f8faff", borderRadius:"6px", fontSize:"10px", color:"#94a3b8", lineHeight:1.6 }}>
+              💡 <strong style={{ color:"#475569" }}>How date ranges work:</strong> The calendar only shows this schedule on days within the Effective From / To window. 
+              Deleting a schedule <strong style={{ color:"#0f172a" }}>never</strong> changes past days — only overrides (manual adjustments) can do that.
               To change a schedule mid-month, set an end date on the old one and create a new one with the new start date.
             </div>
             <button style={{ ...S.bp, marginTop:"9px" }} onClick={addSc}>Save Schedule</button>
@@ -991,7 +1002,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
                               const statH = Math.round(statMins/60*100)/100;
                               const regH  = Math.round(regMins/60*100)/100;
                               return (
-                                <tr key={"out_"+s.guardId} style={{ background:"#140d05" }}>
+                                <tr key={"out_"+s.guardId} style={{ background:"#fffbeb" }}>
                                   <td style={S.td}><span style={{ fontWeight:"700", color:gc(gIdx(s.guardId)) }}>{s.guard.name}</span></td>
                                   <td style={S.td}>{s.startTime}–{s.endTime} <span style={{ fontSize:"9px", color:T.textMute }}>(ends {nextDate})</span></td>
                                   <td style={S.td}><span style={S.pill(T.amber)}>🌅 Crosses into {nextDate}</span></td>
@@ -1002,7 +1013,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
                             })}
                             {/* Employees crossing IN from previous night */}
                             {crossingIn.map(s => (
-                              <tr key={"cross_"+s.guardId} style={{ background:"#0d1a10" }}>
+                              <tr key={"cross_"+s.guardId} style={{ background:"#f0fdf4" }}>
                                 <td style={S.td}><span style={{ fontWeight:"700", color:gc(gIdx(s.guardId)) }}>{s.guard.name}</span></td>
                                 <td style={S.td}>{s.startTime}–{s.endTime} <span style={{ fontSize:"9px", color:T.textMute }}>(starts {prevDate})</span></td>
                                 <td style={S.td}><span style={S.pill(T.purple)}>🌙 Crosses from {prevDate}</span></td>
@@ -1076,7 +1087,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
         <div>
           <div style={{ ...S.card, border:"1px solid #ef444444" }}>
             <div style={S.ct}>🗑 Bulk Delete Employee Hours</div>
-            <div style={{ fontSize:"11px", color:"#5a8ab0", marginBottom:"14px", lineHeight:1.6 }}>
+            <div style={{ fontSize:"11px", color:"#475569", marginBottom:"14px", lineHeight:1.6 }}>
               Select an employee and date range to preview and delete all hours in that period — whether they came from a recurring schedule or were manually entered.
             </div>
             <div style={S.g3}>
@@ -1114,19 +1125,19 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
 
               return (
                 <div style={{ marginTop:"14px" }}>
-                  <div style={{ fontSize:"10px", fontWeight:"700", color:"#5a8ab0", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"8px" }}>
+                  <div style={{ fontSize:"10px", fontWeight:"700", color:"#475569", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"8px" }}>
                     Preview — {hits.length} day{hits.length!==1?"s":""} found for {gName}
                   </div>
                   {hits.length === 0 ? (
-                    <div style={{ fontSize:"11px", color:"#3a6a8a", padding:"8px 0" }}>
+                    <div style={{ fontSize:"11px", color:"#94a3b8", padding:"8px 0" }}>
                       No hours found for this employee in the selected date range.
                     </div>
                   ) : (
-                    <div style={{ background:"#070d19", borderRadius:"7px", padding:"10px", maxHeight:"260px", overflowY:"auto" }}>
+                    <div style={{ background:"#f8faff", borderRadius:"7px", padding:"10px", maxHeight:"260px", overflowY:"auto" }}>
                       {hits.map(h => (
-                        <div key={h.date} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:"1px solid #1e3a5f", fontSize:"11px" }}>
-                          <span style={{ color:"#dce8f5" }}>
-                            {h.date} <span style={{ color:"#3a6a8a" }}>({DAYS[pDate(h.date).getDay()]})</span>
+                        <div key={h.date} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:"1px solid #e2e8f0", fontSize:"11px" }}>
+                          <span style={{ color:"#0f172a" }}>
+                            {h.date} <span style={{ color:"#94a3b8" }}>({DAYS[pDate(h.date).getDay()]})</span>
                           </span>
                           <span style={{ display:"flex", gap:"8px", alignItems:"center" }}>
                             <span style={{ color:"#34d399" }}>
@@ -1184,7 +1195,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
             })()}
 
             {bulkResult && (
-              <div style={{ marginTop:"12px", padding:"10px 14px", background:"#064e3b", borderRadius:"7px", border:"1px solid #059669", fontSize:"11px", color:"#6ee7b7" }}>
+              <div style={{ marginTop:"12px", padding:"10px 14px", background:"#f0fdf4", borderRadius:"7px", border:"1px solid #bbf7d0", fontSize:"11px", color:"#15803d" }}>
                 ✓ Deleted {bulkResult.deleted} day{bulkResult.deleted!==1?"s":""} of hours for {bulkResult.name}.
               </div>
             )}
@@ -1207,7 +1218,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
             });
             if (unscheduled.length === 0) return null;
             return (
-              <div style={{ background:"#1a0f02", border:`1px solid ${T.amber}66`, borderRadius:"10px", padding:"12px 16px", marginBottom:"14px", display:"flex", alignItems:"flex-start", gap:"10px" }}>
+              <div style={{ background:"#fffbeb", border:`1px solid ${T.amber}66`, borderRadius:"10px", padding:"12px 16px", marginBottom:"14px", display:"flex", alignItems:"flex-start", gap:"10px" }}>
                 <span style={{ fontSize:"18px", marginTop:"1px" }}>⚠️</span>
                 <div>
                   <div style={{ fontWeight:"700", color:T.amber, fontSize:"13px", marginBottom:"4px" }}>
@@ -1228,10 +1239,10 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
           <div style={S.card}>
             <F style={{ justifyContent:"space-between", marginBottom:"12px" }}>
               <button style={S.bo} onClick={prev}>‹</button>
-              <span style={{ fontSize:"14px", fontWeight:"700", color:"#e0f0ff" }}>{MONTHS[mo]} {yr}</span>
+              <span style={{ fontSize:"14px", fontWeight:"700", color:"#0f172a" }}>{MONTHS[mo]} {yr}</span>
               <button style={S.bo} onClick={next}>›</button>
             </F>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:"1px", marginBottom:"3px" }}>{DAYS.map(d=><div key={d} style={{ textAlign:"center", fontSize:"8px", fontWeight:"700", color:"#3a6a8a", padding:"2px" }}>{d}</div>)}</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:"1px", marginBottom:"3px" }}>{DAYS.map(d=><div key={d} style={{ textAlign:"center", fontSize:"8px", fontWeight:"700", color:"#94a3b8", padding:"2px" }}>{d}</div>)}</div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:"2px" }}>
               {cells.map((d,i) => {
                 if (!d) return <div key={"e"+i} />;
@@ -1242,13 +1253,13 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
                 const hasSt = ovs.some(o=>o.date===ds&&(o.statHours||0)>0);
                 const hasOv = ovs.some(o=>o.date===ds);
                 return (
-                  <div key={d} onClick={()=>{setSel(isSel?null:d); setDaySearch("");}} style={{ minHeight:"58px", borderRadius:"5px", padding:"4px", cursor:"pointer", background:isSel?"#162a50":isTod?"#0d2040":"#0a1628", border:`1px solid ${isSel?"#2563eb":isTod?"#1a4070":"#1e3a5f"}` }}>
+                  <div key={d} onClick={()=>{setSel(isSel?null:d); setDaySearch("");}} style={{ minHeight:"58px", borderRadius:"5px", padding:"4px", cursor:"pointer", background:isSel?"#eff6ff":isTod?"#eff6ff":"#ffffff", border:`1px solid ${isSel?"#2563eb":isTod?"#bfdbfe":"#e2e8f0"}` }}>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"2px" }}>
-                      <span style={{ fontSize:"10px", fontWeight:"700", color:isTod?"#60a5fa":"#5a8ab0" }}>{d}</span>
+                      <span style={{ fontSize:"10px", fontWeight:"700", color:isTod?"#60a5fa":"#475569" }}>{d}</span>
                       <span style={{ fontSize:"7px" }}>{hasSt?"🌟":""}{hasOv?"✎":""}</span>
                     </div>
-                    <div style={{ display:"flex", flexWrap:"wrap", gap:"2px" }}>{shfts.slice(0,5).map(s=><div key={s.guardId} style={{ width:"6px", height:"6px", borderRadius:"50%", background:gc(gIdx(s.guardId)) }} title={s.guard.name} />)}{shfts.length>5&&<span style={{ fontSize:"7px", color:"#3a6a8a" }}>+{shfts.length-5}</span>}</div>
-                    {shfts.length>0&&<div style={{ fontSize:"7px", color:"#3a6a8a", marginTop:"1px" }}>{shfts.length}g</div>}
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:"2px" }}>{shfts.slice(0,5).map(s=><div key={s.guardId} style={{ width:"6px", height:"6px", borderRadius:"50%", background:gc(gIdx(s.guardId)) }} title={s.guard.name} />)}{shfts.length>5&&<span style={{ fontSize:"7px", color:"#94a3b8" }}>+{shfts.length-5}</span>}</div>
+                    {shfts.length>0&&<div style={{ fontSize:"7px", color:"#94a3b8", marginTop:"1px" }}>{shfts.length}g</div>}
                   </div>
                 );
               })}
@@ -1260,7 +1271,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
               <div style={S.card}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"10px" }}>
                   <div style={S.ct}>{DAYS[selDow]}, {MONTHS[mo]} {sel}</div>
-                  <span style={{ fontSize:"9px", color:"#3a6a8a" }}>{allOn.length} on duty</span>
+                  <span style={{ fontSize:"9px", color:"#94a3b8" }}>{allOn.length} on duty</span>
                 </div>
                 {allOn.length > 0 && (
                   <input
@@ -1279,19 +1290,19 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
                   const idx = gIdx(g.id);
                   const reg = sh?.regularHours||sh?.hours||0, stat = sh?.statHours||0;
                   return (
-                    <div key={g.id} style={{ background:"#070d19", borderRadius:"5px", padding:"8px", marginBottom:"6px", borderLeft:`3px solid ${gc(idx)}` }}>
+                    <div key={g.id} style={{ background:"#f8faff", borderRadius:"5px", padding:"8px", marginBottom:"6px", borderLeft:`3px solid ${gc(idx)}` }}>
                       <div style={{ display:"flex", justifyContent:"space-between" }}>
-                        <div><div style={{ fontWeight:"700", color:gc(idx), fontSize:"11px" }}>{g.name}</div><div style={{ fontSize:"9px", color:"#3a6a8a" }}>{sh?.locationId?lName(sh.locationId):"—"}{sh?.startTime?` · ${sh.startTime}–${sh.endTime}`:""}</div></div>
-                        <div style={{ textAlign:"right" }}>{sh?.absent?<span style={S.pill("#ef4444")}>Absent</span>:<div>{reg>0&&<div style={{ fontSize:"10px", color:"#e0f0ff", fontWeight:"700" }}>{reg}h reg</div>}{stat>0&&<div style={{ fontSize:"9px", color:"#fbbf24" }}>{stat}h stat ★</div>}</div>}{ov&&<div style={{ fontSize:"8px", color:"#34d399" }}>adj</div>}</div>
+                        <div><div style={{ fontWeight:"700", color:gc(idx), fontSize:"11px" }}>{g.name}</div><div style={{ fontSize:"9px", color:"#94a3b8" }}>{sh?.locationId?lName(sh.locationId):"—"}{sh?.startTime?` · ${sh.startTime}–${sh.endTime}`:""}</div></div>
+                        <div style={{ textAlign:"right" }}>{sh?.absent?<span style={S.pill("#ef4444")}>Absent</span>:<div>{reg>0&&<div style={{ fontSize:"10px", color:"#0f172a", fontWeight:"700" }}>{reg}h reg</div>}{stat>0&&<div style={{ fontSize:"9px", color:"#fbbf24" }}>{stat}h stat ★</div>}</div>}{ov&&<div style={{ fontSize:"8px", color:"#34d399" }}>adj</div>}</div>
                       </div>
                       <F style={{ marginTop:"6px" }}><button style={S.bsm("#60a5fa")} onClick={()=>openAdj(g)}>Adjust</button>{ov&&<button style={S.bsm("#f87171")} onClick={()=>remAdj(g.id)}>Reset</button>}</F>
                     </div>
                   );
                 })}
                 {daySearch && allOn.filter(g=>g.name.toLowerCase().includes(daySearch.toLowerCase())).length===0 && (
-                  <div style={{ fontSize:"11px", color:"#3a6a8a", textAlign:"center", padding:"10px 0" }}>No employees match "{daySearch}"</div>
+                  <div style={{ fontSize:"11px", color:"#94a3b8", textAlign:"center", padding:"10px 0" }}>No employees match "{daySearch}"</div>
                 )}
-                <div style={{ marginTop:"8px", borderTop:"1px solid #1e3a5f", paddingTop:"8px" }}>
+                <div style={{ marginTop:"8px", borderTop:"1px solid #e2e8f0", paddingTop:"8px" }}>
                   <label style={S.lbl}>Add employee for this day</label>
                   <select style={S.sel} value="" onChange={e=>{ if(e.target.value){ const g=guards.find(x=>x.id===e.target.value); if(g) openAdj(g); } }}><option value="">Select…</option>{unsch.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
                 </div>
@@ -1358,15 +1369,15 @@ function Reports({ guards, locs, scs, ovs, history, setHistory }) {
         return(
           <div key={l.id} style={S.card}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"10px", flexWrap:"wrap", gap:"8px" }}>
-              <div><div style={{ fontSize:"13px", fontWeight:"800", color:"#e0f0ff" }}>{l.name}</div>{l.client&&<div style={{ fontSize:"9px", color:"#3a6a8a" }}>Client: {l.client}</div>}</div>
+              <div><div style={{ fontSize:"13px", fontWeight:"800", color:"#0f172a" }}>{l.name}</div>{l.client&&<div style={{ fontSize:"9px", color:"#94a3b8" }}>Client: {l.client}</div>}</div>
               <F>
-                <div style={{ textAlign:"center" }}><div style={{ fontSize:"14px", fontWeight:"800", color:"#60a5fa" }}>{tr.toFixed(2)}h</div><div style={{ fontSize:"8px", color:"#3a6a8a" }}>Regular</div></div>
-                {ts>0&&<div style={{ textAlign:"center" }}><div style={{ fontSize:"14px", fontWeight:"800", color:"#fbbf24" }}>{ts.toFixed(2)}h</div><div style={{ fontSize:"8px", color:"#3a6a8a" }}>Stat ★</div></div>}
-                <div style={{ textAlign:"center" }}><div style={{ fontSize:"14px", fontWeight:"800", color:"#34d399" }}>{(tr+ts).toFixed(2)}h</div><div style={{ fontSize:"8px", color:"#3a6a8a" }}>Total</div></div>
+                <div style={{ textAlign:"center" }}><div style={{ fontSize:"14px", fontWeight:"800", color:"#60a5fa" }}>{tr.toFixed(2)}h</div><div style={{ fontSize:"8px", color:"#94a3b8" }}>Regular</div></div>
+                {ts>0&&<div style={{ textAlign:"center" }}><div style={{ fontSize:"14px", fontWeight:"800", color:"#fbbf24" }}>{ts.toFixed(2)}h</div><div style={{ fontSize:"8px", color:"#94a3b8" }}>Stat ★</div></div>}
+                <div style={{ textAlign:"center" }}><div style={{ fontSize:"14px", fontWeight:"800", color:"#34d399" }}>{(tr+ts).toFixed(2)}h</div><div style={{ fontSize:"8px", color:"#94a3b8" }}>Total</div></div>
                 <button style={S.bs} onClick={()=>doExcel(l)}>📊 Excel</button>
               </F>
             </div>
-            {ents.length===0?<div style={S.empty}>No hours.</div>:<table style={S.tbl}><thead><tr>{["Employee","Regular","Stat ★","Total"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead><tbody>{ents.map(([gid,g])=><tr key={gid}><td style={S.td}><span style={{ color:gc(gIdx(gid)), fontWeight:"700" }}>{g.name}</span></td><td style={S.td}>{g.regular.toFixed(2)}h</td><td style={S.td}>{g.stat>0?<span style={{ color:"#fbbf24", fontWeight:"700" }}>{g.stat.toFixed(2)}h</span>:"—"}</td><td style={S.td}><strong style={{ color:"#e0f0ff" }}>{(g.regular+g.stat).toFixed(2)}h</strong></td></tr>)}</tbody></table>}
+            {ents.length===0?<div style={S.empty}>No hours.</div>:<table style={S.tbl}><thead><tr>{["Employee","Regular","Stat ★","Total"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead><tbody>{ents.map(([gid,g])=><tr key={gid}><td style={S.td}><span style={{ color:gc(gIdx(gid)), fontWeight:"700" }}>{g.name}</span></td><td style={S.td}>{g.regular.toFixed(2)}h</td><td style={S.td}>{g.stat>0?<span style={{ color:"#fbbf24", fontWeight:"700" }}>{g.stat.toFixed(2)}h</span>:"—"}</td><td style={S.td}><strong style={{ color:"#0f172a" }}>{(g.regular+g.stat).toFixed(2)}h</strong></td></tr>)}</tbody></table>}
           </div>
         );
       })}
@@ -1397,11 +1408,11 @@ function History({ history, setHistory }) {
         return (
           <div key={h.id} style={S.card}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer" }} onClick={()=>setExp(open?null:h.id)}>
-              <div><div style={{ fontWeight:"700", color:"#e0f0ff", fontSize:"12px" }}>{h.startDate} → {h.endDate}</div><div style={{ fontSize:"9px", color:"#3a6a8a", marginTop:"2px" }}>Saved {new Date(h.savedAt).toLocaleString()} · {h.data.length} loc · {tot.toFixed(2)}h</div></div>
-              <F><span style={{ fontSize:"14px", fontWeight:"800", color:"#60a5fa" }}>{tot.toFixed(2)}h</span><button style={S.bs} onClick={e=>{e.stopPropagation();doExcel(h);}}>📊</button><button style={S.bd} onClick={e=>{e.stopPropagation();del(h.id);}}>Delete</button><span style={{ color:"#3a6a8a" }}>{open?"▲":"▼"}</span></F>
+              <div><div style={{ fontWeight:"700", color:"#0f172a", fontSize:"12px" }}>{h.startDate} → {h.endDate}</div><div style={{ fontSize:"9px", color:"#94a3b8", marginTop:"2px" }}>Saved {new Date(h.savedAt).toLocaleString()} · {h.data.length} loc · {tot.toFixed(2)}h</div></div>
+              <F><span style={{ fontSize:"14px", fontWeight:"800", color:"#60a5fa" }}>{tot.toFixed(2)}h</span><button style={S.bs} onClick={e=>{e.stopPropagation();doExcel(h);}}>📊</button><button style={S.bd} onClick={e=>{e.stopPropagation();del(h.id);}}>Delete</button><span style={{ color:"#94a3b8" }}>{open?"▲":"▼"}</span></F>
             </div>
-            {open&&<div style={{ marginTop:"10px", borderTop:"1px solid #1e3a5f", paddingTop:"10px" }}>
-              {h.data.map(l=>{const ents=Object.entries(l.guards);if(!ents.length)return null;const lr=ents.reduce((s,[,g])=>s+g.regular,0),ls=ents.reduce((s,[,g])=>s+g.stat,0);return(<div key={l.locationId} style={{ marginBottom:"10px" }}><div style={{ display:"flex", justifyContent:"space-between", marginBottom:"4px" }}><span style={{ fontWeight:"700", color:"#7ab3d3", fontSize:"11px" }}>{l.locationName}{l.client?" · "+l.client:""}</span><span style={{ fontSize:"9px", color:"#5a8ab0" }}>{lr.toFixed(2)}h reg{ls>0?" + "+ls.toFixed(2)+"h stat":""}</span></div><table style={S.tbl}><thead><tr>{["Employee","Regular","Stat","Total"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead><tbody>{ents.map(([gid,g])=><tr key={gid}><td style={S.td}>{g.name}</td><td style={S.td}>{g.regular.toFixed(2)}h</td><td style={S.td}>{g.stat>0?<span style={{ color:"#fbbf24" }}>{g.stat.toFixed(2)}h ★</span>:"—"}</td><td style={S.td}><strong>{(g.regular+g.stat).toFixed(2)}h</strong></td></tr>)}</tbody></table></div>);})}
+            {open&&<div style={{ marginTop:"10px", borderTop:"1px solid #e2e8f0", paddingTop:"10px" }}>
+              {h.data.map(l=>{const ents=Object.entries(l.guards);if(!ents.length)return null;const lr=ents.reduce((s,[,g])=>s+g.regular,0),ls=ents.reduce((s,[,g])=>s+g.stat,0);return(<div key={l.locationId} style={{ marginBottom:"10px" }}><div style={{ display:"flex", justifyContent:"space-between", marginBottom:"4px" }}><span style={{ fontWeight:"700", color:"#3b82f6", fontSize:"11px" }}>{l.locationName}{l.client?" · "+l.client:""}</span><span style={{ fontSize:"9px", color:"#475569" }}>{lr.toFixed(2)}h reg{ls>0?" + "+ls.toFixed(2)+"h stat":""}</span></div><table style={S.tbl}><thead><tr>{["Employee","Regular","Stat","Total"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead><tbody>{ents.map(([gid,g])=><tr key={gid}><td style={S.td}>{g.name}</td><td style={S.td}>{g.regular.toFixed(2)}h</td><td style={S.td}>{g.stat>0?<span style={{ color:"#fbbf24" }}>{g.stat.toFixed(2)}h ★</span>:"—"}</td><td style={S.td}><strong>{(g.regular+g.stat).toFixed(2)}h</strong></td></tr>)}</tbody></table></div>);})}
             </div>}
           </div>
         );
@@ -1630,7 +1641,7 @@ function Revenue({ locs }) {
               <tbody>
                 {filtered.map(r => {
                   const isInv = r.fromInvoice;
-                  const rowBg = r.received ? "#030f07" : r.status==="overdue" ? "#1a0505" : "transparent";
+                  const rowBg = r.received ? "#f0fdf4" : r.status==="overdue" ? "#fef2f2" : "transparent";
                   const statusCol = r.received ? T.green : r.status==="overdue" ? T.red : T.amber;
                   const statusLabel = r.received ? "Received" : r.status==="overdue" ? "Overdue" : "Pending";
                   return (
@@ -1714,12 +1725,12 @@ function Sales() {
     <div>
       {confirmEl}
       <F style={{ marginBottom:"12px", flexWrap:"wrap" }}>
-        {[["Total Leads",leads.length,"#e0f0ff"],["Active",active.length,"#3b82f6"],["Signed",signed.length,"#10b981"],["Pipeline","$"+active.reduce((s,l)=>s+parseFloat(l.estimatedValue||0),0).toFixed(0),"#f59e0b"],["Won","$"+signed.reduce((s,l)=>s+parseFloat(l.estimatedValue||0),0).toFixed(0),"#10b981"]].map(([l,v,c])=><Stat key={l} label={l} value={v} color={c}/>)}
+        {[["Total Leads",leads.length,"#0f172a"],["Active",active.length,"#3b82f6"],["Signed",signed.length,"#10b981"],["Pipeline","$"+active.reduce((s,l)=>s+parseFloat(l.estimatedValue||0),0).toFixed(0),"#f59e0b"],["Won","$"+signed.reduce((s,l)=>s+parseFloat(l.estimatedValue||0),0).toFixed(0),"#10b981"]].map(([l,v,c])=><Stat key={l} label={l} value={v} color={c}/>)}
       </F>
       <div style={S.card}>
         <F style={{ flexWrap:"wrap" }}>
           <button style={S.bp} onClick={startNew}>+ New Lead</button>
-          {[["board","🗂 Board"],["list","☰ List"]].map(([v,l])=><button key={v} style={{ ...S.bo, background:view===v?"#172a45":"transparent", color:view===v?"#e0f0ff":"#4a8ab0" }} onClick={()=>setView(v)}>{l}</button>)}
+          {[["board","🗂 Board"],["list","☰ List"]].map(([v,l])=><button key={v} style={{ ...S.bo, background:view===v?"#172a45":"transparent", color:view===v?"#0f172a":"#4a8ab0" }} onClick={()=>setView(v)}>{l}</button>)}
           <input style={{ ...S.inp, width:"150px" }} placeholder="Search…" value={srch} onChange={e=>setSrch(e.target.value)}/>
           <select style={{ ...S.sel, width:"150px" }} value={fStage} onChange={e=>setFStage(e.target.value)}><option value="all">All Stages</option>{STAGES.map(s=><option key={s} value={s}>{s}</option>)}</select>
           <button style={S.bs} onClick={()=>mkCSV("sales_leads",["Company","Contact","Phone","Email","Stage","Priority","Source","Service","Value","Next Action","Next Action Date","Created","Contract Date","Notes"],leads.map(l=>[l.companyName,l.contactName,l.phone,l.email,l.stage,l.priority,l.source,l.serviceType,l.estimatedValue,l.nextAction,l.nextActionDate,l.createdAt,l.contractDate,l.notes]))}>📊 Export</button>
@@ -1731,17 +1742,17 @@ function Sales() {
           {STAGES.map(stage=>{
             const c=SCOL[stage]; const sl=fLeads.filter(l=>l.stage===stage);
             return(
-              <div key={stage} style={{ background:"#0a1628", borderRadius:"8px", border:`1px solid ${c}33`, overflow:"hidden" }}>
+              <div key={stage} style={{ background:"#ffffff", borderRadius:"8px", border:`1px solid ${c}33`, overflow:"hidden" }}>
                 <div style={{ background:c+"22", padding:"7px 10px", borderBottom:`1px solid ${c}33`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                   <span style={{ fontSize:"9px", fontWeight:"700", color:c }}>{SICO[stage]} {stage}</span>
                   <span style={{ background:c, color:"#fff", borderRadius:"9px", padding:"1px 6px", fontSize:"9px", fontWeight:"700" }}>{sl.length}</span>
                 </div>
                 <div style={{ padding:"6px", minHeight:"50px" }}>
-                  {sl.length===0&&<div style={{ fontSize:"9px", color:"#3a6a8a", textAlign:"center", padding:"10px 0" }}>No leads</div>}
+                  {sl.length===0&&<div style={{ fontSize:"9px", color:"#94a3b8", textAlign:"center", padding:"10px 0" }}>No leads</div>}
                   {sl.map(l=>(
-                    <div key={l.id} style={{ background:"#070d19", borderRadius:"5px", padding:"8px", marginBottom:"5px", borderLeft:`3px solid ${c}`, cursor:"pointer" }} onClick={()=>startEdit(l)}>
-                      <div style={{ fontWeight:"700", color:"#e0f0ff", fontSize:"10px", marginBottom:"2px" }}>{l.companyName}</div>
-                      {l.contactName&&<div style={{ fontSize:"9px", color:"#5a8ab0" }}>👤 {l.contactName}</div>}
+                    <div key={l.id} style={{ background:"#f8faff", borderRadius:"5px", padding:"8px", marginBottom:"5px", borderLeft:`3px solid ${c}`, cursor:"pointer" }} onClick={()=>startEdit(l)}>
+                      <div style={{ fontWeight:"700", color:"#0f172a", fontSize:"10px", marginBottom:"2px" }}>{l.companyName}</div>
+                      {l.contactName&&<div style={{ fontSize:"9px", color:"#475569" }}>👤 {l.contactName}</div>}
                       {l.estimatedValue&&<div style={{ fontSize:"9px", color:"#34d399" }}>💰 ${parseFloat(l.estimatedValue).toLocaleString()}/mo</div>}
                       {l.nextActionDate&&<div style={{ fontSize:"8px", color:"#f59e0b" }}>📅 {l.nextActionDate}</div>}
                       {l.priority&&<div style={{ marginTop:"3px" }}><span style={S.pill(l.priority==="High"?"#ef4444":l.priority==="Medium"?"#f59e0b":"#3b82f6")}>{l.priority}</span></div>}
@@ -1758,12 +1769,12 @@ function Sales() {
       {view==="list"&&(
         <div style={S.card}>
           <div style={S.ct}>All Leads ({fLeads.length})</div>
-          {fLeads.length===0?<div style={S.empty}>No leads.</div>:<div style={{ overflowX:"auto" }}><table style={S.tbl}><thead><tr>{["Company","Contact","Phone","Stage","Priority","Value","Next Action","Created",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead><tbody>{fLeads.map(l=>{const c=SCOL[l.stage]||"#6b7280";return(<tr key={l.id}><td style={S.td}><span style={{ color:"#e0f0ff", fontWeight:"700", cursor:"pointer" }} onClick={()=>startEdit(l)}>{l.companyName}</span>{l.email&&<div style={{ fontSize:"9px", color:"#3a6a8a" }}>{l.email}</div>}</td><td style={S.td}>{l.contactName||"—"}</td><td style={S.td}>{l.phone||"—"}</td><td style={S.td}><span style={S.pill(c)}>{SICO[l.stage]} {l.stage}</span></td><td style={S.td}><span style={S.pill(l.priority==="High"?"#ef4444":l.priority==="Medium"?"#f59e0b":"#3b82f6")}>{l.priority||"—"}</span></td><td style={S.td}>{l.estimatedValue?`$${parseFloat(l.estimatedValue).toLocaleString()}`:""}</td><td style={S.td}><div style={{ fontSize:"10px" }}>{l.nextAction||"—"}</div>{l.nextActionDate&&<div style={{ fontSize:"9px", color:"#f59e0b" }}>{l.nextActionDate}</div>}</td><td style={S.td}>{l.createdAt||"—"}</td><td style={S.td}><F><button style={S.bsm("#60a5fa")} onClick={()=>startEdit(l)}>Edit</button><button style={S.bd} onClick={()=>del(l.id)}>✕</button></F></td></tr>);})}</tbody></table></div>}
+          {fLeads.length===0?<div style={S.empty}>No leads.</div>:<div style={{ overflowX:"auto" }}><table style={S.tbl}><thead><tr>{["Company","Contact","Phone","Stage","Priority","Value","Next Action","Created",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead><tbody>{fLeads.map(l=>{const c=SCOL[l.stage]||"#6b7280";return(<tr key={l.id}><td style={S.td}><span style={{ color:"#0f172a", fontWeight:"700", cursor:"pointer" }} onClick={()=>startEdit(l)}>{l.companyName}</span>{l.email&&<div style={{ fontSize:"9px", color:"#94a3b8" }}>{l.email}</div>}</td><td style={S.td}>{l.contactName||"—"}</td><td style={S.td}>{l.phone||"—"}</td><td style={S.td}><span style={S.pill(c)}>{SICO[l.stage]} {l.stage}</span></td><td style={S.td}><span style={S.pill(l.priority==="High"?"#ef4444":l.priority==="Medium"?"#f59e0b":"#3b82f6")}>{l.priority||"—"}</span></td><td style={S.td}>{l.estimatedValue?`$${parseFloat(l.estimatedValue).toLocaleString()}`:""}</td><td style={S.td}><div style={{ fontSize:"10px" }}>{l.nextAction||"—"}</div>{l.nextActionDate&&<div style={{ fontSize:"9px", color:"#f59e0b" }}>{l.nextActionDate}</div>}</td><td style={S.td}>{l.createdAt||"—"}</td><td style={S.td}><F><button style={S.bsm("#60a5fa")} onClick={()=>startEdit(l)}>Edit</button><button style={S.bd} onClick={()=>del(l.id)}>✕</button></F></td></tr>);})}</tbody></table></div>}
         </div>
       )}
 
       {view==="form"&&(
-        <div style={{ ...S.card, border:"1px solid #2563eb" }}>
+        <div style={{ ...S.card, border:"1px solid #bfdbfe" }}>
           <div style={S.ct}>{editing?"Edit Lead":"New Lead"}</div>
           <div style={S.g3}><Inp label="Company Name *" value={form.companyName} onChange={ff("companyName")} placeholder="ABC Security Ltd"/><Inp label="Contact Name" value={form.contactName} onChange={ff("contactName")}/><Inp label="Phone" type="tel" value={form.phone} onChange={ff("phone")}/></div>
           <div style={{ ...S.g3, marginTop:"8px" }}><Inp label="Email" type="email" value={form.email} onChange={ff("email")}/><Inp label="Address" value={form.address} onChange={ff("address")}/><Inp label="Lead Source" value={form.source} onChange={ff("source")} placeholder="Referral, Cold Call…"/></div>
@@ -1776,8 +1787,8 @@ function Sales() {
           {form.stage==="Signed Contract"&&<div style={{ marginTop:"8px", maxWidth:"200px" }}><Inp label="Contract Signed Date" type="date" value={form.contractDate} onChange={ff("contractDate")} style={{ borderColor:"#059669" }}/></div>}
           <div style={{ ...S.g2, marginTop:"8px" }}><Inp label="Next Action" value={form.nextAction} onChange={ff("nextAction")} placeholder="Follow up call…"/><Inp label="Next Action Date" type="date" value={form.nextActionDate} onChange={ff("nextActionDate")}/></div>
           <div style={{ marginTop:"8px" }}><label style={S.lbl}>Notes</label><textarea style={S.ta} value={form.notes} onChange={ff("notes")} placeholder="Lead details, requirements, conversations…"/></div>
-          <div style={{ marginTop:"10px", padding:"10px", background:"#070d19", borderRadius:"6px" }}>
-            <div style={{ fontSize:"9px", color:"#3a6a8a", marginBottom:"6px", fontWeight:"700", textTransform:"uppercase" }}>Quick Stage</div>
+          <div style={{ marginTop:"10px", padding:"10px", background:"#f8faff", borderRadius:"6px" }}>
+            <div style={{ fontSize:"9px", color:"#94a3b8", marginBottom:"6px", fontWeight:"700", textTransform:"uppercase" }}>Quick Stage</div>
             <F style={{ flexWrap:"wrap" }}>{STAGES.map(s=><button key={s} onClick={()=>setForm(p=>({...p,stage:s}))} style={{ padding:"3px 8px", borderRadius:"4px", cursor:"pointer", fontSize:"8px", fontWeight:"700", background:form.stage===s?SCOL[s]:"transparent", color:form.stage===s?"#fff":SCOL[s], border:`1px solid ${SCOL[s]}66` }}>{SICO[s]} {s}</button>)}</F>
           </div>
           <F style={{ marginTop:"10px" }}>
@@ -1997,7 +2008,7 @@ function Invoices({ locs }) {
       {confirmEl}
       <div style={{ display:"flex", gap:"6px", marginBottom:"14px", flexWrap:"wrap" }}>
         {subTabs.map(([v,l]) => (
-          <button key={v} style={{ ...S.bp, background:view===v?"#1d4ed8":"transparent", color:view===v?"#fff":"#4a8ab0", border:"1px solid #1e3a5f" }}
+          <button key={v} style={{ ...S.bp, background:view===v?"#1d4ed8":"transparent", color:view===v?"#fff":"#4a8ab0", border:"1px solid #e2e8f0" }}
             onClick={()=>{ if(v==="form") startNew(); else setView(v); }}>{l}</button>
         ))}
       </div>
@@ -2041,9 +2052,9 @@ function Invoices({ locs }) {
                 <thead><tr>{["Invoice #","Client","Summary","Date","Due","Status","Total",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
                 <tbody>{[...invs].sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(inv=>(
                   <tr key={inv.id}>
-                    <td style={S.td}><strong style={{ color:"#e0f0ff" }}>{inv.number}</strong></td>
+                    <td style={S.td}><strong style={{ color:"#0f172a" }}>{inv.number}</strong></td>
                     <td style={S.td}>{clientLabel(inv)}</td>
-                    <td style={{ ...S.td, maxWidth:"160px", fontSize:"10px", color:"#5a8ab0" }}>{inv.summary||"—"}</td>
+                    <td style={{ ...S.td, maxWidth:"160px", fontSize:"10px", color:"#475569" }}>{inv.summary||"—"}</td>
                     <td style={S.td}>{inv.date||"—"}</td>
                     <td style={S.td}>{inv.dueDate||"—"}</td>
                     <td style={S.td}><span style={S.pill(INV_STATUS_COL[inv.status]||"#6b7280")}>{inv.status}</span></td>
@@ -2069,7 +2080,7 @@ function Invoices({ locs }) {
           {/* company profile — always saved */}
           <div style={S.card}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"12px" }}>
-              <div style={S.ct}>Your Company Details <span style={{ color:"#3a6a8a", fontSize:"9px", fontWeight:"400" }}>(saved automatically across all invoices)</span></div>
+              <div style={S.ct}>Your Company Details <span style={{ color:"#94a3b8", fontSize:"9px", fontWeight:"400" }}>(saved automatically across all invoices)</span></div>
               <button style={{ ...S.bs, fontSize:"9px" }} onClick={saveCoProfile}>{coSaved?"✓ Saved!":"💾 Save Profile"}</button>
             </div>
             <div style={S.g3}>
@@ -2091,7 +2102,7 @@ function Invoices({ locs }) {
                       r.readAsDataURL(f);
                     }}/>
                   </label>
-                  {logoB64&&<><img src={logoB64} alt="logo" style={{ height:"30px", borderRadius:"3px", border:"1px solid #1e3a5f" }}/><button style={S.bd} onClick={()=>{setLogoB64("");setCo(p=>({...p,logo:""}));}}>Remove</button></>}
+                  {logoB64&&<><img src={logoB64} alt="logo" style={{ height:"30px", borderRadius:"3px", border:"1px solid #e2e8f0" }}/><button style={S.bd} onClick={()=>{setLogoB64("");setCo(p=>({...p,logo:""}));}}>Remove</button></>}
                 </div>
               </div>
             </div>
@@ -2108,7 +2119,7 @@ function Invoices({ locs }) {
                 <input style={S.inp} type="date" value={form.dueDate} onChange={e=>setForm(p=>({...p,dueDate:e.target.value}))}/>
                 <div style={{ display:"flex", gap:"4px", flexWrap:"wrap", marginTop:"5px" }}>
                   {DUE_SHORTCUTS.map(([label,days])=>(
-                    <button key={label} style={{ ...S.bsm("#5a8ab0"), fontSize:"8px", padding:"2px 6px" }}
+                    <button key={label} style={{ ...S.bsm("#475569"), fontSize:"8px", padding:"2px 6px" }}
                       onClick={()=>setForm(p=>({...p,dueDate:addDays(p.date,days)}))}>{label}</button>
                   ))}
                 </div>
@@ -2179,7 +2190,7 @@ function Invoices({ locs }) {
                       <td style={S.td}><input style={S.inp} value={it.desc} onChange={e=>setItem(i,"desc",e.target.value)} placeholder="e.g. Security Services — May 1–15"/></td>
                       <td style={S.td}><input style={{ ...S.inp, width:"65px" }} type="number" min="0" value={it.qty} onChange={e=>setItem(i,"qty",e.target.value)}/></td>
                       <td style={S.td}><input style={{ ...S.inp, width:"100px" }} type="number" step="0.01" min="0" value={it.price} onChange={e=>setItem(i,"price",e.target.value)}/></td>
-                      <td style={{ ...S.td, fontWeight:"700", color:"#e0f0ff" }}>${amt.toFixed(2)}</td>
+                      <td style={{ ...S.td, fontWeight:"700", color:"#0f172a" }}>${amt.toFixed(2)}</td>
                       <td style={S.td}>{form.items.length>1&&<button style={S.bd} onClick={()=>removeItem(i)}>✕</button>}</td>
                     </tr>
                   );
