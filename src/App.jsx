@@ -1389,6 +1389,77 @@ function Reports({ guards, locs, scs, ovs, history, setHistory, addLog }) {
         </F>
       </div>
       {shown.length===0&&<div style={S.card}><div style={S.empty}>No locations added yet.</div></div>}
+
+      {/* ── EMPLOYEE TOTALS SUMMARY (only when viewing all locations) ── */}
+      {sl==="all" && shown.length > 0 && (() => {
+        // Aggregate hours across all locations per employee
+        const empTotals = {};
+        shown.forEach(l => {
+          const gm = buildRpt(l.id);
+          Object.entries(gm).forEach(([gid, g]) => {
+            if (!empTotals[gid]) empTotals[gid] = { name:g.name, regular:0, stat:0, locations:[], days:[] };
+            empTotals[gid].regular += g.regular;
+            empTotals[gid].stat    += g.stat;
+            if (!empTotals[gid].locations.includes(l.name)) empTotals[gid].locations.push(l.name);
+            empTotals[gid].days = [...empTotals[gid].days, ...(g.days||[])];
+          });
+        });
+        const entries = Object.entries(empTotals).filter(([,g])=>g.regular+g.stat>0)
+          .sort((a,b)=>b[1].regular+b[1].stat - (a[1].regular+a[1].stat));
+        if (!entries.length) return null;
+        const multiLoc = entries.some(([,g])=>g.locations.length>1);
+        return (
+          <div style={{ ...S.card, border:`1px solid ${T.borderHi}` }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"12px" }}>
+              <div>
+                <div style={{ ...S.ct, fontWeight:"800", fontSize:"13px", color:T.text }}>Employee Totals — All Locations</div>
+                {multiLoc && <div style={{ fontSize:"11px", color:T.textMute, marginTop:"-8px" }}>Some employees worked at multiple locations — hours are combined below.</div>}
+              </div>
+              <div style={{ fontSize:"12px", color:T.textSub }}>
+                {sd} → {ed}
+              </div>
+            </div>
+            <table style={S.tbl}>
+              <thead>
+                <tr>{["Employee","Location(s)","Regular","Stat ★","Total Hours"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {entries.map(([gid, g]) => {
+                  const total = g.regular + g.stat;
+                  const multipleLocations = g.locations.length > 1;
+                  return (
+                    <tr key={gid} style={{ background: multipleLocations ? "#eff6ff" : "transparent" }}>
+                      <td style={S.td}>
+                        <span style={{ color:gc(gIdx(gid)), fontWeight:"700" }}>{g.name}</span>
+                        {multipleLocations && <span style={{ ...S.pill(T.blue), marginLeft:"8px", fontSize:"9px" }}>Multi-site</span>}
+                      </td>
+                      <td style={{ ...S.td, fontSize:"11px", color:T.textSub }}>
+                        {g.locations.join(" · ")}
+                      </td>
+                      <td style={S.td}>{g.regular.toFixed(2)}h</td>
+                      <td style={S.td}>
+                        {g.stat > 0
+                          ? <span style={{ color:"#d97706", fontWeight:"700" }}>{g.stat.toFixed(2)}h</span>
+                          : "—"}
+                      </td>
+                      <td style={S.td}>
+                        <strong style={{ color:T.text, fontSize:"14px" }}>{total.toFixed(2)}h</strong>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {/* grand total row */}
+            <div style={{ display:"flex", gap:"20px", marginTop:"12px", paddingTop:"10px", borderTop:`1px solid ${T.border}`, fontSize:"12px", color:T.textSub, flexWrap:"wrap" }}>
+              <span>Total Regular: <strong style={{ color:T.text }}>{entries.reduce((s,[,g])=>s+g.regular,0).toFixed(2)}h</strong></span>
+              {entries.some(([,g])=>g.stat>0) && <span>Total Stat: <strong style={{ color:"#d97706" }}>{entries.reduce((s,[,g])=>s+g.stat,0).toFixed(2)}h</strong></span>}
+              <span>Grand Total: <strong style={{ color:T.blue }}>{entries.reduce((s,[,g])=>s+g.regular+g.stat,0).toFixed(2)}h</strong></span>
+              <span style={{ color:T.textMute }}>{entries.length} employee{entries.length!==1?"s":""}</span>
+            </div>
+          </div>
+        );
+      })()}
       {shown.map(l=>{
         const gm=buildRpt(l.id); const ents=Object.entries(gm);
         const tr=ents.reduce((s,[,g])=>s+g.regular,0), ts=ents.reduce((s,[,g])=>s+g.stat,0);
