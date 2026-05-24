@@ -7,7 +7,7 @@ fontLink.href = "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght
 document.head.appendChild(fontLink);
 
 // ─── storage ──────────────────────────────────────────────────────────────────
-const K = { g:"so_g", l:"so_l", sc:"so_sc", ov:"so_ov", hi:"so_hi", pay:"so_pay", leads:"so_lds", inv:"so_inv", co:"so_co" };
+const K = { g:"so_g", l:"so_l", sc:"so_sc", ov:"so_ov", hi:"so_hi", pay:"so_pay", leads:"so_lds", inv:"so_inv", co:"so_co", log:"so_log" };
 import { load, save } from './supabase.js';
 
 // ─── utils ────────────────────────────────────────────────────────────────────
@@ -283,6 +283,7 @@ function MassWageUpdate({ guards, setGuards, ask }) {
       return { ...g, wage: String(calcNew(g.wage)) };
     });
     setGuards(updated); save(K.g, updated);
+    ask && ask.addLog && ask.addLog("Updated","Employee",`Mass wage update — ${modeLabel}${value} applied to ${targetGuards.length} employee${targetGuards.length!==1?"s":""}`);
     setOpen(false); setValue(""); setPreview(false);
   }
 
@@ -384,7 +385,7 @@ function MassWageUpdate({ guards, setGuards, ask }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMPLOYEES
 // ═══════════════════════════════════════════════════════════════════════════════
-function Employees({ guards, setGuards }) {
+function Employees({ guards, setGuards, addLog }) {
   const blank = { name:"",badge:"",phone:"",email:"",sin:"",dob:"",address:"",startDate:"",endDate:"",wage:"",status:"Active",notes:"" };
   const [form, setForm] = useState(blank); const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState(""); const [exp, setExp] = useState(null);
@@ -397,9 +398,14 @@ function Employees({ guards, setGuards }) {
     const entry = { ...form, id: editing || uid() };
     const u = editing ? guards.map(g => g.id===editing ? entry : g) : [...guards, entry];
     setGuards(u); save(K.g, u); setForm(blank); setEditing(null);
-    if (editing) { setSaved(true); setTimeout(() => setSaved(false), 2500); }
+    if (editing) { setSaved(true); setTimeout(() => setSaved(false), 2500); addLog("Updated","Employee",`Updated employee: ${entry.name}`); }
+    else { addLog("Created","Employee",`Added new employee: ${entry.name}`, `Wage: $${entry.wage||"—"}/hr · Status: ${entry.status}`); }
   }
-  const del = id => ask("Delete this employee? This cannot be undone.", () => { const u = guards.filter(g=>g.id!==id); setGuards(u); save(K.g,u); });
+  const del = id => ask("Delete this employee? This cannot be undone.", () => {
+    const g = guards.find(x=>x.id===id);
+    const u = guards.filter(g=>g.id!==id); setGuards(u); save(K.g,u);
+    addLog("Deleted","Employee",`Deleted employee: ${g?.name||"Unknown"}`);
+  });
   const edit = g => {
     setForm({...blank,...g}); setEditing(g.id); setExp(null);
     setTimeout(() => formRef.current?.scrollIntoView({ behavior:"smooth", block:"start" }), 50);
@@ -486,7 +492,7 @@ function Employees({ guards, setGuards }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // LOCATIONS
 // ═══════════════════════════════════════════════════════════════════════════════
-function Locations({ locs, setLocs }) {
+function Locations({ locs, setLocs, addLog }) {
   const blankL = { name:"", client:"", contactName:"", contactEmail:"", contactPhone:"", clientAddress:"", contractStart:"", contractEnd:"", notes:"", rates:[] };
   const [form, setForm] = useState(blankL);
   const [editing, setEditing] = useState(null);
@@ -512,28 +518,38 @@ function Locations({ locs, setLocs }) {
     };
     const u = editing ? locs.map(l=>l.id===editing?entry:l) : [...locs, entry];
     setLocs(u); save(K.l, u); setForm(blankL);
-    if (editing) { setSaved(true); setTimeout(()=>setSaved(false), 2500); }
+    if (editing) { setSaved(true); setTimeout(()=>setSaved(false), 2500); addLog("Updated","Location",`Updated location: ${entry.name||entry.client}`,entry.client?`Client: ${entry.client}`:""); }
+    else { addLog("Created","Location",`Added new location: ${entry.name||entry.client}`,entry.client?`Client: ${entry.client}`:""); }
     setEditing(null); setShowForm(false);
   }
   function edit(l) {
     setForm({...blankL,...l, rates:l.rates||[]}); setEditing(l.id); setShowForm(true); setExpanded(null);
     setTimeout(() => formRef.current?.scrollIntoView({ behavior:"smooth", block:"start" }), 50);
   }
-  function del(id) { ask("Delete this location/client? This cannot be undone.", () => { const u=locs.filter(l=>l.id!==id); setLocs(u); save(K.l,u); }); }
+  function del(id) { ask("Delete this location/client? This cannot be undone.", () => {
+    const l=locs.find(x=>x.id===id);
+    const u=locs.filter(l=>l.id!==id); setLocs(u); save(K.l,u);
+    addLog("Deleted","Location",`Deleted location: ${l?.name||l?.client||"Unknown"}`);
+  }); }
 
   function addRate(locId) {
     if (!rateForm.effectiveDate || !rateForm.rate) return;
+    const loc = locs.find(l=>l.id===locId);
     const u = locs.map(l => {
       if (l.id!==locId) return l;
       const rates = [...(l.rates||[]), { ...rateForm, id:uid() }].sort((a,b)=>a.effectiveDate.localeCompare(b.effectiveDate));
       return { ...l, rates };
     });
     setLocs(u); save(K.l, u); setRateForm(blankRate);
+    addLog("Created","Location",`Added billing rate for ${loc?.name||loc?.client||"location"}`,`$${rateForm.rate}/hr effective ${rateForm.effectiveDate}`);
   }
   function delRate(locId, rateId) {
     ask("Delete this billing rate entry?", () => {
+      const loc=locs.find(l=>l.id===locId);
+      const rate=(loc?.rates||[]).find(r=>r.id===rateId);
       const u = locs.map(l => l.id!==locId ? l : { ...l, rates:(l.rates||[]).filter(r=>r.id!==rateId) });
       setLocs(u); save(K.l, u);
+      addLog("Deleted","Location",`Deleted billing rate for ${loc?.name||loc?.client||"location"}`,rate?`$${rate.rate}/hr from ${rate.effectiveDate}`:"");
     });
   }
 
@@ -658,7 +674,7 @@ function Locations({ locs, setLocs }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // CALENDAR
 // ═══════════════════════════════════════════════════════════════════════════════
-function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
+function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog }) {
   const today = new Date();
   const [yr, setYr] = useState(today.getFullYear()); const [mo, setMo] = useState(today.getMonth());
   const [sel, setSel] = useState(null); const [sub, setSub] = useState("cal");
@@ -689,6 +705,9 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
     const u = [...scs, { ...sf, id:uid(), hours:calcH(sf.startTime,sf.endTime), days:sf.days.map(Number) }];
     setScs(u); save(K.sc,u); setSf({ guardId:"",locationId:"",days:[],startTime:"",endTime:"",effectiveFrom:"",effectiveTo:"" });
     setScSaved(true); setTimeout(()=>setScSaved(false), 2500);
+    const gn=guards.find(g=>g.id===sf.guardId)?.name||"?";
+    const ln=locs.find(l=>l.id===sf.locationId)?.name||"?";
+    addLog("Created","Schedule",`Created schedule for ${gn} at ${ln}`,`${sf.days.map(d=>DAYS[d]).join(", ")} · ${sf.startTime}–${sf.endTime} · From: ${sf.effectiveFrom||"—"}`);
   };
   const delSc = id => ask(
     "Remove this recurring schedule?\n\nAll past days from this schedule will be permanently saved so your historical hours are not lost.",
@@ -736,6 +755,9 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
       const newScs = scs.filter(s => s.id !== id);
       setOvs(newOvs); save(K.ov, newOvs);
       setScs(newScs); save(K.sc, newScs);
+      const gn=guards.find(g=>g.id===sc.guardId)?.name||"?";
+      const ln=locs.find(l=>l.id===sc.locationId)?.name||"?";
+      addLog("Deleted","Schedule",`Removed schedule for ${gn} at ${ln}`,`${sc.days.map(d=>DAYS[d]).join(", ")} · ${sc.startTime}–${sc.endTime}`);
     }
   );
   const togDay = d => setSf(p => ({ ...p, days: p.days.includes(d)?p.days.filter(x=>x!==d):[...p.days,d] }));
@@ -753,6 +775,8 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
     const ov = { id:uid(), date:ds, guardId:adjG.id, locationId:adj.locationId, startTime:adj.startTime, endTime:adj.endTime, regularHours:adj.absent?0:(parseFloat(adj.regularHours)||0), statHours:adj.absent?0:(parseFloat(adj.statHours)||0), absent:adj.absent, notes:adj.notes };
     const u=[...base,ov]; setOvs(u); save(K.ov,u); setAdjG(null);
     setAdjSaved(true); setTimeout(()=>setAdjSaved(false), 2500);
+    const gn=adjG.name;
+    addLog("Adjusted","Hours",`Adjusted hours for ${gn} on ${ds}`,ov.absent?"Marked absent":`${ov.regularHours}h reg${ov.statHours>0?" + "+ov.statHours+"h stat":""}`);
   };
   const remAdj = gid => ask("Reset this day's adjustment back to scheduled hours?", ()=>{ const ds=dStr(yr,mo,sel); const u=ovs.filter(o=>!(o.date===ds&&o.guardId===gid)); setOvs(u); save(K.ov,u); });
 
@@ -1319,7 +1343,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // REPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
-function Reports({ guards, locs, scs, ovs, history, setHistory }) {
+function Reports({ guards, locs, scs, ovs, history, setHistory, addLog }) {
   const tod = new Date().toISOString().slice(0,10);
   const two = new Date(Date.now()-14*86400000).toISOString().slice(0,10);
   const [sd, setSd] = useState(two); const [ed, setEd] = useState(tod); const [sl, setSl] = useState("all");
@@ -1347,7 +1371,9 @@ function Reports({ guards, locs, scs, ovs, history, setHistory }) {
 
   function saveHist() {
     const e={id:uid(),savedAt:new Date().toISOString(),startDate:sd,endDate:ed,data:locs.map(l=>({locationId:l.id,locationName:l.name,client:l.client||"",guards:buildRpt(l.id)}))};
-    const u=[e,...history].slice(0,50); setHistory(u); save(K.hi,u); alert("Saved to History!");
+    const u=[e,...history].slice(0,50); setHistory(u); save(K.hi,u);
+    addLog("Created","Saved Report",`Saved report: ${sd} → ${ed}`,`${shown.length} location${shown.length!==1?"s":""}`);
+    alert("Saved to History!");
   }
 
   const shown = sl==="all" ? locs : locs.filter(l=>l.id===sl);
@@ -1377,7 +1403,52 @@ function Reports({ guards, locs, scs, ovs, history, setHistory }) {
                 <button style={S.bs} onClick={()=>doExcel(l)}>📊 Excel</button>
               </F>
             </div>
-            {ents.length===0?<div style={S.empty}>No hours.</div>:<table style={S.tbl}><thead><tr>{["Employee","Regular","Stat ★","Total"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead><tbody>{ents.map(([gid,g])=><tr key={gid}><td style={S.td}><span style={{ color:gc(gIdx(gid)), fontWeight:"700" }}>{g.name}</span></td><td style={S.td}>{g.regular.toFixed(2)}h</td><td style={S.td}>{g.stat>0?<span style={{ color:"#fbbf24", fontWeight:"700" }}>{g.stat.toFixed(2)}h</span>:"—"}</td><td style={S.td}><strong style={{ color:"#0f172a" }}>{(g.regular+g.stat).toFixed(2)}h</strong></td></tr>)}</tbody></table>}
+            {ents.length===0 ? <div style={S.empty}>No hours.</div> : (
+              <table style={S.tbl}>
+                <thead><tr>{["Employee","Days Worked","Regular","Stat ★","Total"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {ents.map(([gid,g]) => {
+                    // Format dates adaptively based on how many days there are
+                    const days = (g.days||[]).sort((a,b)=>a.date.localeCompare(b.date));
+                    const dayStr = (() => {
+                      if (!days.length) return "—";
+                      const count = days.length;
+                      const first = new Date(days[0].date+"T00:00:00");
+                      const last  = new Date(days[days.length-1].date+"T00:00:00");
+                      const fmt = d => d.toLocaleString("en-CA",{month:"short",day:"numeric"});
+                      if (count <= 10) {
+                        // Show individual dates grouped by month
+                        const groups = {};
+                        days.forEach(d => {
+                          const dt = new Date(d.date+"T00:00:00");
+                          const key = `${dt.getFullYear()}-${dt.getMonth()}`;
+                          const label = dt.toLocaleString("en-CA",{month:"short"});
+                          if (!groups[key]) groups[key] = { label, nums:[] };
+                          groups[key].nums.push(dt.getDate());
+                        });
+                        return Object.values(groups).map(g=>`${g.label} ${g.nums.join(", ")}`).join(" · ");
+                      } else if (count <= 20) {
+                        // Show count + date range
+                        return `${count} days · ${fmt(first)} – ${fmt(last)}`;
+                      } else {
+                        // Show count + range only
+                        const yr = first.getFullYear()!==last.getFullYear() ? ` ${last.getFullYear()}`:"";
+                        return `${count} days · ${fmt(first)} – ${fmt(last)}${yr}`;
+                      }
+                    })();
+                    return (
+                      <tr key={gid}>
+                        <td style={S.td}><span style={{ color:gc(gIdx(gid)), fontWeight:"700" }}>{g.name}</span></td>
+                        <td style={{ ...S.td, fontSize:"11px", color:T.textSub, maxWidth:"260px" }}>{dayStr}</td>
+                        <td style={S.td}>{g.regular.toFixed(2)}h</td>
+                        <td style={S.td}>{g.stat>0?<span style={{ color:"#d97706", fontWeight:"700" }}>{g.stat.toFixed(2)}h</span>:"—"}</td>
+                        <td style={S.td}><strong style={{ color:T.text }}>{(g.regular+g.stat).toFixed(2)}h</strong></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         );
       })}
@@ -1388,10 +1459,14 @@ function Reports({ guards, locs, scs, ovs, history, setHistory }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // HISTORY
 // ═══════════════════════════════════════════════════════════════════════════════
-function History({ history, setHistory }) {
+function History({ history, setHistory, addLog }) {
   const [exp, setExp] = useState(null);
   const [confirmEl, ask] = useConfirm();
-  const del = id => ask("Delete this saved report?", ()=>{ const u=history.filter(h=>h.id!==id); setHistory(u); save(K.hi,u); if(exp===id)setExp(null); });
+  const del = id => ask("Delete this saved report?", ()=>{
+    const h=history.find(x=>x.id===id);
+    const u=history.filter(h=>h.id!==id); setHistory(u); save(K.hi,u); if(exp===id)setExp(null);
+    addLog("Deleted","Saved Report",`Deleted saved report: ${h?.startDate||""} → ${h?.endDate||""}`);
+  });
   function doExcel(h) {
     const rows=[];
     h.data.forEach(l=>Object.values(l.guards).forEach(g=>(g.days||[]).forEach(d=>rows.push([h.startDate,h.endDate,l.locationName,l.client||"",g.name,d.date,d.startTime||"",d.endTime||"",d.regular,d.stat,d.regular+d.stat]))));
@@ -1424,7 +1499,7 @@ function History({ history, setHistory }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // REVENUE
 // ═══════════════════════════════════════════════════════════════════════════════
-function Revenue({ locs }) {
+function Revenue({ locs, addLog }) {
   const [pays, setPays] = useState([]);
   const [invs, setInvs] = useState([]);
   const [rdy, setRdy] = useState(false);
@@ -1504,6 +1579,8 @@ function Revenue({ locs }) {
     if (!form.amountBilled) return;
     const e = { ...form, id:editing||uid(), hst:hst(form.amountBilled), total:tot(form.amountBilled), fromInvoice:false };
     savePays(editing ? pays.map(p=>p.id===editing?e:p) : [...pays,e]);
+    if(editing) addLog("Updated","Revenue",`Updated payment record for ${e.clientName||"—"}`,`$${parseFloat(e.amountBilled||0).toFixed(2)} · ${e.received?"Received":"Pending"}`);
+    else addLog("Created","Revenue",`Added manual payment for ${e.clientName||"—"}`,`$${parseFloat(e.amountBilled||0).toFixed(2)}`);
     setForm(blank); setEditing(null); setShow(false);
   }
   function editRow(r) {
@@ -1512,7 +1589,10 @@ function Revenue({ locs }) {
   }
   function delRow(r) {
     if (r.fromInvoice) { alert("This record is linked to an invoice. To remove it, delete the invoice in the Invoices tab."); return; }
-    ask("Delete this payment record?", () => savePays(pays.filter(p=>p.id!==r.id)));
+    ask("Delete this payment record?", () => {
+      savePays(pays.filter(p=>p.id!==r.id));
+      addLog("Deleted","Revenue",`Deleted payment record for ${r.clientName||"—"}`,`$${parseFloat(r.amountBilled||0).toFixed(2)}`);
+    });
   }
 
   function doExport() {
@@ -1698,7 +1778,7 @@ const STAGES = ["New Lead","Contacted","Meeting Scheduled","Proposal Sent","Nego
 const SCOL = { "New Lead":"#3b82f6","Contacted":"#06b6d4","Meeting Scheduled":"#8b5cf6","Proposal Sent":"#f59e0b","Negotiation":"#f97316","Signed Contract":"#10b981","Lost":"#6b7280" };
 const SICO = { "New Lead":"🆕","Contacted":"📞","Meeting Scheduled":"📅","Proposal Sent":"📄","Negotiation":"🤝","Signed Contract":"✅","Lost":"❌" };
 
-function Sales() {
+function Sales({ addLog }) {
   const [leads, setLeads] = useState([]); const [rdy, setRdy] = useState(false);
   const [view, setView] = useState("board"); const [editing, setEditing] = useState(null);
   const [fStage, setFStage] = useState("all"); const [srch, setSrch] = useState("");
@@ -1713,9 +1793,16 @@ function Sales() {
   function submit() {
     if (!form.companyName.trim()) return;
     const e={...form,id:editing||uid(),createdAt:form.createdAt||new Date().toISOString().slice(0,10)};
-    saveLeads(editing?leads.map(l=>l.id===editing?e:l):[...leads,e]); setEditing(null); setView("board");
+    saveLeads(editing?leads.map(l=>l.id===editing?e:l):[...leads,e]);
+    if(editing) addLog("Updated","Sales",`Updated lead: ${e.companyName}`,`Stage: ${e.stage}`);
+    else addLog("Created","Sales",`Added new lead: ${e.companyName}`,`Stage: ${e.stage}${e.estimatedValue?" · $"+e.estimatedValue+"/mo":""}`);
+    setEditing(null); setView("board");
   }
-  const del = id => ask("Delete this lead? This cannot be undone.", ()=>{ saveLeads(leads.filter(l=>l.id!==id)); });
+  const del = id => ask("Delete this lead? This cannot be undone.", ()=>{
+    const l=leads.find(x=>x.id===id);
+    saveLeads(leads.filter(l=>l.id!==id));
+    addLog("Deleted","Sales",`Deleted lead: ${l?.companyName||"Unknown"}`);
+  });
   const advance = id => { const l=leads.find(x=>x.id===id); if(!l)return; const i=STAGES.indexOf(l.stage); if(i<STAGES.length-2) saveLeads(leads.map(x=>x.id===id?{...x,stage:STAGES[i+1],contractDate:STAGES[i+1]==="Signed Contract"?new Date().toISOString().slice(0,10):x.contractDate}:x)); };
   const fLeads = leads.filter(l=>(fStage==="all"||l.stage===fStage)&&(srch===""||l.companyName.toLowerCase().includes(srch.toLowerCase())||l.contactName.toLowerCase().includes(srch.toLowerCase())));
   const signed = leads.filter(l=>l.stage==="Signed Contract");
@@ -1917,7 +2004,7 @@ function printInvoiceHTML(inv) {
   setTimeout(() => { w.focus(); w.print(); }, 700);
 }
 
-function Invoices({ locs }) {
+function Invoices({ locs, addLog }) {
   const [invs, setInvs] = useState([]);
   const [rdy, setRdy]   = useState(false);
   const [view, setView] = useState("dashboard");
@@ -1986,11 +2073,21 @@ function Invoices({ locs }) {
     const { sub, discAmt, afterDisc, hstAmt, total } = calcTotals();
     const entry = { ...form, ...co, logo:logoB64, id:editing||uid(), subtotal:sub, discAmt, afterDisc, hstAmt, total };
     saveInvs(editing ? invs.map(x=>x.id===editing?entry:x) : [...invs,entry]);
+    if(editing) addLog("Updated","Invoice",`Updated invoice ${entry.number}`,`Client: ${entry.clientName||"—"} · Total: $${entry.total?.toFixed(2)||"0"}`);
+    else addLog("Created","Invoice",`Created invoice ${entry.number}`,`Client: ${entry.clientName||"—"} · Total: $${entry.total?.toFixed(2)||"0"} · Status: ${entry.status}`);
     setEditing(null); setView("list");
   }
 
-  function delInv(id)        { ask("Delete this invoice? This cannot be undone.", ()=>saveInvs(invs.filter(x=>x.id!==id))); }
-  function setStatus(id, st) { saveInvs(invs.map(x=>x.id===id?{...x,status:st}:x)); }
+  function delInv(id) { ask("Delete this invoice? This cannot be undone.", ()=>{
+    const inv=invs.find(x=>x.id===id);
+    saveInvs(invs.filter(x=>x.id!==id));
+    addLog("Deleted","Invoice",`Deleted invoice ${inv?.number||""}`,`Client: ${inv?.clientName||"—"}`);
+  }); }
+  function setStatus(id, st) {
+    const inv=invs.find(x=>x.id===id);
+    saveInvs(invs.map(x=>x.id===id?{...x,status:st}:x));
+    addLog("Updated","Invoice",`Marked invoice ${inv?.number||""} as ${st}`,`Client: ${inv?.clientName||"—"}`);
+  }
 
   const clientLabel = inv => inv.clientName||(locs.find(l=>l.id===inv.clientLocationId)?.client)||(locs.find(l=>l.id===inv.clientLocationId)?.name)||"—";
 
@@ -2270,26 +2367,115 @@ function Invoices({ locs }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // APP ROOT
 // ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+// ACTIVITY LOG
+// ═══════════════════════════════════════════════════════════════════════════════
+const ACTION_STYLE = {
+  Created: { color:"#15803d", bg:"#f0fdf4", border:"#bbf7d0", icon:"✦" },
+  Updated: { color:"#2563eb", bg:"#eff6ff", border:"#bfdbfe", icon:"✎" },
+  Deleted: { color:"#dc2626", bg:"#fef2f2", border:"#fecaca", icon:"✕" },
+  Adjusted: { color:"#d97706", bg:"#fffbeb", border:"#fde68a", icon:"⊙" },
+};
+
+function ActivityLog({ logEntries, setLogEntries }) {
+  const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [confirmEl, ask] = useConfirm();
+
+  const categories = [...new Set(logEntries.map(e=>e.category))].sort();
+  const filtered = logEntries
+    .filter(e => filter==="all" || e.category===filter)
+    .filter(e => !search || e.description.toLowerCase().includes(search.toLowerCase()) || e.category.toLowerCase().includes(search.toLowerCase()))
+    .sort((a,b) => b.timestamp.localeCompare(a.timestamp));
+
+  function clearLog() {
+    ask("Clear the entire activity log? This cannot be undone.", () => {
+      setLogEntries([]); save(K.log, []);
+    });
+  }
+
+  function fmtTime(ts) {
+    const d = new Date(ts);
+    return d.toLocaleString("en-CA", { month:"short", day:"numeric", year:"numeric", hour:"2-digit", minute:"2-digit" });
+  }
+
+  return (
+    <div>
+      {confirmEl}
+      <div style={S.card}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"10px", marginBottom:"12px" }}>
+          <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
+            <input style={{ ...S.inp, width:"200px" }} placeholder="Search log…" value={search} onChange={e=>setSearch(e.target.value)}/>
+            <select style={{ ...S.sel, width:"160px" }} value={filter} onChange={e=>setFilter(e.target.value)}>
+              <option value="all">All Categories</option>
+              {categories.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div style={{ display:"flex", gap:"8px", alignItems:"center" }}>
+            <span style={{ fontSize:"12px", color:T.textMute }}>{filtered.length} entr{filtered.length!==1?"ies":"y"}</span>
+            {logEntries.length>0 && <button style={S.bd} onClick={clearLog}>Clear Log</button>}
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <div style={S.empty}>
+            {logEntries.length === 0
+              ? "No activity recorded yet. Changes you make in the app will appear here."
+              : "No entries match your search."}
+          </div>
+        ) : (
+          <div>
+            {filtered.map(entry => {
+              const st = ACTION_STYLE[entry.action] || ACTION_STYLE.Updated;
+              return (
+                <div key={entry.id} style={{ display:"flex", gap:"12px", alignItems:"flex-start", padding:"12px 0", borderBottom:`1px solid ${T.border}` }}>
+                  {/* icon */}
+                  <div style={{ width:"32px", height:"32px", borderRadius:"8px", background:st.bg, border:`1px solid ${st.border}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px", color:st.color, flexShrink:0, fontWeight:"700" }}>
+                    {st.icon}
+                  </div>
+                  {/* content */}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:"flex", gap:"8px", alignItems:"center", flexWrap:"wrap", marginBottom:"2px" }}>
+                      <span style={{ fontSize:"11px", fontWeight:"700", color:st.color, background:st.bg, border:`1px solid ${st.border}`, padding:"2px 8px", borderRadius:"20px" }}>{entry.action}</span>
+                      <span style={{ fontSize:"11px", fontWeight:"600", color:T.textSub, background:T.surface2, border:`1px solid ${T.border}`, padding:"2px 8px", borderRadius:"20px" }}>{entry.category}</span>
+                    </div>
+                    <div style={{ fontSize:"13px", color:T.text, marginTop:"3px" }}>{entry.description}</div>
+                    {entry.detail && <div style={{ fontSize:"11px", color:T.textMute, marginTop:"2px" }}>{entry.detail}</div>}
+                  </div>
+                  {/* time */}
+                  <div style={{ fontSize:"11px", color:T.textMute, flexShrink:0, textAlign:"right" }}>{fmtTime(entry.timestamp)}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const TABS = [
-  { id:"emp",  label:"Employees",  icon:"👤", section:"Operations" },
-  { id:"loc",  label:"Locations",  icon:"📍", section:"Operations" },
-  { id:"cal",  label:"Calendar",   icon:"📅", section:"Operations" },
-  { id:"rep",  label:"Reports",    icon:"📊", section:"Operations" },
-  { id:"his",  label:"History",    icon:"🗂",  section:"Operations" },
-  { id:"inv",  label:"Invoices",   icon:"🧾", section:"Finance" },
-  { id:"pay",  label:"Revenue",    icon:"💰", section:"Finance" },
-  { id:"sal",  label:"Sales",      icon:"🎯", section:"Finance" },
+  { id:"emp",  label:"Employees",     icon:"👤", section:"Operations" },
+  { id:"loc",  label:"Locations",     icon:"📍", section:"Operations" },
+  { id:"cal",  label:"Calendar",      icon:"📅", section:"Operations" },
+  { id:"rep",  label:"Reports",       icon:"📊", section:"Operations" },
+  { id:"his",  label:"Saved Reports", icon:"🗂",  section:"Operations" },
+  { id:"act",  label:"Activity Log",  icon:"📋", section:"Operations" },
+  { id:"inv",  label:"Invoices",      icon:"🧾", section:"Finance" },
+  { id:"pay",  label:"Revenue",       icon:"💰", section:"Finance" },
+  { id:"sal",  label:"Sales",         icon:"🎯", section:"Finance" },
 ];
 
 const PAGE_META = {
-  emp: { title:"Employees", subtitle:"Manage your employee records and personnel information" },
-  loc: { title:"Locations", subtitle:"Client sites, contracts, and billing rates" },
-  cal: { title:"Calendar", subtitle:"Schedules, shifts, and daily attendance" },
-  rep: { title:"Reports", subtitle:"Export hours by location and time period" },
-  his: { title:"History", subtitle:"Saved period reports" },
-  inv: { title:"Invoices", subtitle:"Create and manage client invoices" },
-  pay: { title:"Revenue", subtitle:"Invoice payments, pending collections, and revenue tracking" },
-  sal: { title:"Sales", subtitle:"Lead pipeline and client acquisition" },
+  emp: { title:"Employees",     subtitle:"Manage your employee records and personnel information" },
+  loc: { title:"Locations",     subtitle:"Client sites, contracts, and billing rates" },
+  cal: { title:"Calendar",      subtitle:"Schedules, shifts, and daily attendance" },
+  rep: { title:"Reports",       subtitle:"Export hours by location and time period" },
+  his: { title:"Saved Reports", subtitle:"Saved period reports" },
+  act: { title:"Activity Log",  subtitle:"A running record of every change made in the app" },
+  inv: { title:"Invoices",      subtitle:"Create and manage client invoices" },
+  pay: { title:"Revenue",       subtitle:"Invoice payments, pending collections, and revenue tracking" },
+  sal: { title:"Sales",         subtitle:"Lead pipeline and client acquisition" },
 };
 
 export default function App() {
@@ -2300,15 +2486,27 @@ export default function App() {
   const [scs, setScs] = useState([]);
   const [ovs, setOvs] = useState([]);
   const [history, setHistory] = useState([]);
+  const [logEntries, setLogEntries] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const [g,l,sc,ov,hi] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi)]);
+      const [g,l,sc,ov,hi,lg] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log)]);
       if(g) setGuards(g); if(l) setLocs(l); if(sc) setScs(sc); if(ov) setOvs(ov); if(hi) setHistory(hi);
+      if(lg) setLogEntries(lg);
       setLoaded(true);
     })();
   }, []);
+
+  // Global activity logger — call this from any page to record a change
+  const addLog = (action, category, description, detail="") => {
+    const entry = { id:uid(), timestamp:new Date().toISOString(), action, category, description, detail };
+    setLogEntries(prev => {
+      const updated = [entry, ...prev].slice(0, 500); // keep last 500
+      save(K.log, updated);
+      return updated;
+    });
+  };
 
   if (!loggedIn) return <Login onLogin={() => setLoggedIn(true)} />;
   if (!loaded) return (
@@ -2342,6 +2540,11 @@ export default function App() {
                 <button key={t.id} style={S.navItem(tab===t.id)} onClick={() => setTab(t.id)}>
                   <span style={S.navIcon}>{t.icon}</span>
                   <span>{t.label}</span>
+                  {t.id==="act" && logEntries.length>0 && (
+                    <span style={{ marginLeft:"auto", background:T.blue, color:"#fff", fontSize:"9px", fontWeight:"700", padding:"1px 6px", borderRadius:"10px" }}>
+                      {logEntries.length > 99 ? "99+" : logEntries.length}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -2359,14 +2562,15 @@ export default function App() {
       <main style={S.main}>
         <div style={S.pageTitle}>{meta.title}</div>
         <div style={S.pageSubtitle}>{meta.subtitle}</div>
-        {tab==="emp" && <Employees guards={guards} setGuards={setGuards} />}
-        {tab==="loc" && <Locations locs={locs} setLocs={setLocs} />}
-        {tab==="cal" && <Calendar guards={guards} locs={locs} scs={scs} setScs={setScs} ovs={ovs} setOvs={setOvs} />}
-        {tab==="rep" && <Reports guards={guards} locs={locs} scs={scs} ovs={ovs} history={history} setHistory={setHistory} />}
-        {tab==="his" && <History history={history} setHistory={setHistory} />}
-        {tab==="inv" && <Invoices locs={locs} />}
-        {tab==="pay" && <Revenue locs={locs} />}
-        {tab==="sal" && <Sales />}
+        {tab==="emp" && <Employees guards={guards} setGuards={setGuards} addLog={addLog} />}
+        {tab==="loc" && <Locations locs={locs} setLocs={setLocs} addLog={addLog} />}
+        {tab==="cal" && <Calendar guards={guards} locs={locs} scs={scs} setScs={setScs} ovs={ovs} setOvs={setOvs} addLog={addLog} />}
+        {tab==="rep" && <Reports guards={guards} locs={locs} scs={scs} ovs={ovs} history={history} setHistory={setHistory} addLog={addLog} />}
+        {tab==="his" && <History history={history} setHistory={setHistory} addLog={addLog} />}
+        {tab==="act" && <ActivityLog logEntries={logEntries} setLogEntries={setLogEntries} />}
+        {tab==="inv" && <Invoices locs={locs} addLog={addLog} />}
+        {tab==="pay" && <Revenue locs={locs} addLog={addLog} />}
+        {tab==="sal" && <Sales addLog={addLog} />}
       </main>
     </div>
   );
