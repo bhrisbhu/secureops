@@ -392,14 +392,20 @@ function Employees({ guards, setGuards, addLog }) {
   const [confirmEl, ask] = useConfirm();
   const [saved, setSaved] = useState(false);
   const formRef = useRef(null);
+  const origRef = useRef(null);
   const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
   function submit() {
     if (!form.name.trim()) return;
     const entry = { ...form, id: editing || uid() };
     const u = editing ? guards.map(g => g.id===editing ? entry : g) : [...guards, entry];
     setGuards(u); save(K.g, u); setForm(blank); setEditing(null);
-    if (editing) { setSaved(true); setTimeout(() => setSaved(false), 2500); addLog("Updated","Employee",`Updated employee: ${entry.name}`); }
-    else { addLog("Created","Employee",`Added new employee: ${entry.name}`, `Wage: $${entry.wage||"—"}/hr · Status: ${entry.status}`); }
+    if (editing) {
+      setSaved(true); setTimeout(() => setSaved(false), 2500);
+      const changed = JSON.stringify(origRef.current) !== JSON.stringify(entry);
+      if (changed) addLog("Updated","Employee",`Updated employee: ${entry.name}`);
+    } else {
+      addLog("Created","Employee",`Added new employee: ${entry.name}`, `Wage: $${entry.wage||"—"}/hr · Status: ${entry.status}`);
+    }
   }
   const del = id => ask("Delete this employee? This cannot be undone.", () => {
     const g = guards.find(x=>x.id===id);
@@ -408,6 +414,7 @@ function Employees({ guards, setGuards, addLog }) {
   });
   const edit = g => {
     setForm({...blank,...g}); setEditing(g.id); setExp(null);
+    origRef.current = {...blank,...g};
     setTimeout(() => formRef.current?.scrollIntoView({ behavior:"smooth", block:"start" }), 50);
   };
   const rows = guards.filter(g => g.name.toLowerCase().includes(search.toLowerCase())||(g.badge||"").includes(search));
@@ -503,6 +510,7 @@ function Locations({ locs, setLocs, addLog }) {
   const [confirmEl, ask] = useConfirm();
   const [saved, setSaved] = useState(false);
   const formRef = useRef(null);
+  const origRef = useRef(null);
 
   const ff = k => e => setForm(p=>({...p,[k]:e.target.value}));
 
@@ -518,12 +526,18 @@ function Locations({ locs, setLocs, addLog }) {
     };
     const u = editing ? locs.map(l=>l.id===editing?entry:l) : [...locs, entry];
     setLocs(u); save(K.l, u); setForm(blankL);
-    if (editing) { setSaved(true); setTimeout(()=>setSaved(false), 2500); addLog("Updated","Location",`Updated location: ${entry.name||entry.client}`,entry.client?`Client: ${entry.client}`:""); }
-    else { addLog("Created","Location",`Added new location: ${entry.name||entry.client}`,entry.client?`Client: ${entry.client}`:""); }
+    if (editing) {
+      setSaved(true); setTimeout(()=>setSaved(false), 2500);
+      const changed = JSON.stringify(origRef.current) !== JSON.stringify(entry);
+      if (changed) addLog("Updated","Location",`Updated location: ${entry.name||entry.client}`,entry.client?`Client: ${entry.client}`:"");
+    } else {
+      addLog("Created","Location",`Added new location: ${entry.name||entry.client}`,entry.client?`Client: ${entry.client}`:"");
+    }
     setEditing(null); setShowForm(false);
   }
   function edit(l) {
     setForm({...blankL,...l, rates:l.rates||[]}); setEditing(l.id); setShowForm(true); setExpanded(null);
+    origRef.current = {...blankL,...l, rates:l.rates||[]};
     setTimeout(() => formRef.current?.scrollIntoView({ behavior:"smooth", block:"start" }), 50);
   }
   function del(id) { ask("Delete this location/client? This cannot be undone.", () => {
@@ -772,11 +786,22 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog }) {
     if (!adjG) return;
     const ds = dStr(yr,mo,sel);
     const base = ovs.filter(o=>!(o.date===ds&&o.guardId===adjG.id));
+    const existing = ovs.find(o=>o.date===ds&&o.guardId===adjG.id);
     const ov = { id:uid(), date:ds, guardId:adjG.id, locationId:adj.locationId, startTime:adj.startTime, endTime:adj.endTime, regularHours:adj.absent?0:(parseFloat(adj.regularHours)||0), statHours:adj.absent?0:(parseFloat(adj.statHours)||0), absent:adj.absent, notes:adj.notes };
     const u=[...base,ov]; setOvs(u); save(K.ov,u); setAdjG(null);
     setAdjSaved(true); setTimeout(()=>setAdjSaved(false), 2500);
-    const gn=adjG.name;
-    addLog("Adjusted","Hours",`Adjusted hours for ${gn} on ${ds}`,ov.absent?"Marked absent":`${ov.regularHours}h reg${ov.statHours>0?" + "+ov.statHours+"h stat":""}`);
+    // Only log if something actually changed
+    const changed = !existing ||
+      existing.regularHours !== ov.regularHours ||
+      existing.statHours    !== ov.statHours ||
+      existing.absent       !== ov.absent ||
+      existing.startTime    !== ov.startTime ||
+      existing.endTime      !== ov.endTime ||
+      existing.locationId   !== ov.locationId;
+    if (changed) {
+      const gn = adjG.name;
+      addLog("Adjusted","Hours",`Adjusted hours for ${gn} on ${ds}`, ov.absent?"Marked absent":`${ov.regularHours}h reg${ov.statHours>0?" + "+ov.statHours+"h stat":""}`);
+    }
   };
   const remAdj = gid => ask("Reset this day's adjustment back to scheduled hours?", ()=>{ const ds=dStr(yr,mo,sel); const u=ovs.filter(o=>!(o.date===ds&&o.guardId===gid)); setOvs(u); save(K.ov,u); });
 
@@ -1977,6 +2002,24 @@ function addDays(dateStr, n) {
   return d.toISOString().slice(0,10);
 }
 
+function sendGmail(inv) {
+  const clientEmail = inv.clientEmail || "";
+  const subject = encodeURIComponent(`Invoice for ${inv.summary||inv.number} from ${inv.companyName||"SecureOps"}`);
+  const body = encodeURIComponent(
+`Hello,
+
+Please find attached Invoice for ${inv.summary||inv.number}.
+
+Don't hesitate to reach out if you have any questions!
+
+Best regards,
+Chris
+${inv.companyName||""}${inv.companyAddress?"\n"+inv.companyAddress:""}${inv.companyEmail?"\n"+inv.companyEmail:""}`
+  );
+  const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(clientEmail)}&su=${subject}&body=${body}`;
+  window.open(url, "_blank");
+}
+
 function printInvoiceHTML(inv) {
   const sub = inv.items.reduce((s,it) => s+(parseFloat(it.qty)||0)*(parseFloat(it.price)||0), 0);
   const discVal = parseFloat(inv.discount)||0;
@@ -2081,6 +2124,7 @@ function Invoices({ locs, addLog }) {
   const [view, setView] = useState("dashboard");
   const [editing, setEditing] = useState(null);
   const [confirmEl, ask] = useConfirm();
+  const origRef = useRef(null);
 
   // saved company profile
   const [co, setCo] = useState({ companyName:"", companyAddress:"", companyEmail:"", companyPhone:"", companyTax:"", logo:"" });
@@ -2122,6 +2166,7 @@ function Invoices({ locs, addLog }) {
   }
   function startEdit(inv) {
     setForm({ ...blankForm(), ...inv, items:inv.items?.length?inv.items:[{desc:"",qty:1,price:""}] });
+    origRef.current = { ...inv };
     setEditing(inv.id); setView("form");
   }
 
@@ -2144,8 +2189,17 @@ function Invoices({ locs, addLog }) {
     const { sub, discAmt, afterDisc, hstAmt, total } = calcTotals();
     const entry = { ...form, ...co, logo:logoB64, id:editing||uid(), subtotal:sub, discAmt, afterDisc, hstAmt, total };
     saveInvs(editing ? invs.map(x=>x.id===editing?entry:x) : [...invs,entry]);
-    if(editing) addLog("Updated","Invoice",`Updated invoice ${entry.number}`,`Client: ${entry.clientName||"—"} · Total: $${entry.total?.toFixed(2)||"0"}`);
-    else addLog("Created","Invoice",`Created invoice ${entry.number}`,`Client: ${entry.clientName||"—"} · Total: $${entry.total?.toFixed(2)||"0"} · Status: ${entry.status}`);
+    if (editing) {
+      const changed = JSON.stringify(origRef.current?.items) !== JSON.stringify(entry.items) ||
+        origRef.current?.total !== entry.total ||
+        origRef.current?.status !== entry.status ||
+        origRef.current?.clientName !== entry.clientName ||
+        origRef.current?.dueDate !== entry.dueDate ||
+        origRef.current?.summary !== entry.summary;
+      if (changed) addLog("Updated","Invoice",`Updated invoice ${entry.number}`,`Client: ${entry.clientName||"—"} · Total: $${entry.total?.toFixed(2)||"0"}`);
+    } else {
+      addLog("Created","Invoice",`Created invoice ${entry.number}`,`Client: ${entry.clientName||"—"} · Total: $${entry.total?.toFixed(2)||"0"} · Status: ${entry.status}`);
+    }
     setEditing(null); setView("list");
   }
 
@@ -2230,6 +2284,7 @@ function Invoices({ locs, addLog }) {
                     <td style={S.td}><div style={{ display:"flex", gap:"4px", flexWrap:"wrap" }}>
                       <button style={S.bsm("#60a5fa")} onClick={()=>startEdit(inv)}>Edit</button>
                       <button style={S.bsm("#a78bfa")} onClick={()=>printInvoiceHTML(inv)}>🖨 PDF</button>
+                      <button style={S.bsm("#ea4335")} title="Opens Gmail compose — remember to attach the PDF manually" onClick={()=>sendGmail(inv)}>✉ Send</button>
                       {inv.status!=="paid"&&<button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"paid")}>Paid</button>}
                       {inv.status==="outstanding"&&<button style={S.bsm("#ef4444")} onClick={()=>setStatus(inv.id,"overdue")}>Overdue</button>}
                       <button style={S.bd} onClick={()=>delInv(inv.id)}>✕</button>
@@ -2423,11 +2478,15 @@ function Invoices({ locs, addLog }) {
             )}
           </div>
 
-          <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
+          <div style={{ display:"flex", gap:"8px", flexWrap:"wrap", alignItems:"center" }}>
             <button style={S.bp} onClick={submit}>Save Invoice</button>
             <button style={{ ...S.bsm("#a78bfa"), padding:"7px 13px", fontSize:"10px" }} onClick={()=>{ const {sub,discAmt,afterDisc,hstAmt,total}=calcTotals(); printInvoiceHTML({...form,...co,logo:logoB64,subtotal:sub,discAmt,afterDisc,hstAmt,total}); }}>🖨 Preview PDF</button>
+            <button style={{ ...S.bsm("#ea4335"), padding:"7px 13px", fontSize:"10px" }} title="Opens Gmail compose — remember to attach the PDF manually" onClick={()=>{ const {sub,discAmt,afterDisc,hstAmt,total}=calcTotals(); sendGmail({...form,...co,logo:logoB64,subtotal:sub,discAmt,afterDisc,hstAmt,total}); }}>✉ Send via Gmail</button>
             <button style={S.bo} onClick={()=>setView(editing?"list":"dashboard")}>Cancel</button>
             {editing&&<button style={S.bd} onClick={()=>delInv(editing)}>Delete Invoice</button>}
+          </div>
+          <div style={{ fontSize:"11px", color:T.textMute, marginTop:"8px" }}>
+            💡 <strong>To send the invoice:</strong> Click "🖨 Preview PDF" first to download the PDF, then click "✉ Send via Gmail" — Gmail will open with the email pre-filled. Attach the PDF file before clicking Send.
           </div>
         </div>
       )}
