@@ -6,6 +6,33 @@ fontLink.rel = "stylesheet";
 fontLink.href = "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap";
 document.head.appendChild(fontLink);
 
+// ─── logo mark (SVG) ──────────────────────────────────────────────────────────
+const LogoMark = ({ size = 32, radius = 8 }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"
+    style={{ borderRadius: radius, display:"block", flexShrink:0 }}>
+    <defs>
+      <linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#1e3a8a"/>
+        <stop offset="100%" stopColor="#2563eb"/>
+      </linearGradient>
+    </defs>
+    {/* background */}
+    <rect width="32" height="32" rx={radius} fill="url(#lg1)"/>
+    {/* outer diamond */}
+    <rect x="9" y="9" width="14" height="14" rx="1.5"
+      transform="rotate(45 16 16)"
+      fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1"/>
+    {/* middle diamond */}
+    <rect x="11.5" y="11.5" width="9" height="9" rx="1"
+      transform="rotate(45 16 16)"
+      fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.6)" strokeWidth="1.2"/>
+    {/* inner diamond — solid */}
+    <rect x="13.5" y="13.5" width="5" height="5" rx="0.5"
+      transform="rotate(45 16 16)"
+      fill="white"/>
+  </svg>
+);
+
 // ─── storage ──────────────────────────────────────────────────────────────────
 const K = { g:"so_g", l:"so_l", sc:"so_sc", ov:"so_ov", hi:"so_hi", pay:"so_pay", leads:"so_lds", inv:"so_inv", co:"so_co", log:"so_log" };
 import { load, save } from './supabase.js';
@@ -225,7 +252,8 @@ function Login({ onLogin }) {
   const go = () => {
     setLoading(true);
     setTimeout(() => {
-      if (u==="security"&&p==="security") onLogin();
+      if (u==="security" && p==="security") { onLogin("admin"); }
+      else if (u==="guest" && p==="guest") { onLogin("guest"); }
       else { setErr("Invalid username or password."); setP(""); setLoading(false); }
     }, 400);
   };
@@ -233,7 +261,9 @@ function Login({ onLogin }) {
     <div style={{ minHeight:"100vh", background:T.bg, backgroundImage:["radial-gradient(ellipse 80% 40% at 50% -10%, #dbeafe88 0%, transparent 70%)","radial-gradient(circle, #cbd5e133 1px, transparent 1px)"].join(", "), backgroundSize:"100% 100%, 26px 26px", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Plus Jakarta Sans',-apple-system,'Segoe UI',sans-serif" }}>
       <div style={{ width:"100%", maxWidth:"400px", padding:"0 20px" }}>
         <div style={{ textAlign:"center", marginBottom:"40px" }}>
-          <div style={{ width:"56px", height:"56px", background:"linear-gradient(135deg,#1d4ed8,#3b82f6)", borderRadius:"14px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"26px", margin:"0 auto 16px", boxShadow:"0 8px 32px #3b82f640" }}>🛡</div>
+          <div style={{ margin:"0 auto 16px", width:"56px", height:"56px", filter:"drop-shadow(0 8px 24px #3b82f650)" }}>
+            <LogoMark size={56} radius={14}/>
+          </div>
           <div style={{ fontSize:"24px", fontWeight:"700", color:T.text, letterSpacing:"-0.5px" }}>SecureOps</div>
           <div style={{ fontSize:"13px", color:T.textSub, marginTop:"4px" }}>Business Administration Platform</div>
         </div>
@@ -251,6 +281,9 @@ function Login({ onLogin }) {
           <button style={{ ...S.bp, width:"100%", padding:"12px", fontSize:"14px", borderRadius:"10px", opacity:loading?0.7:1 }} onClick={go} disabled={loading}>
             {loading ? "Signing in…" : "Sign In"}
           </button>
+        </div>
+        <div style={{ textAlign:"center", marginTop:"20px", fontSize:"11px", color:T.textMute }}>
+          Developed by Christopher Hu
         </div>
       </div>
     </div>
@@ -385,7 +418,7 @@ function MassWageUpdate({ guards, setGuards, ask }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMPLOYEES
 // ═══════════════════════════════════════════════════════════════════════════════
-function Employees({ guards, setGuards, addLog }) {
+function Employees({ guards, setGuards, addLog, isGuest }) {
   const blank = { name:"",badge:"",phone:"",email:"",sin:"",dob:"",address:"",startDate:"",endDate:"",wage:"",status:"Active",notes:"" };
   const [form, setForm] = useState(blank); const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState(""); const [exp, setExp] = useState(null);
@@ -432,6 +465,7 @@ function Employees({ guards, setGuards, addLog }) {
       </F>
       <div ref={formRef} style={S.card}>
         <div style={S.ct}>{editing?"Edit Employee":"Add Employee"}</div>
+        {isGuest ? <div style={S.empty}>Sign in as admin to add or edit employees.</div> : <div>
         <div style={S.g5}>
           <Inp label="Full Name *" value={form.name} onChange={f("name")} />
           <Inp label="Badge #" value={form.badge} onChange={f("badge")} />
@@ -454,10 +488,11 @@ function Employees({ guards, setGuards, addLog }) {
           <button style={S.bp} onClick={submit}>{editing?"Save Changes":"Add Employee"}</button>
           {editing && <button style={S.bo} onClick={()=>{setForm(blank);setEditing(null);}}>Cancel</button>}
         </F>
+      </div>}
       </div>
 
       {/* ── MASS WAGE UPDATE ── */}
-      <MassWageUpdate guards={guards} setGuards={setGuards} ask={ask} />
+      {!isGuest && <MassWageUpdate guards={guards} setGuards={setGuards} ask={ask} />}
 
       <div style={S.card}>
         <F style={{ justifyContent:"space-between", marginBottom:"10px" }}>
@@ -477,7 +512,7 @@ function Employees({ guards, setGuards, addLog }) {
                     <td style={S.td}>{g.endDate?<span style={{ color:"#f87171" }}>{g.endDate}</span>:"—"}</td>
                     <td style={S.td}>{g.wage?`$${parseFloat(g.wage).toFixed(2)}/hr`:"—"}</td>
                     <td style={S.td}><span style={S.pill(g.status==="Active"?"#10b981":g.status==="On Leave"?"#f59e0b":"#6b7280")}>{g.status}</span></td>
-                    <td style={S.td}><F><button style={S.bsm()} onClick={()=>edit(g)}>Edit</button><button style={S.bd} onClick={()=>del(g.id)}>✕</button></F></td>
+                    <td style={S.td}>{!isGuest && <F><button style={S.bsm()} onClick={()=>edit(g)}>Edit</button><button style={S.bd} onClick={()=>del(g.id)}>✕</button></F>}</td>
                   </tr>
                   {exp===g.id && <tr><td colSpan={8} style={{ ...S.td, background:"#f8faff" }}><F style={{ fontSize:"10px", color:"#475569" }}>{[["Email",g.email],["SIN",g.sin],["Address",g.address],["Notes",g.notes]].map(([l,v])=><span key={l}><span style={{ color:"#94a3b8" }}>{l}: </span>{v||"—"}</span>)}</F></td></tr>}
                 </Fragment>
@@ -499,7 +534,7 @@ function Employees({ guards, setGuards, addLog }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // LOCATIONS
 // ═══════════════════════════════════════════════════════════════════════════════
-function Locations({ locs, setLocs, addLog }) {
+function Locations({ locs, setLocs, addLog, isGuest }) {
   const blankL = { name:"", client:"", contactName:"", contactEmail:"", contactPhone:"", clientAddress:"", contractStart:"", contractEnd:"", notes:"", rates:[] };
   const [form, setForm] = useState(blankL);
   const [editing, setEditing] = useState(null);
@@ -585,13 +620,13 @@ function Locations({ locs, setLocs, addLog }) {
       {/* ── TOOLBAR ── */}
       <div ref={formRef} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"12px" }}>
         <span style={{ fontSize:"11px", color:"#475569" }}>{locs.length} location{locs.length!==1?"s":""}</span>
-        <button style={S.bp} onClick={()=>{setForm(blankL);setEditing(null);setShowForm(s=>!s);}}>
+        {!isGuest && <button style={S.bp} onClick={()=>{setForm(blankL);setEditing(null);setShowForm(s=>!s);}}>
           {showForm?"Cancel":"+ Add Location"}
-        </button>
+        </button>}
       </div>
 
       {/* ── FORM ── */}
-      {showForm && (
+      {!isGuest && showForm && (
         <div style={{ ...S.card, border:"1px solid #bfdbfe" }}>
           <div style={S.ct}>{editing?"Edit Location / Client":"New Location / Client"}</div>
           <div style={S.g3}>
@@ -637,8 +672,8 @@ function Locations({ locs, setLocs, addLog }) {
 </div>
                 </div>
                 <div style={{ display:"flex", gap:"5px", flexWrap:"wrap" }}>
-                  <button style={S.bsm()} onClick={()=>edit(l)}>Edit</button>
-                  <button style={S.bd} onClick={()=>del(l.id)}>Delete</button>
+                  {!isGuest && <button style={S.bsm()} onClick={()=>edit(l)}>Edit</button>}
+                  {!isGuest && <button style={S.bd} onClick={()=>del(l.id)}>Delete</button>}
                   <button style={S.bsm()} onClick={()=>setExpanded(isExp?null:l.id)}>{isExp?"▲":"▼"}</button>
                 </div>
               </div>
@@ -665,7 +700,7 @@ function Locations({ locs, setLocs, addLog }) {
                         <button style={S.bd} onClick={()=>delRate(l.id,r.id)}>✕</button>
                       </div>
                     ))}
-                    <div style={{ marginTop:"10px" }}>
+                    {!isGuest && <div style={{ marginTop:"10px" }}>
                       <div style={{ fontSize:"9px", color:"#94a3b8", marginBottom:"5px", textTransform:"uppercase", letterSpacing:"0.5px" }}>Add New Rate</div>
                       <div style={{ display:"flex", gap:"7px", flexWrap:"wrap", alignItems:"flex-end" }}>
                         <div><label style={S.lbl}>Effective Date</label><input style={{ ...S.inp, width:"140px" }} type="date" value={rateForm.effectiveDate} onChange={e=>setRateForm(p=>({...p,effectiveDate:e.target.value}))}/></div>
@@ -673,7 +708,7 @@ function Locations({ locs, setLocs, addLog }) {
                         <div style={{ flex:1 }}><label style={S.lbl}>Note (optional)</label><input style={S.inp} value={rateForm.notes} onChange={e=>setRateForm(p=>({...p,notes:e.target.value}))} placeholder="e.g. Rate increase Jan 2026"/></div>
                         <button style={S.bs} onClick={()=>addRate(l.id)}>Add Rate</button>
                       </div>
-                    </div>
+                    </div>}
                   </div>
                 </div>
               )}
@@ -688,7 +723,7 @@ function Locations({ locs, setLocs, addLog }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // CALENDAR
 // ═══════════════════════════════════════════════════════════════════════════════
-function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog }) {
+function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
   const today = new Date();
   const [yr, setYr] = useState(today.getFullYear()); const [mo, setMo] = useState(today.getMonth());
   const [sel, setSel] = useState(null); const [sub, setSub] = useState("cal");
@@ -856,8 +891,14 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog }) {
             {!adj.absent && (
               <div>
                 <div style={S.g2}>
-                  <Inp label="Shift Start" type="time" value={adj.startTime} onChange={e=>setAdj(p=>({...p,startTime:e.target.value}))}/>
-                  <Inp label="Shift End"   type="time" value={adj.endTime}   onChange={e=>setAdj(p=>({...p,endTime:e.target.value}))}/>
+                  <Inp label="Shift Start" type="time" value={adj.startTime} onChange={e=>{
+                    const s=e.target.value, en=adj.endTime;
+                    setAdj(p=>({...p, startTime:s, regularHours: s&&en ? calcH(s,en) : p.regularHours }));
+                  }}/>
+                  <Inp label="Shift End" type="time" value={adj.endTime} onChange={e=>{
+                    const en=e.target.value, s=adj.startTime;
+                    setAdj(p=>({...p, endTime:en, regularHours: s&&en ? calcH(s,en) : p.regularHours }));
+                  }}/>
                 </div>
                 <div style={{ ...S.g2, marginTop:"10px" }}>
                   <Inp label="Regular Hours" type="number" step="0.5" value={adj.regularHours} onChange={e=>setAdj(p=>({...p,regularHours:e.target.value}))} placeholder="0"/>
@@ -889,7 +930,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog }) {
       )}
 
       <F style={{ marginBottom:"12px" }}>
-        {[["cal","📅 Calendar"],["sch","🔁 Schedules"],["stat","⭐ Stat Holiday"],["bulk","🗑 Bulk Delete Hours"]].map(([t,l])=><button key={t} style={{ ...S.bp, background:sub===t?"#1d4ed8":"transparent", color:sub===t?"#fff":"#4a8ab0", border:"1px solid #e2e8f0" }} onClick={()=>{setSub(t);setBulkResult(null);}}>{l}</button>)}
+        {(isGuest ? [["cal","📅 Calendar"]] : [["cal","📅 Calendar"],["sch","🔁 Schedules"],["stat","⭐ Stat Holiday"],["bulk","🗑 Bulk Delete Hours"]]).map(([t,l])=><button key={t} style={{ ...S.bp, background:sub===t?"#1d4ed8":"transparent", color:sub===t?"#fff":"#4a8ab0", border:"1px solid #e2e8f0" }} onClick={()=>{setSub(t);setBulkResult(null);}}>{l}</button>)}
       </F>
 
       {sub==="sch" && (
@@ -1344,17 +1385,20 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog }) {
                         <div><div style={{ fontWeight:"700", color:gc(idx), fontSize:"11px" }}>{g.name}</div><div style={{ fontSize:"9px", color:"#94a3b8" }}>{sh?.locationId?lName(sh.locationId):"—"}{sh?.startTime?` · ${sh.startTime}–${sh.endTime}`:""}</div></div>
                         <div style={{ textAlign:"right" }}>{sh?.absent?<span style={S.pill("#ef4444")}>Absent</span>:<div>{reg>0&&<div style={{ fontSize:"10px", color:"#0f172a", fontWeight:"700" }}>{reg}h reg</div>}{stat>0&&<div style={{ fontSize:"9px", color:"#fbbf24" }}>{stat}h stat ★</div>}</div>}{ov&&<div style={{ fontSize:"8px", color:"#34d399" }}>adj</div>}</div>
                       </div>
-                      <F style={{ marginTop:"6px" }}><button style={S.bsm("#60a5fa")} onClick={()=>openAdj(g)}>Adjust</button>{ov&&<button style={S.bsm("#f87171")} onClick={()=>remAdj(g.id)}>Reset</button>}</F>
+                      <F style={{ marginTop:"6px" }}>
+                        {!isGuest && <button style={S.bsm("#60a5fa")} onClick={()=>openAdj(g)}>Adjust</button>}
+                        {!isGuest && ov&&<button style={S.bsm("#f87171")} onClick={()=>remAdj(g.id)}>Reset</button>}
+                      </F>
                     </div>
                   );
                 })}
                 {daySearch && allOn.filter(g=>g.name.toLowerCase().includes(daySearch.toLowerCase())).length===0 && (
                   <div style={{ fontSize:"11px", color:"#94a3b8", textAlign:"center", padding:"10px 0" }}>No employees match "{daySearch}"</div>
                 )}
-                <div style={{ marginTop:"8px", borderTop:"1px solid #e2e8f0", paddingTop:"8px" }}>
+                {!isGuest && <div style={{ marginTop:"8px", borderTop:"1px solid #e2e8f0", paddingTop:"8px" }}>
                   <label style={S.lbl}>Add employee for this day</label>
                   <select style={S.sel} value="" onChange={e=>{ if(e.target.value){ const g=guards.find(x=>x.id===e.target.value); if(g) openAdj(g); } }}><option value="">Select…</option>{unsch.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
-                </div>
+                </div>}
               </div>
             </div>
           )}
@@ -1368,7 +1412,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // REPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
-function Reports({ guards, locs, scs, ovs, history, setHistory, addLog }) {
+function Reports({ guards, locs, scs, ovs, history, setHistory, addLog, isGuest }) {
   const tod = new Date().toISOString().slice(0,10);
   const two = new Date(Date.now()-14*86400000).toISOString().slice(0,10);
   const [sd, setSd] = useState(two); const [ed, setEd] = useState(tod); const [sl, setSl] = useState("all");
@@ -1410,7 +1454,7 @@ function Reports({ guards, locs, scs, ovs, history, setHistory, addLog }) {
           <Inp label="Start Date" type="date" value={sd} onChange={e=>setSd(e.target.value)} />
           <Inp label="End Date" type="date" value={ed} onChange={e=>setEd(e.target.value)} />
           <Sel label="Location" value={sl} onChange={e=>setSl(e.target.value)}><option value="all">All Locations</option>{locs.map(l=><option key={l.id} value={l.id}>{l.name}</option>)}</Sel>
-          <button style={{ ...S.bs, marginTop:"13px" }} onClick={saveHist}>💾 Save to History</button>
+          {!isGuest && <button style={{ ...S.bs, marginTop:"13px" }} onClick={saveHist}>💾 Save to History</button>}
         </F>
       </div>
       {shown.length===0&&<div style={S.card}><div style={S.empty}>No locations added yet.</div></div>}
@@ -1555,7 +1599,7 @@ function Reports({ guards, locs, scs, ovs, history, setHistory, addLog }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // HISTORY
 // ═══════════════════════════════════════════════════════════════════════════════
-function History({ history, setHistory, addLog }) {
+function History({ history, setHistory, addLog, isGuest }) {
   const [exp, setExp] = useState(null);
   const [confirmEl, ask] = useConfirm();
   const del = id => ask("Delete this saved report?", ()=>{
@@ -1580,7 +1624,7 @@ function History({ history, setHistory, addLog }) {
           <div key={h.id} style={S.card}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer" }} onClick={()=>setExp(open?null:h.id)}>
               <div><div style={{ fontWeight:"700", color:"#0f172a", fontSize:"12px" }}>{h.startDate} → {h.endDate}</div><div style={{ fontSize:"9px", color:"#94a3b8", marginTop:"2px" }}>Saved {new Date(h.savedAt).toLocaleString()} · {h.data.length} loc · {tot.toFixed(2)}h</div></div>
-              <F><span style={{ fontSize:"14px", fontWeight:"800", color:"#60a5fa" }}>{tot.toFixed(2)}h</span><button style={S.bs} onClick={e=>{e.stopPropagation();doExcel(h);}}>📊</button><button style={S.bd} onClick={e=>{e.stopPropagation();del(h.id);}}>Delete</button><span style={{ color:"#94a3b8" }}>{open?"▲":"▼"}</span></F>
+              <F><span style={{ fontSize:"14px", fontWeight:"800", color:"#60a5fa" }}>{tot.toFixed(2)}h</span><button style={S.bs} onClick={e=>{e.stopPropagation();doExcel(h);}}>📊</button>{!isGuest && <button style={S.bd} onClick={e=>{e.stopPropagation();del(h.id);}}>Delete</button>}<span style={{ color:"#94a3b8" }}>{open?"▲":"▼"}</span></F>
             </div>
             {open&&<div style={{ marginTop:"10px", borderTop:"1px solid #e2e8f0", paddingTop:"10px" }}>
               {h.data.map(l=>{const ents=Object.entries(l.guards);if(!ents.length)return null;const lr=ents.reduce((s,[,g])=>s+g.regular,0),ls=ents.reduce((s,[,g])=>s+g.stat,0);return(<div key={l.locationId} style={{ marginBottom:"10px" }}><div style={{ display:"flex", justifyContent:"space-between", marginBottom:"4px" }}><span style={{ fontWeight:"700", color:"#3b82f6", fontSize:"11px" }}>{l.locationName}{l.client?" · "+l.client:""}</span><span style={{ fontSize:"9px", color:"#475569" }}>{lr.toFixed(2)}h reg{ls>0?" + "+ls.toFixed(2)+"h stat":""}</span></div><table style={S.tbl}><thead><tr>{["Employee","Regular","Stat","Total"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead><tbody>{ents.map(([gid,g])=><tr key={gid}><td style={S.td}>{g.name}</td><td style={S.td}>{g.regular.toFixed(2)}h</td><td style={S.td}>{g.stat>0?<span style={{ color:"#fbbf24" }}>{g.stat.toFixed(2)}h ★</span>:"—"}</td><td style={S.td}><strong>{(g.regular+g.stat).toFixed(2)}h</strong></td></tr>)}</tbody></table></div>);})}
@@ -1595,7 +1639,7 @@ function History({ history, setHistory, addLog }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // REVENUE
 // ═══════════════════════════════════════════════════════════════════════════════
-function Revenue({ locs, addLog }) {
+function Revenue({ locs, addLog, isGuest }) {
   const [pays, setPays] = useState([]);
   const [invs, setInvs] = useState([]);
   const [rdy, setRdy] = useState(false);
@@ -1737,7 +1781,7 @@ function Revenue({ locs, addLog }) {
             {locs.map(l=><option key={l.id} value={l.id}>{l.client||l.name}</option>)}
           </Sel>
           <button style={{ ...S.bs, marginTop:"13px" }} onClick={doExport}>📊 Export Excel</button>
-          <button style={{ ...S.bp, marginTop:"13px" }} onClick={()=>{setForm(blank);setEditing(null);setShow(s=>!s);}}>+ Add Manual Entry</button>
+          {!isGuest && <button style={{ ...S.bp, marginTop:"13px" }} onClick={()=>{setForm(blank);setEditing(null);setShow(s=>!s);}}>+ Add Manual Entry</button>}
         </F>
         {/* revenue & HST stats for the selected period */}
         <div style={{ display:"flex", gap:"9px", marginTop:"14px", flexWrap:"wrap" }}>
@@ -1767,7 +1811,7 @@ function Revenue({ locs, addLog }) {
       </div>
 
       {/* manual entry form */}
-      {show && (
+      {!isGuest && show && (
         <div style={{ ...S.card, border:`1px solid ${T.blue}` }}>
           <div style={S.ct}>{editing ? "Edit Manual Entry" : "New Manual Payment Entry"}</div>
           <div style={S.g3}>
@@ -1841,9 +1885,9 @@ function Revenue({ locs, addLog }) {
                       <td style={S.td}>{r.depositDate||"—"}</td>
                       <td style={S.td}>
                         <F>
-                          {!isInv && <button style={S.bsm(T.blue)} onClick={()=>editRow(r)}>Edit</button>}
+                          {!isGuest && !isInv && <button style={S.bsm(T.blue)} onClick={()=>editRow(r)}>Edit</button>}
                           {isInv && <span style={{ fontSize:"10px", color:T.textMute }}>via Invoice</span>}
-                          <button style={S.bd} onClick={()=>delRow(r)}>✕</button>
+                          {!isGuest && <button style={S.bd} onClick={()=>delRow(r)}>✕</button>}
                         </F>
                       </td>
                     </tr>
@@ -1874,7 +1918,7 @@ const STAGES = ["New Lead","Contacted","Meeting Scheduled","Proposal Sent","Nego
 const SCOL = { "New Lead":"#3b82f6","Contacted":"#06b6d4","Meeting Scheduled":"#8b5cf6","Proposal Sent":"#f59e0b","Negotiation":"#f97316","Signed Contract":"#10b981","Lost":"#6b7280" };
 const SICO = { "New Lead":"🆕","Contacted":"📞","Meeting Scheduled":"📅","Proposal Sent":"📄","Negotiation":"🤝","Signed Contract":"✅","Lost":"❌" };
 
-function Sales({ addLog }) {
+function Sales({ addLog, isGuest }) {
   const [leads, setLeads] = useState([]); const [rdy, setRdy] = useState(false);
   const [view, setView] = useState("board"); const [editing, setEditing] = useState(null);
   const [fStage, setFStage] = useState("all"); const [srch, setSrch] = useState("");
@@ -1912,11 +1956,11 @@ function Sales({ addLog }) {
       </F>
       <div style={S.card}>
         <F style={{ flexWrap:"wrap" }}>
-          <button style={S.bp} onClick={startNew}>+ New Lead</button>
+          {!isGuest && <button style={S.bp} onClick={startNew}>+ New Lead</button>}
           {[["board","🗂 Board"],["list","☰ List"]].map(([v,l])=><button key={v} style={{ ...S.bo, background:view===v?"#172a45":"transparent", color:view===v?"#0f172a":"#4a8ab0" }} onClick={()=>setView(v)}>{l}</button>)}
           <input style={{ ...S.inp, width:"150px" }} placeholder="Search…" value={srch} onChange={e=>setSrch(e.target.value)}/>
           <select style={{ ...S.sel, width:"150px" }} value={fStage} onChange={e=>setFStage(e.target.value)}><option value="all">All Stages</option>{STAGES.map(s=><option key={s} value={s}>{s}</option>)}</select>
-          <button style={S.bs} onClick={()=>mkCSV("sales_leads",["Company","Contact","Phone","Email","Stage","Priority","Source","Service","Value","Next Action","Next Action Date","Created","Contract Date","Notes"],leads.map(l=>[l.companyName,l.contactName,l.phone,l.email,l.stage,l.priority,l.source,l.serviceType,l.estimatedValue,l.nextAction,l.nextActionDate,l.createdAt,l.contractDate,l.notes]))}>📊 Export</button>
+{!isGuest &&           <button style={S.bs} onClick={()=>mkCSV("sales_leads",["Company","Contact","Phone","Email","Stage","Priority","Source","Service","Value","Next Action","Next Action Date","Created","Contract Date","Notes"],leads.map(l=>[l.companyName,l.contactName,l.phone,l.email,l.stage,l.priority,l.source,l.serviceType,l.estimatedValue,l.nextAction,l.nextActionDate,l.createdAt,l.contractDate,l.notes]))}>📊 Export</button>}
         </F>
       </div>
 
@@ -1939,7 +1983,7 @@ function Sales({ addLog }) {
                       {l.estimatedValue&&<div style={{ fontSize:"9px", color:"#34d399" }}>💰 ${parseFloat(l.estimatedValue).toLocaleString()}/mo</div>}
                       {l.nextActionDate&&<div style={{ fontSize:"8px", color:"#f59e0b" }}>📅 {l.nextActionDate}</div>}
                       {l.priority&&<div style={{ marginTop:"3px" }}><span style={S.pill(l.priority==="High"?"#ef4444":l.priority==="Medium"?"#f59e0b":"#3b82f6")}>{l.priority}</span></div>}
-                      {stage!=="Signed Contract"&&stage!=="Lost"&&<button style={{ ...S.bsm(c), marginTop:"5px", width:"100%", textAlign:"center", fontSize:"8px" }} onClick={e=>{e.stopPropagation();advance(l.id);}}>→ {STAGES[STAGES.indexOf(stage)+1]}</button>}
+                      {!isGuest && stage!=="Signed Contract"&&stage!=="Lost"&&<button style={{ ...S.bsm(c), marginTop:"5px", width:"100%", textAlign:"center", fontSize:"8px" }} onClick={e=>{e.stopPropagation();advance(l.id);}}>→ {STAGES[STAGES.indexOf(stage)+1]}</button>}
                     </div>
                   ))}
                 </div>
@@ -1952,7 +1996,7 @@ function Sales({ addLog }) {
       {view==="list"&&(
         <div style={S.card}>
           <div style={S.ct}>All Leads ({fLeads.length})</div>
-          {fLeads.length===0?<div style={S.empty}>No leads.</div>:<div style={{ overflowX:"auto" }}><table style={S.tbl}><thead><tr>{["Company","Contact","Phone","Stage","Priority","Value","Next Action","Created",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead><tbody>{fLeads.map(l=>{const c=SCOL[l.stage]||"#6b7280";return(<tr key={l.id}><td style={S.td}><span style={{ color:"#0f172a", fontWeight:"700", cursor:"pointer" }} onClick={()=>startEdit(l)}>{l.companyName}</span>{l.email&&<div style={{ fontSize:"9px", color:"#94a3b8" }}>{l.email}</div>}</td><td style={S.td}>{l.contactName||"—"}</td><td style={S.td}>{l.phone||"—"}</td><td style={S.td}><span style={S.pill(c)}>{SICO[l.stage]} {l.stage}</span></td><td style={S.td}><span style={S.pill(l.priority==="High"?"#ef4444":l.priority==="Medium"?"#f59e0b":"#3b82f6")}>{l.priority||"—"}</span></td><td style={S.td}>{l.estimatedValue?`$${parseFloat(l.estimatedValue).toLocaleString()}`:""}</td><td style={S.td}><div style={{ fontSize:"10px" }}>{l.nextAction||"—"}</div>{l.nextActionDate&&<div style={{ fontSize:"9px", color:"#f59e0b" }}>{l.nextActionDate}</div>}</td><td style={S.td}>{l.createdAt||"—"}</td><td style={S.td}><F><button style={S.bsm("#60a5fa")} onClick={()=>startEdit(l)}>Edit</button><button style={S.bd} onClick={()=>del(l.id)}>✕</button></F></td></tr>);})}</tbody></table></div>}
+          {fLeads.length===0?<div style={S.empty}>No leads.</div>:<div style={{ overflowX:"auto" }}><table style={S.tbl}><thead><tr>{["Company","Contact","Phone","Stage","Priority","Value","Next Action","Created",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead><tbody>{fLeads.map(l=>{const c=SCOL[l.stage]||"#6b7280";return(<tr key={l.id}><td style={S.td}><span style={{ color:"#0f172a", fontWeight:"700", cursor:"pointer" }} onClick={()=>startEdit(l)}>{l.companyName}</span>{l.email&&<div style={{ fontSize:"9px", color:"#94a3b8" }}>{l.email}</div>}</td><td style={S.td}>{l.contactName||"—"}</td><td style={S.td}>{l.phone||"—"}</td><td style={S.td}><span style={S.pill(c)}>{SICO[l.stage]} {l.stage}</span></td><td style={S.td}><span style={S.pill(l.priority==="High"?"#ef4444":l.priority==="Medium"?"#f59e0b":"#3b82f6")}>{l.priority||"—"}</span></td><td style={S.td}>{l.estimatedValue?`$${parseFloat(l.estimatedValue).toLocaleString()}`:""}</td><td style={S.td}><div style={{ fontSize:"10px" }}>{l.nextAction||"—"}</div>{l.nextActionDate&&<div style={{ fontSize:"9px", color:"#f59e0b" }}>{l.nextActionDate}</div>}</td><td style={S.td}>{l.createdAt||"—"}</td><td style={S.td}><F>{!isGuest && <button style={S.bsm("#60a5fa")} onClick={()=>startEdit(l)}>Edit</button>}{!isGuest && <button style={S.bd} onClick={()=>del(l.id)}>✕</button>}</F></td></tr>);})}</tbody></table></div>}
         </div>
       )}
 
@@ -2028,97 +2072,201 @@ function printInvoiceHTML(inv) {
   const hstAmt = inv.hst ? afterDisc*0.13 : 0;
   const tot = afterDisc + hstAmt;
   const cur = inv.currency||"CAD";
-  const itemRows = inv.items.map(it => {
+
+  const statusColor = inv.status==="paid" ? "#059669" : inv.status==="overdue" ? "#dc2626" : "#d97706";
+  const statusBg    = inv.status==="paid" ? "#f0fdf4" : inv.status==="overdue" ? "#fef2f2" : "#fffbeb";
+  const statusBorder= inv.status==="paid" ? "#bbf7d0" : inv.status==="overdue" ? "#fecaca" : "#fde68a";
+  const statusLabel = inv.status==="paid" ? "PAID" : inv.status==="overdue" ? "OVERDUE" : "OUTSTANDING";
+
+  const itemRows = inv.items.map((it, i) => {
     const amt = (parseFloat(it.qty)||0)*(parseFloat(it.price)||0);
-    return `<tr>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee">${it.desc||""}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center">${it.qty}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right">$${parseFloat(it.price||0).toFixed(2)}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right">$${amt.toFixed(2)}</td>
+    return `<tr style="background:${i%2===0?"#ffffff":"#f9fafb"}">
+      <td style="padding:12px 16px;font-size:13px;color:#1e293b;border-bottom:1px solid #f1f5f9">${it.desc||""}</td>
+      <td style="padding:12px 16px;text-align:center;font-size:13px;color:#475569;border-bottom:1px solid #f1f5f9">${it.qty}</td>
+      <td style="padding:12px 16px;text-align:right;font-size:13px;color:#475569;border-bottom:1px solid #f1f5f9">${cur} $${parseFloat(it.price||0).toFixed(2)}</td>
+      <td style="padding:12px 16px;text-align:right;font-size:13px;font-weight:600;color:#1e293b;border-bottom:1px solid #f1f5f9">${cur} $${amt.toFixed(2)}</td>
     </tr>`;
   }).join("");
-  const statusColor = inv.status==="paid"?"#065f46":inv.status==="overdue"?"#7f1d1d":"#78350f";
-  const statusBg    = inv.status==="paid"?"#d1fae5":inv.status==="overdue"?"#fee2e2":"#fef3c7";
+
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
   <title>Invoice ${inv.number}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',Arial,sans-serif;padding:48px;color:#1a2a3a;font-size:13px;max-width:820px;margin:0 auto}
-    .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px}
-    .logo-img{max-height:72px;max-width:200px;object-fit:contain;margin-bottom:6px}
-    .company-name{font-size:16px;font-weight:700;color:#1a2a4a}
-    .company-sub{font-size:11px;color:#666;margin-top:2px}
-    .inv-block{text-align:right}
-    .inv-label{font-size:10px;color:#999;text-transform:uppercase;letter-spacing:1px}
-    .inv-num{font-size:28px;font-weight:800;color:#1a3a6a;margin:2px 0}
-    .status-badge{display:inline-block;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;background:${statusBg};color:${statusColor};margin-top:4px}
-    .summary-box{background:#f0f4ff;border-left:4px solid #1a3a6a;padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:24px;font-size:12px;color:#1a2a4a;line-height:1.5}
-    .meta{display:grid;grid-template-columns:1fr 1fr;gap:20px;background:#f8faff;border-radius:8px;padding:18px;margin-bottom:28px}
-    .meta h4{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:6px;font-weight:700}
-    .meta p{margin:2px 0;font-size:12px}
-    table{width:100%;border-collapse:collapse;margin-bottom:0}
-    thead tr{background:#1a3a6a}
-    thead th{color:#fff;padding:9px 12px;text-align:left;font-size:11px;font-weight:600}
-    thead th.r{text-align:right}thead th.c{text-align:center}
-    .totals-wrap{border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;overflow:hidden}
-    .tot-row{display:flex;justify-content:space-between;padding:7px 14px;font-size:12px;border-top:1px solid #eee}
-    .tot-row.final{background:#1a3a6a;color:#fff;font-weight:700;font-size:15px}
-    .notes-box{margin-top:20px;background:#f8faff;border-radius:6px;padding:14px;font-size:12px;color:#555;line-height:1.5}
-    .footer{margin-top:28px;font-size:10px;color:#aaa;border-top:1px solid #eee;padding-top:12px}
-    @media print{@page{margin:1.2cm}body{padding:0}}
-  </style></head><body>
-  <div class="top">
-    <div>
-      ${inv.logo ? `<img src="${inv.logo}" class="logo-img" alt="logo"/>` : ""}
-      ${inv.companyName ? `<div class="company-name">${inv.companyName}</div>` : ""}
-      ${inv.companyAddress ? `<div class="company-sub">${inv.companyAddress}</div>` : ""}
-      ${inv.companyPhone ? `<div class="company-sub">${inv.companyPhone}</div>` : ""}
-      ${inv.companyEmail ? `<div class="company-sub">${inv.companyEmail}</div>` : ""}
-      ${inv.companyTax ? `<div class="company-sub">HST/GST #: ${inv.companyTax}</div>` : ""}
+    body{font-family:'Inter','Segoe UI',Arial,sans-serif;background:#f8fafc;color:#1e293b;font-size:13px}
+    .page{max-width:820px;margin:0 auto;background:#fff;min-height:100vh}
+
+    /* ── HEADER BAND ── */
+    .header{background:linear-gradient(135deg,#0f172a 0%,#1e3a6e 100%);padding:40px 48px 36px;display:flex;justify-content:space-between;align-items:flex-start}
+    .logo-img{max-height:64px;max-width:180px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.95;margin-bottom:8px}
+    .company-name{font-size:18px;font-weight:700;color:#fff;letter-spacing:-0.3px}
+    .company-details{margin-top:6px}
+    .company-details p{font-size:11px;color:#94a3b8;margin-top:2px;line-height:1.5}
+    .inv-right{text-align:right}
+    .inv-word{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px}
+    .inv-number{font-size:32px;font-weight:800;color:#fff;letter-spacing:-1px;line-height:1}
+    .status-pill{display:inline-block;margin-top:10px;padding:4px 14px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:1px;background:${statusBg};color:${statusColor};border:1px solid ${statusBorder}}
+
+    /* ── BODY ── */
+    .body{padding:40px 48px}
+
+    /* summary strip */
+    .summary-strip{background:#f0f7ff;border-left:3px solid #2563eb;border-radius:0 6px 6px 0;padding:10px 16px;margin-bottom:32px;font-size:12px;color:#1e40af;font-weight:500;line-height:1.5}
+
+    /* bill to / details grid */
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:36px}
+    .info-box{background:#f8fafc;border-radius:10px;padding:20px 22px;border:1px solid #e2e8f0}
+    .info-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin-bottom:10px}
+    .info-primary{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px}
+    .info-secondary{font-size:12px;color:#64748b;margin-top:2px;line-height:1.6}
+    .info-row{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+    .info-row .label{font-size:11px;color:#94a3b8}
+    .info-row .value{font-size:12px;font-weight:600;color:#1e293b}
+
+    /* items table */
+    .table-wrap{border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;margin-bottom:0}
+    table{width:100%;border-collapse:collapse}
+    thead tr{background:#0f172a}
+    thead th{color:#94a3b8;padding:12px 16px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px}
+    thead th.r{text-align:right}
+    thead th.c{text-align:center}
+    tbody tr:last-child td{border-bottom:none}
+
+    /* totals */
+    .totals-section{display:flex;justify-content:flex-end;margin-top:0}
+    .totals-box{width:320px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 0}
+    .tot-line{display:flex;justify-content:space-between;align-items:center;padding:9px 20px;font-size:12px;color:#475569;border-top:1px solid #f1f5f9}
+    .tot-line .lbl{color:#64748b}
+    .tot-line .val{font-weight:500;color:#1e293b}
+    .tot-line.discount .val{color:#059669}
+    .tot-final{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:#0f172a;border-radius:0 0 10px 0}
+    .tot-final .lbl{font-size:13px;font-weight:600;color:#94a3b8;letter-spacing:0.3px}
+    .tot-final .val{font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.5px}
+
+    /* notes & attachments */
+    .notes-section{margin-top:32px}
+    .notes-box{background:#f8fafc;border-radius:10px;padding:18px 22px;border:1px solid #e2e8f0;font-size:12px;color:#475569;line-height:1.7}
+    .notes-box .notes-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:6px}
+    .attachments-box{margin-top:16px;background:#fffbeb;border-radius:10px;padding:18px 22px;border:1px solid #fde68a}
+    .attachments-box .att-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#92400e;margin-bottom:8px}
+    .att-item{display:flex;align-items:center;gap:8px;font-size:12px;color:#1e293b;font-weight:500;margin-top:6px}
+    .att-note{font-size:11px;color:#b45309;margin-top:8px}
+
+    /* footer */
+    .footer{display:flex;justify-content:space-between;align-items:center;margin-top:40px;padding:20px 0 0;border-top:1px solid #e2e8f0}
+    .footer-left{font-size:11px;color:#94a3b8}
+    .footer-right{font-size:10px;color:#cbd5e1}
+    .thank-you{text-align:center;margin-top:28px;padding:18px;background:linear-gradient(135deg,#f0f7ff,#f8fafc);border-radius:10px;border:1px solid #dbeafe}
+    .thank-you p{font-size:13px;color:#1e40af;font-weight:500}
+
+    @media print{
+      @page{margin:0.8cm;size:A4}
+      body{background:#fff}
+      .page{box-shadow:none}
+    }
+  </style>
+  </head><body>
+  <div class="page">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div>
+        ${inv.logo ? `<img src="${inv.logo}" class="logo-img" alt="logo"/>` : ""}
+        <div class="company-name">${inv.companyName||""}</div>
+        <div class="company-details">
+          ${inv.companyAddress ? `<p>${inv.companyAddress}</p>` : ""}
+          ${inv.companyEmail ? `<p>${inv.companyEmail}</p>` : ""}
+          ${inv.companyTax ? `<p>HST/GST #: ${inv.companyTax}</p>` : ""}
+        </div>
+      </div>
+      <div class="inv-right">
+        <div class="inv-word">Invoice</div>
+        <div class="inv-number">${inv.number}</div>
+        <div class="status-pill">${statusLabel}</div>
+      </div>
     </div>
-    <div class="inv-block">
-      <div class="inv-label">Invoice</div>
-      <div class="inv-num">${inv.number}</div>
-      <div class="status-badge">${inv.status}</div>
+
+    <!-- BODY -->
+    <div class="body">
+
+      ${inv.summary ? `<div class="summary-strip">📋 ${inv.summary}</div>` : ""}
+
+      <!-- Bill To + Invoice Details -->
+      <div class="info-grid">
+        <div class="info-box">
+          <div class="info-label">Bill To</div>
+          <div class="info-primary">${inv.clientName||"—"}</div>
+          ${inv.clientContact ? `<div class="info-secondary">Attn: ${inv.clientContact}</div>` : ""}
+          ${inv.clientAddress ? `<div class="info-secondary">${inv.clientAddress}</div>` : ""}
+          ${inv.clientEmail ? `<div class="info-secondary">${inv.clientEmail}</div>` : ""}
+        </div>
+        <div class="info-box">
+          <div class="info-label">Invoice Details</div>
+          <div class="info-row"><span class="label">Invoice Number</span><span class="value">${inv.number}</span></div>
+          <div class="info-row"><span class="label">Invoice Date</span><span class="value">${inv.date||"—"}</span></div>
+          ${inv.dueDate ? `<div class="info-row"><span class="label">Payment Due</span><span class="value" style="color:#dc2626;font-weight:700">${inv.dueDate}</span></div>` : ""}
+          <div class="info-row"><span class="label">Currency</span><span class="value">${cur}</span></div>
+        </div>
+      </div>
+
+      <!-- Line Items -->
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:50%">Description</th>
+            <th class="c" style="width:12%">Qty</th>
+            <th class="r" style="width:19%">Unit Price</th>
+            <th class="r" style="width:19%">Amount</th>
+          </tr></thead>
+          <tbody>${itemRows}</tbody>
+        </table>
+        <!-- Totals flush with table -->
+        <div class="totals-section">
+          <div class="totals-box">
+            <div class="tot-line"><span class="lbl">Subtotal</span><span class="val">${cur} $${sub.toFixed(2)}</span></div>
+            ${discAmt>0 ? `<div class="tot-line discount"><span class="lbl">Discount${inv.discountNote?" ("+inv.discountNote+")":""}${inv.discountType==="percent"?" "+discVal+"%":""}</span><span class="val" style="color:#059669">− ${cur} $${discAmt.toFixed(2)}</span></div>` : ""}
+            ${inv.hst ? `<div class="tot-line"><span class="lbl">HST (13%)</span><span class="val">${cur} $${hstAmt.toFixed(2)}</span></div>` : ""}
+            <div class="tot-final">
+              <span class="lbl">Total Due</span>
+              <span class="val">${cur} $${tot.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="notes-section">
+        ${inv.notes ? `<div class="notes-box"><div class="notes-label">Payment Instructions</div>${inv.notes}</div>` : ""}
+        ${inv.attachments&&inv.attachments.length>0 ? `
+        <div class="attachments-box">
+          <div class="att-label">📎 Supporting Documents</div>
+          ${inv.attachments.map(a=>`<div class="att-item">📄 ${a.name}</div>`).join("")}
+          <div class="att-note">These files are attached separately to the email alongside this invoice.</div>
+        </div>` : ""}
+      </div>
+
+      <!-- Thank you -->
+      <div class="thank-you">
+        <p>Thank you for your business. Please don't hesitate to reach out with any questions.</p>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <div class="footer-left">${inv.companyName||"SecureOps"} &nbsp;·&nbsp; ${inv.companyEmail||""}</div>
+        <div class="footer-right">Generated ${new Date().toLocaleDateString("en-CA",{year:"numeric",month:"long",day:"numeric"})}</div>
+      </div>
+
     </div>
   </div>
-  ${inv.summary ? `<div class="summary-box"><strong>Re:</strong> ${inv.summary}</div>` : ""}
-  <div class="meta">
-    <div>
-      <h4>Bill To</h4>
-      <p><strong>${inv.clientName||"—"}</strong></p>
-      ${inv.clientContact ? `<p style="color:#555">Attn: ${inv.clientContact}</p>` : ""}
-      ${inv.clientAddress ? `<p style="color:#555">${inv.clientAddress}</p>` : ""}
-      ${inv.clientEmail ? `<p style="color:#555">${inv.clientEmail}</p>` : ""}
-      ${inv.clientPhone ? `<p style="color:#555">${inv.clientPhone}</p>` : ""}
-    </div>
-    <div>
-      <h4>Invoice Details</h4>
-      <p>Invoice Date: <strong>${inv.date||"—"}</strong></p>
-      ${inv.dueDate ? `<p>Due Date: <strong>${inv.dueDate}</strong></p>` : ""}
-    </div>
-  </div>
-  <table>
-    <thead><tr><th>Description</th><th class="c">Qty</th><th class="r">Unit Price</th><th class="r">Amount</th></tr></thead>
-    <tbody>${itemRows}</tbody>
-  </table>
-  <div class="totals-wrap">
-    <div class="tot-row"><span>Subtotal</span><span>${cur} $${sub.toFixed(2)}</span></div>
-    ${discAmt>0 ? `<div class="tot-row"><span>Discount${inv.discountNote?" — "+inv.discountNote:""}${inv.discountType==="percent"?" ("+discVal+"%)":""}</span><span style="color:#059669">− ${cur} $${discAmt.toFixed(2)}</span></div>` : ""}
-    ${inv.hst ? `<div class="tot-row"><span>HST (13%)</span><span>${cur} $${hstAmt.toFixed(2)}</span></div>` : ""}
-    <div class="tot-row final"><span>Total (${cur})</span><span>$${tot.toFixed(2)}</span></div>
-  </div>
-  ${inv.notes ? `<div class="notes-box"><strong>Notes:</strong> ${inv.notes}</div>` : ""}
-  ${inv.attachments&&inv.attachments.length>0 ? `<div class="notes-box" style="margin-top:12px"><strong>Attachments:</strong> ${inv.attachments.map(a=>a.name).join(", ")}</div>` : ""}
-  <div class="footer">Generated by SecureOps &nbsp;|&nbsp; ${new Date().toLocaleDateString()}</div>
   </body></html>`;
-  const w = window.open("","_blank","width=900,height=720");
+
+  const w = window.open("","_blank","width=960,height=780");
   if (!w) { alert("Allow pop-ups in your browser to download the PDF."); return; }
   w.document.open(); w.document.write(html); w.document.close();
-  setTimeout(() => { w.focus(); w.print(); }, 700);
+  setTimeout(() => { w.focus(); w.print(); }, 800);
 }
 
-function Invoices({ locs, addLog }) {
+function Invoices({ locs, addLog, isGuest }) {
   const [invs, setInvs] = useState([]);
   const [rdy, setRdy]   = useState(false);
   const [view, setView] = useState("dashboard");
@@ -2229,7 +2377,7 @@ function Invoices({ locs, addLog }) {
     <div>
       {confirmEl}
       <div style={{ display:"flex", gap:"6px", marginBottom:"14px", flexWrap:"wrap" }}>
-        {subTabs.map(([v,l]) => (
+        {(isGuest ? [["dashboard","📊 Dashboard"],["list","📄 All Invoices"]] : subTabs).map(([v,l]) => (
           <button key={v} style={{ ...S.bp, background:view===v?"#1d4ed8":"transparent", color:view===v?"#fff":"#4a8ab0", border:"1px solid #e2e8f0" }}
             onClick={()=>{ if(v==="form") startNew(); else setView(v); }}>{l}</button>
         ))}
@@ -2282,12 +2430,12 @@ function Invoices({ locs, addLog }) {
                     <td style={S.td}><span style={S.pill(INV_STATUS_COL[inv.status]||"#6b7280")}>{inv.status}</span></td>
                     <td style={S.td}><strong>${(inv.total||0).toFixed(2)}</strong></td>
                     <td style={S.td}><div style={{ display:"flex", gap:"4px", flexWrap:"wrap" }}>
-                      <button style={S.bsm("#60a5fa")} onClick={()=>startEdit(inv)}>Edit</button>
+                      {!isGuest && <button style={S.bsm("#60a5fa")} onClick={()=>startEdit(inv)}>Edit</button>}
                       <button style={S.bsm("#a78bfa")} onClick={()=>printInvoiceHTML(inv)}>🖨 PDF</button>
                       <button style={S.bsm("#ea4335")} title="Opens Gmail compose — remember to attach the PDF manually" onClick={()=>sendGmail(inv)}>✉ Send</button>
-                      {inv.status!=="paid"&&<button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"paid")}>Paid</button>}
-                      {inv.status==="outstanding"&&<button style={S.bsm("#ef4444")} onClick={()=>setStatus(inv.id,"overdue")}>Overdue</button>}
-                      <button style={S.bd} onClick={()=>delInv(inv.id)}>✕</button>
+                      {!isGuest && inv.status!=="paid"&&<button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"paid")}>Paid</button>}
+                      {!isGuest && inv.status==="outstanding"&&<button style={S.bsm("#ef4444")} onClick={()=>setStatus(inv.id,"overdue")}>Overdue</button>}
+                      {!isGuest && <button style={S.bd} onClick={()=>delInv(inv.id)}>✕</button>}
                     </div></td>
                   </tr>
                 ))}</tbody>
@@ -2298,7 +2446,7 @@ function Invoices({ locs, addLog }) {
       )}
 
       {/* ── FORM ── */}
-      {view==="form" && (
+      {view==="form" && !isGuest && (
         <div>
           {/* company profile — always saved */}
           <div style={S.card}>
@@ -2403,14 +2551,81 @@ function Invoices({ locs, addLog }) {
           {/* line items */}
           <div style={S.card}>
             <div style={S.ct}>Line Items</div>
+            {/* Past line item suggestions for selected client */}
+            {(() => {
+              // Collect unique descriptions from previous invoices for this client
+              const clientId = form.clientLocationId;
+              const clientName = form.clientName;
+              const pastDescs = [...new Set(
+                invs
+                  .filter(inv =>
+                    inv.id !== editing &&
+                    (clientId ? inv.clientLocationId === clientId : inv.clientName === clientName)
+                  )
+                  .flatMap(inv => (inv.items||[]).map(it => it.desc).filter(Boolean))
+              )];
+
+              if (!pastDescs.length) return null;
+              return (
+                <div style={{ marginBottom:"10px", padding:"10px 12px", background:"#eff6ff", borderRadius:"8px", border:"1px solid #bfdbfe" }}>
+                  <div style={{ fontSize:"10px", fontWeight:"600", color:"#1d4ed8", marginBottom:"6px" }}>
+                    💡 Previous line items for this client — click to add
+                  </div>
+                  <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
+                    {pastDescs.map(desc => (
+                      <button key={desc}
+                        style={{ background:"#fff", border:"1px solid #bfdbfe", borderRadius:"6px", padding:"4px 10px", fontSize:"11px", color:"#1e40af", cursor:"pointer", fontWeight:"500" }}
+                        onClick={() => {
+                          // Add as a new line item (or fill first empty one)
+                          const emptyIdx = form.items.findIndex(it => !it.desc.trim());
+                          if (emptyIdx !== -1) {
+                            setItem(emptyIdx, "desc", desc);
+                          } else {
+                            setForm(p => ({ ...p, items:[...p.items, { desc, qty:1, price:"" }] }));
+                          }
+                        }}>
+                        {desc}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             <table style={S.tbl}>
               <thead><tr>{["Description","Qty","Unit Price ($)","Amount",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
               <tbody>
                 {form.items.map((it,i)=>{
                   const amt=(parseFloat(it.qty)||0)*(parseFloat(it.price)||0);
+                  // Get matching suggestions for this specific input as user types
+                  const clientId = form.clientLocationId;
+                  const clientName = form.clientName;
+                  const suggestions = it.desc.trim().length > 0
+                    ? [...new Set(
+                        invs
+                          .filter(inv => inv.id !== editing && (clientId ? inv.clientLocationId===clientId : inv.clientName===clientName))
+                          .flatMap(inv => (inv.items||[]).map(x=>x.desc).filter(Boolean))
+                      )].filter(d => d.toLowerCase().includes(it.desc.toLowerCase()) && d !== it.desc)
+                    : [];
                   return (
                     <tr key={i}>
-                      <td style={S.td}><input style={S.inp} value={it.desc} onChange={e=>setItem(i,"desc",e.target.value)} placeholder="e.g. Security Services — May 1–15"/></td>
+                      <td style={S.td}>
+                        <div style={{ position:"relative" }}>
+                          <input style={S.inp} value={it.desc}
+                            onChange={e=>setItem(i,"desc",e.target.value)}
+                            placeholder="e.g. Security Services — May 1–15"/>
+                          {suggestions.length > 0 && (
+                            <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#fff", border:`1px solid ${T.border}`, borderRadius:"8px", boxShadow:"0 4px 16px rgba(0,0,0,0.1)", zIndex:100, marginTop:"2px", overflow:"hidden" }}>
+                              {suggestions.slice(0,5).map(s => (
+                                <div key={s}
+                                  style={{ padding:"8px 12px", fontSize:"12px", color:T.text, cursor:"pointer", borderBottom:`1px solid ${T.border}` }}
+                                  onMouseDown={e=>{ e.preventDefault(); setItem(i,"desc",s); }}>
+                                  {s}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td style={S.td}><input style={{ ...S.inp, width:"65px" }} type="number" min="0" value={it.qty} onChange={e=>setItem(i,"qty",e.target.value)}/></td>
                       <td style={S.td}><input style={{ ...S.inp, width:"100px" }} type="number" step="0.01" min="0" value={it.price} onChange={e=>setItem(i,"price",e.target.value)}/></td>
                       <td style={{ ...S.td, fontWeight:"700", color:"#0f172a" }}>${amt.toFixed(2)}</td>
@@ -2609,7 +2824,7 @@ const PAGE_META = {
 };
 
 export default function App() {
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [role, setRole] = useState(null); // null | "admin" | "guest"
   const [tab, setTab] = useState("emp");
   const [guards, setGuards] = useState([]);
   const [locs, setLocs] = useState([]);
@@ -2618,6 +2833,8 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [logEntries, setLogEntries] = useState([]);
   const [loaded, setLoaded] = useState(false);
+
+  const isGuest = role === "guest";
 
   useEffect(() => {
     (async () => {
@@ -2628,21 +2845,23 @@ export default function App() {
     })();
   }, []);
 
-  // Global activity logger — call this from any page to record a change
   const addLog = (action, category, description, detail="") => {
+    if (isGuest) return; // guests don't generate activity log entries
     const entry = { id:uid(), timestamp:new Date().toISOString(), action, category, description, detail };
     setLogEntries(prev => {
-      const updated = [entry, ...prev].slice(0, 500); // keep last 500
+      const updated = [entry, ...prev].slice(0, 500);
       save(K.log, updated);
       return updated;
     });
   };
 
-  if (!loggedIn) return <Login onLogin={() => setLoggedIn(true)} />;
+  if (!role) return <Login onLogin={(r) => setRole(r)} />;
   if (!loaded) return (
     <div style={{ ...S.app, display:"flex", alignItems:"center", justifyContent:"center", height:"100vh" }}>
       <div style={{ textAlign:"center" }}>
-        <div style={{ width:"40px", height:"40px", background:"linear-gradient(135deg,#1d4ed8,#3b82f6)", borderRadius:"10px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"20px", margin:"0 auto 16px" }}>🛡</div>
+        <div style={{ width:"40px", height:"40px", margin:"0 auto 16px" }}>
+          <LogoMark size={40} radius={10}/>
+        </div>
         <div style={{ color:T.textSub, fontSize:"13px" }}>Loading SecureOps…</div>
       </div>
     </div>
@@ -2651,26 +2870,37 @@ export default function App() {
   const sections = ["Operations", "Finance"];
   const meta = PAGE_META[tab];
 
+  // Tabs visible to guests — all pages are visible but edit-locked
+  const visibleTabs = isGuest
+    ? TABS.filter(t => !["act"].includes(t.id)) // hide Activity Log from guests
+    : TABS;
+
   return (
     <div style={S.app}>
       {/* ── SIDEBAR ── */}
       <aside style={S.sidebar}>
         <div style={S.sidebarLogo}>
-          <div style={S.sidebarLogoIcon}>🛡</div>
+          <LogoMark size={32} radius={8}/>
           <div>
             <div style={S.sidebarLogoText}>SecureOps</div>
-            <div style={{ fontSize:"10px", color:T.textMute }}>Management</div>
+            <div style={{ fontSize:"10px", color:T.textMute }}>{isGuest ? "Guest View" : "Management"}</div>
           </div>
         </div>
+        {/* Guest banner */}
+        {isGuest && (
+          <div style={{ margin:"10px 10px 0", padding:"8px 12px", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:"8px", fontSize:"11px", color:"#92400e", lineHeight:1.5 }}>
+            👁 <strong>View only.</strong> You can view all data, generate reports, and download PDFs.
+          </div>
+        )}
         <nav style={S.sidebarNav}>
           {sections.map(section => (
             <div key={section}>
               <div style={S.sidebarSection}>{section}</div>
-              {TABS.filter(t=>t.section===section).map(t => (
+              {visibleTabs.filter(t=>t.section===section).map(t => (
                 <button key={t.id} style={S.navItem(tab===t.id)} onClick={() => setTab(t.id)}>
                   <span style={S.navIcon}>{t.icon}</span>
                   <span>{t.label}</span>
-                  {t.id==="act" && logEntries.length>0 && (
+                  {!isGuest && t.id==="act" && logEntries.length>0 && (
                     <span style={{ marginLeft:"auto", background:T.blue, color:"#fff", fontSize:"9px", fontWeight:"700", padding:"1px 6px", borderRadius:"10px" }}>
                       {logEntries.length > 99 ? "99+" : logEntries.length}
                     </span>
@@ -2681,7 +2911,7 @@ export default function App() {
           ))}
         </nav>
         <div style={S.sidebarBottom}>
-          <button style={S.signOutBtn} onClick={() => setLoggedIn(false)}>
+          <button style={S.signOutBtn} onClick={() => { setRole(null); setTab("emp"); }}>
             <span style={S.navIcon}>↩</span>
             <span>Sign Out</span>
           </button>
@@ -2692,15 +2922,15 @@ export default function App() {
       <main style={S.main}>
         <div style={S.pageTitle}>{meta.title}</div>
         <div style={S.pageSubtitle}>{meta.subtitle}</div>
-        {tab==="emp" && <Employees guards={guards} setGuards={setGuards} addLog={addLog} />}
-        {tab==="loc" && <Locations locs={locs} setLocs={setLocs} addLog={addLog} />}
-        {tab==="cal" && <Calendar guards={guards} locs={locs} scs={scs} setScs={setScs} ovs={ovs} setOvs={setOvs} addLog={addLog} />}
-        {tab==="rep" && <Reports guards={guards} locs={locs} scs={scs} ovs={ovs} history={history} setHistory={setHistory} addLog={addLog} />}
-        {tab==="his" && <History history={history} setHistory={setHistory} addLog={addLog} />}
-        {tab==="act" && <ActivityLog logEntries={logEntries} setLogEntries={setLogEntries} />}
-        {tab==="inv" && <Invoices locs={locs} addLog={addLog} />}
-        {tab==="pay" && <Revenue locs={locs} addLog={addLog} />}
-        {tab==="sal" && <Sales addLog={addLog} />}
+        {tab==="emp" && <Employees guards={guards} setGuards={setGuards} addLog={addLog} isGuest={isGuest} />}
+        {tab==="loc" && <Locations locs={locs} setLocs={setLocs} addLog={addLog} isGuest={isGuest} />}
+        {tab==="cal" && <Calendar guards={guards} locs={locs} scs={scs} setScs={setScs} ovs={ovs} setOvs={setOvs} addLog={addLog} isGuest={isGuest} />}
+        {tab==="rep" && <Reports guards={guards} locs={locs} scs={scs} ovs={ovs} history={history} setHistory={setHistory} addLog={addLog} isGuest={isGuest} />}
+        {tab==="his" && <History history={history} setHistory={setHistory} addLog={addLog} isGuest={isGuest} />}
+        {tab==="act" && !isGuest && <ActivityLog logEntries={logEntries} setLogEntries={setLogEntries} />}
+        {tab==="inv" && <Invoices locs={locs} addLog={addLog} isGuest={isGuest} />}
+        {tab==="pay" && <Revenue locs={locs} addLog={addLog} isGuest={isGuest} />}
+        {tab==="sal" && <Sales addLog={addLog} isGuest={isGuest} />}
       </main>
     </div>
   );
