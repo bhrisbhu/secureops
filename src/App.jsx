@@ -1327,11 +1327,28 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
 
           <div style={{ display:"grid", gridTemplateColumns:sel?"1fr 320px":"1fr", gap:"14px", alignItems:"start" }}>
           <div style={S.card}>
-            <F style={{ justifyContent:"space-between", marginBottom:"12px" }}>
+            <F style={{ justifyContent:"space-between", marginBottom:"8px" }}>
               <button style={S.bo} onClick={prev}>‹</button>
               <span style={{ fontSize:"14px", fontWeight:"700", color:"#0f172a" }}>{MONTHS[mo]} {yr}</span>
               <button style={S.bo} onClick={next}>›</button>
             </F>
+            {/* Stat holiday indicator for this month */}
+            {(() => {
+              const statDays = [];
+              for (let d=1; d<=dim; d++) {
+                const ds = dStr(yr,mo,d);
+                if (ovs.some(o=>o.date===ds&&(o.statHours||0)>0)) {
+                  statDays.push(d);
+                }
+              }
+              if (!statDays.length) return null;
+              return (
+                <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:"8px", padding:"7px 12px", marginBottom:"10px", fontSize:"11px", color:"#92400e", display:"flex", alignItems:"center", gap:"8px" }}>
+                  <span style={{ fontSize:"14px" }}>⭐</span>
+                  <span><strong>Stat holiday hours</strong> recorded on: {statDays.map(d=>`${MONTHS[mo].slice(0,3)} ${d}`).join(", ")}</span>
+                </div>
+              );
+            })()}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:"1px", marginBottom:"3px" }}>{DAYS.map(d=><div key={d} style={{ textAlign:"center", fontSize:"8px", fontWeight:"700", color:"#94a3b8", padding:"2px" }}>{d}</div>)}</div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:"2px" }}>
               {cells.map((d,i) => {
@@ -1412,10 +1429,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // REPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
-function Reports({ guards, locs, scs, ovs, history, setHistory, addLog, isGuest }) {
-  const tod = new Date().toISOString().slice(0,10);
-  const two = new Date(Date.now()-14*86400000).toISOString().slice(0,10);
-  const [sd, setSd] = useState(two); const [ed, setEd] = useState(tod); const [sl, setSl] = useState("all");
+function Reports({ guards, locs, scs, ovs, history, setHistory, addLog, isGuest, sd, setSd, ed, setEd, sl, setSl }) {
   const gIdx = id => guards.findIndex(g=>g.id===id);
 
   function buildRpt(lid) {
@@ -2032,7 +2046,7 @@ function Sales({ addLog, isGuest }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // INVOICES
 // ═══════════════════════════════════════════════════════════════════════════════
-const INV_STATUS_COL = { outstanding:"#f59e0b", overdue:"#ef4444", paid:"#10b981" };
+const INV_STATUS_COL = { draft:"#94a3b8", outstanding:"#f59e0b", overdue:"#ef4444", paid:"#10b981", sent:"#3b82f6" };
 
 const DUE_SHORTCUTS = [
   ["On Receipt", 0], ["7 Days", 7], ["15 Days", 15],
@@ -2073,198 +2087,151 @@ function printInvoiceHTML(inv) {
   const tot = afterDisc + hstAmt;
   const cur = inv.currency||"CAD";
 
-  const statusColor = inv.status==="paid" ? "#059669" : inv.status==="overdue" ? "#dc2626" : "#d97706";
-  const statusBg    = inv.status==="paid" ? "#f0fdf4" : inv.status==="overdue" ? "#fef2f2" : "#fffbeb";
-  const statusBorder= inv.status==="paid" ? "#bbf7d0" : inv.status==="overdue" ? "#fecaca" : "#fde68a";
-  const statusLabel = inv.status==="paid" ? "PAID" : inv.status==="overdue" ? "OVERDUE" : "OUTSTANDING";
-
-  const itemRows = inv.items.map((it, i) => {
+  const itemRows = inv.items.map(it => {
     const amt = (parseFloat(it.qty)||0)*(parseFloat(it.price)||0);
-    return `<tr style="background:${i%2===0?"#ffffff":"#f9fafb"}">
-      <td style="padding:12px 16px;font-size:13px;color:#1e293b;border-bottom:1px solid #f1f5f9">${it.desc||""}</td>
-      <td style="padding:12px 16px;text-align:center;font-size:13px;color:#475569;border-bottom:1px solid #f1f5f9">${it.qty}</td>
-      <td style="padding:12px 16px;text-align:right;font-size:13px;color:#475569;border-bottom:1px solid #f1f5f9">${cur} $${parseFloat(it.price||0).toFixed(2)}</td>
-      <td style="padding:12px 16px;text-align:right;font-size:13px;font-weight:600;color:#1e293b;border-bottom:1px solid #f1f5f9">${cur} $${amt.toFixed(2)}</td>
+    return `<tr>
+      <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;vertical-align:top">
+        <div style="font-weight:600;color:#111827;font-size:13px">${it.desc||""}</div>
+        ${it.subDesc ? `<div style="font-size:11px;color:#6b7280;margin-top:2px">${it.subDesc}</div>` : ""}
+      </td>
+      <td style="padding:10px 14px;text-align:center;border-bottom:1px solid #e5e7eb;font-size:13px;color:#374151">${it.qty}</td>
+      <td style="padding:10px 14px;text-align:right;border-bottom:1px solid #e5e7eb;font-size:13px;color:#374151">$${parseFloat(it.price||0).toFixed(2)}</td>
+      <td style="padding:10px 14px;text-align:right;border-bottom:1px solid #e5e7eb;font-size:13px;font-weight:600;color:#111827">$${amt.toFixed(2)}</td>
     </tr>`;
   }).join("");
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
   <title>Invoice ${inv.number}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Inter','Segoe UI',Arial,sans-serif;background:#f8fafc;color:#1e293b;font-size:13px}
-    .page{max-width:820px;margin:0 auto;background:#fff;min-height:100vh}
-
-    /* ── HEADER BAND ── */
-    .header{background:linear-gradient(135deg,#0f172a 0%,#1e3a6e 100%);padding:40px 48px 36px;display:flex;justify-content:space-between;align-items:flex-start}
-    .logo-img{max-height:64px;max-width:180px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.95;margin-bottom:8px}
-    .company-name{font-size:18px;font-weight:700;color:#fff;letter-spacing:-0.3px}
-    .company-details{margin-top:6px}
-    .company-details p{font-size:11px;color:#94a3b8;margin-top:2px;line-height:1.5}
-    .inv-right{text-align:right}
-    .inv-word{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px}
-    .inv-number{font-size:32px;font-weight:800;color:#fff;letter-spacing:-1px;line-height:1}
-    .status-pill{display:inline-block;margin-top:10px;padding:4px 14px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:1px;background:${statusBg};color:${statusColor};border:1px solid ${statusBorder}}
-
-    /* ── BODY ── */
-    .body{padding:40px 48px}
-
-    /* summary strip */
-    .summary-strip{background:#f0f7ff;border-left:3px solid #2563eb;border-radius:0 6px 6px 0;padding:10px 16px;margin-bottom:32px;font-size:12px;color:#1e40af;font-weight:500;line-height:1.5}
-
-    /* bill to / details grid */
-    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:36px}
-    .info-box{background:#f8fafc;border-radius:10px;padding:20px 22px;border:1px solid #e2e8f0}
-    .info-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin-bottom:10px}
-    .info-primary{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px}
-    .info-secondary{font-size:12px;color:#64748b;margin-top:2px;line-height:1.6}
-    .info-row{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
-    .info-row .label{font-size:11px;color:#94a3b8}
-    .info-row .value{font-size:12px;font-weight:600;color:#1e293b}
-
-    /* items table */
-    .table-wrap{border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;margin-bottom:0}
-    table{width:100%;border-collapse:collapse}
-    thead tr{background:#0f172a}
-    thead th{color:#94a3b8;padding:12px 16px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px}
-    thead th.r{text-align:right}
-    thead th.c{text-align:center}
-    tbody tr:last-child td{border-bottom:none}
-
-    /* totals */
-    .totals-section{display:flex;justify-content:flex-end;margin-top:0}
-    .totals-box{width:320px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 0}
-    .tot-line{display:flex;justify-content:space-between;align-items:center;padding:9px 20px;font-size:12px;color:#475569;border-top:1px solid #f1f5f9}
-    .tot-line .lbl{color:#64748b}
-    .tot-line .val{font-weight:500;color:#1e293b}
-    .tot-line.discount .val{color:#059669}
-    .tot-final{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:#0f172a;border-radius:0 0 10px 0}
-    .tot-final .lbl{font-size:13px;font-weight:600;color:#94a3b8;letter-spacing:0.3px}
-    .tot-final .val{font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.5px}
-
-    /* notes & attachments */
-    .notes-section{margin-top:32px}
-    .notes-box{background:#f8fafc;border-radius:10px;padding:18px 22px;border:1px solid #e2e8f0;font-size:12px;color:#475569;line-height:1.7}
-    .notes-box .notes-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:6px}
-    .attachments-box{margin-top:16px;background:#fffbeb;border-radius:10px;padding:18px 22px;border:1px solid #fde68a}
-    .attachments-box .att-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#92400e;margin-bottom:8px}
-    .att-item{display:flex;align-items:center;gap:8px;font-size:12px;color:#1e293b;font-weight:500;margin-top:6px}
-    .att-note{font-size:11px;color:#b45309;margin-top:8px}
-
-    /* footer */
-    .footer{display:flex;justify-content:space-between;align-items:center;margin-top:40px;padding:20px 0 0;border-top:1px solid #e2e8f0}
-    .footer-left{font-size:11px;color:#94a3b8}
-    .footer-right{font-size:10px;color:#cbd5e1}
-    .thank-you{text-align:center;margin-top:28px;padding:18px;background:linear-gradient(135deg,#f0f7ff,#f8fafc);border-radius:10px;border:1px solid #dbeafe}
-    .thank-you p{font-size:13px;color:#1e40af;font-weight:500}
-
-    @media print{
-      @page{margin:0.8cm;size:A4}
-      body{background:#fff}
-      .page{box-shadow:none}
-    }
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#111827;font-size:13px}
+    .page{max-width:820px;margin:0 auto;padding:48px 52px;background:#fff}
+    @media print{@page{margin:1cm;size:A4}body{background:#fff}.page{padding:24px;max-width:100%}}
   </style>
-  </head><body>
-  <div class="page">
+  </head><body><div class="page">
 
-    <!-- HEADER -->
-    <div class="header">
-      <div>
-        ${inv.logo ? `<img src="${inv.logo}" class="logo-img" alt="logo"/>` : ""}
-        <div class="company-name">${inv.companyName||""}</div>
-        <div class="company-details">
-          ${inv.companyAddress ? `<p>${inv.companyAddress}</p>` : ""}
-          ${inv.companyEmail ? `<p>${inv.companyEmail}</p>` : ""}
-          ${inv.companyTax ? `<p>HST/GST #: ${inv.companyTax}</p>` : ""}
+    <!-- TOP: logo left, INVOICE right -->
+    <table width="100%" style="margin-bottom:24px"><tr>
+      <td style="vertical-align:top;width:45%">
+        ${inv.logo ? `<img src="${inv.logo}" style="max-height:90px;max-width:180px;object-fit:contain;display:block" alt="logo"/>` : ""}
+      </td>
+      <td style="vertical-align:top;text-align:right">
+        <div style="font-size:38px;font-weight:700;color:#111827;letter-spacing:-1px;line-height:1">INVOICE</div>
+        ${inv.summary ? `<div style="font-size:12px;color:#6b7280;margin-top:6px">${inv.summary}</div>` : ""}
+        <div style="margin-top:16px;text-align:right">
+          ${inv.companyName ? `<div style="font-weight:700;font-size:13px;color:#111827">${inv.companyName}</div>` : ""}
+          ${inv.companyTax ? `<div style="font-size:12px;color:#374151;margin-top:2px">Tax Number: ${inv.companyTax}</div>` : ""}
+          ${inv.companyAddress ? `<div style="font-size:12px;color:#374151;margin-top:2px">${inv.companyAddress}</div>` : ""}
+          ${inv.companyEmail ? `<div style="font-size:12px;color:#374151;margin-top:2px">${inv.companyEmail}</div>` : ""}
         </div>
-      </div>
-      <div class="inv-right">
-        <div class="inv-word">Invoice</div>
-        <div class="inv-number">${inv.number}</div>
-        <div class="status-pill">${statusLabel}</div>
-      </div>
-    </div>
+      </td>
+    </tr></table>
 
-    <!-- BODY -->
-    <div class="body">
+    <!-- DIVIDER -->
+    <hr style="border:none;border-top:1px solid #d1d5db;margin-bottom:24px"/>
 
-      ${inv.summary ? `<div class="summary-strip">📋 ${inv.summary}</div>` : ""}
-
-      <!-- Bill To + Invoice Details -->
-      <div class="info-grid">
-        <div class="info-box">
-          <div class="info-label">Bill To</div>
-          <div class="info-primary">${inv.clientName||"—"}</div>
-          ${inv.clientContact ? `<div class="info-secondary">Attn: ${inv.clientContact}</div>` : ""}
-          ${inv.clientAddress ? `<div class="info-secondary">${inv.clientAddress}</div>` : ""}
-          ${inv.clientEmail ? `<div class="info-secondary">${inv.clientEmail}</div>` : ""}
-        </div>
-        <div class="info-box">
-          <div class="info-label">Invoice Details</div>
-          <div class="info-row"><span class="label">Invoice Number</span><span class="value">${inv.number}</span></div>
-          <div class="info-row"><span class="label">Invoice Date</span><span class="value">${inv.date||"—"}</span></div>
-          ${inv.dueDate ? `<div class="info-row"><span class="label">Payment Due</span><span class="value" style="color:#dc2626;font-weight:700">${inv.dueDate}</span></div>` : ""}
-          <div class="info-row"><span class="label">Currency</span><span class="value">${cur}</span></div>
-        </div>
-      </div>
-
-      <!-- Line Items -->
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th style="width:50%">Description</th>
-            <th class="c" style="width:12%">Qty</th>
-            <th class="r" style="width:19%">Unit Price</th>
-            <th class="r" style="width:19%">Amount</th>
-          </tr></thead>
-          <tbody>${itemRows}</tbody>
+    <!-- BILL TO + INVOICE DETAILS -->
+    <table width="100%" style="margin-bottom:28px"><tr>
+      <td style="vertical-align:top;width:50%;padding-right:24px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;margin-bottom:8px">Bill To</div>
+        ${inv.clientName ? `<div style="font-weight:700;font-size:14px;color:#111827">${inv.clientName}</div>` : ""}
+        ${inv.clientContact ? `<div style="font-size:12px;color:#374151;margin-top:3px">Attn: ${inv.clientContact}</div>` : ""}
+        ${inv.clientPhone ? `<div style="font-size:12px;color:#374151;margin-top:3px">${inv.clientPhone}</div>` : ""}
+        ${inv.clientEmail ? `<div style="font-size:12px;color:#374151;margin-top:3px">${inv.clientEmail}</div>` : ""}
+        ${inv.clientAddress ? `<div style="font-size:12px;color:#374151;margin-top:3px">${inv.clientAddress}</div>` : ""}
+      </td>
+      <td style="vertical-align:top">
+        <table width="100%" style="font-size:12px;border-collapse:collapse">
+          <tr>
+            <td style="color:#6b7280;padding:4px 0;padding-right:16px">Invoice Number:</td>
+            <td style="color:#111827;font-weight:600;text-align:right">${inv.number||"—"}</td>
+          </tr>
+          <tr>
+            <td style="color:#6b7280;padding:4px 0;padding-right:16px">Invoice Date:</td>
+            <td style="color:#111827;font-weight:600;text-align:right">${inv.date||"—"}</td>
+          </tr>
+          ${inv.dueDate ? `<tr>
+            <td style="color:#6b7280;padding:4px 0;padding-right:16px">Payment Due:</td>
+            <td style="color:#111827;font-weight:600;text-align:right">${inv.dueDate}</td>
+          </tr>` : ""}
+          <tr>
+            <td colspan="2" style="padding:0"><div style="height:1px;background:#e5e7eb;margin:6px 0"></div></td>
+          </tr>
+          <tr style="background:#f3f4f6">
+            <td style="color:#111827;font-weight:700;padding:6px 8px;font-size:13px">Amount Due (${cur}):</td>
+            <td style="color:#111827;font-weight:800;font-size:14px;text-align:right;padding:6px 8px">$${tot.toFixed(2)}</td>
+          </tr>
         </table>
-        <!-- Totals flush with table -->
-        <div class="totals-section">
-          <div class="totals-box">
-            <div class="tot-line"><span class="lbl">Subtotal</span><span class="val">${cur} $${sub.toFixed(2)}</span></div>
-            ${discAmt>0 ? `<div class="tot-line discount"><span class="lbl">Discount${inv.discountNote?" ("+inv.discountNote+")":""}${inv.discountType==="percent"?" "+discVal+"%":""}</span><span class="val" style="color:#059669">− ${cur} $${discAmt.toFixed(2)}</span></div>` : ""}
-            ${inv.hst ? `<div class="tot-line"><span class="lbl">HST (13%)</span><span class="val">${cur} $${hstAmt.toFixed(2)}</span></div>` : ""}
-            <div class="tot-final">
-              <span class="lbl">Total Due</span>
-              <span class="val">${cur} $${tot.toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      </td>
+    </tr></table>
 
-      <!-- Notes -->
-      <div class="notes-section">
-        ${inv.notes ? `<div class="notes-box"><div class="notes-label">Payment Instructions</div>${inv.notes}</div>` : ""}
-        ${inv.attachments&&inv.attachments.length>0 ? `
-        <div class="attachments-box">
-          <div class="att-label">📎 Supporting Documents</div>
-          ${inv.attachments.map(a=>`<div class="att-item">📄 ${a.name}</div>`).join("")}
-          <div class="att-note">These files are attached separately to the email alongside this invoice.</div>
-        </div>` : ""}
-      </div>
+    <!-- ITEMS TABLE -->
+    <table width="100%" style="border-collapse:collapse;margin-bottom:4px">
+      <thead>
+        <tr style="background:#e09820">
+          <th style="padding:10px 14px;text-align:left;font-size:12px;font-weight:700;color:#fff">Items</th>
+          <th style="padding:10px 14px;text-align:center;font-size:12px;font-weight:700;color:#fff;width:12%">Quantity</th>
+          <th style="padding:10px 14px;text-align:right;font-size:12px;font-weight:700;color:#fff;width:16%">Price</th>
+          <th style="padding:10px 14px;text-align:right;font-size:12px;font-weight:700;color:#fff;width:16%">Amount</th>
+        </tr>
+      </thead>
+      <tbody>${itemRows}</tbody>
+    </table>
 
-      <!-- Thank you -->
-      <div class="thank-you">
-        <p>Thank you for your business. Please don't hesitate to reach out with any questions.</p>
-      </div>
+    <!-- TOTALS right-aligned -->
+    <table width="100%"><tr><td width="52%"></td>
+      <td style="padding-top:16px">
+        <table width="100%" style="font-size:13px;border-collapse:collapse">
+          <tr>
+            <td style="padding:4px 0;color:#6b7280;text-align:right;padding-right:20px">Subtotal:</td>
+            <td style="text-align:right;color:#111827;font-weight:600;white-space:nowrap">$${sub.toFixed(2)}</td>
+          </tr>
+          ${discAmt>0?`<tr>
+            <td style="padding:4px 0;color:#6b7280;text-align:right;padding-right:20px">Discount${inv.discountNote?" ("+inv.discountNote+")":""}:</td>
+            <td style="text-align:right;color:#059669;font-weight:600">− $${discAmt.toFixed(2)}</td>
+          </tr>`:""}
+          ${inv.hst?`<tr>
+            <td style="padding:4px 0;color:#6b7280;text-align:right;padding-right:20px">HST 13%:</td>
+            <td style="text-align:right;color:#111827;font-weight:600">$${hstAmt.toFixed(2)}</td>
+          </tr>`:""}
+          <tr>
+            <td colspan="2" style="padding:0"><div style="height:1px;background:#d1d5db;margin:8px 0"></div></td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;color:#374151;font-weight:600;text-align:right;padding-right:20px">Total:</td>
+            <td style="text-align:right;color:#111827;font-weight:700">$${tot.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td colspan="2" style="padding:0"><div style="height:1px;background:#d1d5db;margin:8px 0"></div></td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;color:#111827;font-weight:700;text-align:right;padding-right:20px">Amount Due (${cur}):</td>
+            <td style="text-align:right;color:#111827;font-weight:800;font-size:15px;white-space:nowrap">$${tot.toFixed(2)}</td>
+          </tr>
+        </table>
+      </td>
+    </tr></table>
 
-      <!-- Footer -->
-      <div class="footer">
-        <div class="footer-left">${inv.companyName||"SecureOps"} &nbsp;·&nbsp; ${inv.companyEmail||""}</div>
-        <div class="footer-right">Generated ${new Date().toLocaleDateString("en-CA",{year:"numeric",month:"long",day:"numeric"})}</div>
-      </div>
+    ${inv.notes ? `<div style="margin-top:24px;padding:12px 16px;background:#f9fafb;border-radius:4px;font-size:12px;color:#374151;line-height:1.6"><strong>Notes:</strong> ${inv.notes}</div>` : ""}
+    ${inv.attachments&&inv.attachments.length>0?`
+    <div style="margin-top:12px;padding:12px 16px;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;font-size:12px">
+      <strong style="color:#92400e">Attachments:</strong>
+      ${inv.attachments.map(a=>`<span style="margin-left:8px;color:#1e40af">• ${a.name}</span>`).join("")}
+    </div>`:""}
 
+    <div style="margin-top:32px;padding-top:12px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;font-size:10px;color:#9ca3af">
+      <span>${inv.companyName||""}${inv.companyEmail?" · "+inv.companyEmail:""}</span>
+      <span>Generated ${new Date().toLocaleDateString("en-CA",{year:"numeric",month:"long",day:"numeric"})}</span>
     </div>
-  </div>
-  </body></html>`;
+
+  </div></body></html>`;
 
   const w = window.open("","_blank","width=960,height=780");
   if (!w) { alert("Allow pop-ups in your browser to download the PDF."); return; }
   w.document.open(); w.document.write(html); w.document.close();
   setTimeout(() => { w.focus(); w.print(); }, 800);
 }
+
 
 function Invoices({ locs, addLog, isGuest }) {
   const [invs, setInvs] = useState([]);
@@ -2368,6 +2335,8 @@ function Invoices({ locs, addLog, isGuest }) {
   const outstanding = invs.filter(x=>x.status==="outstanding");
   const overdue     = invs.filter(x=>x.status==="overdue");
   const paid        = invs.filter(x=>x.status==="paid");
+  const sent        = invs.filter(x=>x.status==="sent");
+  const drafts      = invs.filter(x=>x.status==="draft");
 
   if (!rdy) return <div style={S.card}><div style={S.empty}>Loading…</div></div>;
 
@@ -2387,17 +2356,27 @@ function Invoices({ locs, addLog, isGuest }) {
       {view==="dashboard" && (
         <div>
           <div style={{ display:"flex", gap:"9px", marginBottom:"14px", flexWrap:"wrap" }}>
-            {[["Outstanding",outstanding.length,"#f59e0b"],["Overdue",overdue.length,"#ef4444"],["Paid (All Time)",paid.length,"#10b981"],["Total Invoices",invs.length,T.text]].map(([l,v,c])=>(
-              <div key={l} style={{ ...S.stat, flex:"1", minWidth:"110px", borderTop:`3px solid ${c}` }}>
+            {[["Drafts",drafts.length,"#94a3b8"],["Outstanding",outstanding.length,"#f59e0b"],["Sent",sent.length,"#3b82f6"],["Overdue",overdue.length,"#ef4444"],["Paid (All Time)",paid.length,"#10b981"],["Total Invoices",invs.length,T.text]].map(([l,v,c])=>(
+              <div key={l} style={{ ...S.stat, flex:"1", minWidth:"90px", borderTop:`3px solid ${c}` }}>
                 <div style={{ ...S.sn, color:c, fontSize:"20px" }}>{v}</div><div style={S.sl}>{l}</div>
               </div>
             ))}
           </div>
-          <div style={{ ...S.card, background:T.surface2, border:`1px solid ${T.borderHi}` }}>
-            <div style={{ fontSize:"12px", color:T.textSub }}>
-              💡 For revenue totals, HST collected, and period breakdowns — visit the <strong style={{ color:T.blue }}>Revenue</strong> page in the sidebar.
+          <div style={{ ...S.card, background:"#eff6ff", border:`1px solid #bfdbfe` }}>
+            <div style={{ fontSize:"12px", color:"#1e40af" }}>
+              💡 For revenue totals, HST collected, and period breakdowns — visit the <strong>Revenue</strong> page in the sidebar.
             </div>
           </div>
+          {/* Drafts */}
+          {drafts.length>0&&<div style={S.card}><div style={S.ct}>📝 Drafts</div>
+            <table style={S.tbl}><thead><tr>{["Invoice #","Client","Date","Total",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <tbody>{drafts.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:T.text }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}><strong style={{ color:"#94a3b8" }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button><button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"outstanding")}>Send →</button></div></td></tr>)}</tbody>
+            </table></div>}
+          {/* Sent */}
+          {sent.length>0&&<div style={S.card}><div style={S.ct}>✉ Sent — Awaiting Payment</div>
+            <table style={S.tbl}><thead><tr>{["Invoice #","Client","Date","Due","Total",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <tbody>{sent.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:T.text }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}>{inv.dueDate||"—"}</td><td style={S.td}><strong style={{ color:T.blue }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"paid")}>Mark Paid</button><button style={S.bsm(T.red)} onClick={()=>setStatus(inv.id,"overdue")}>Overdue</button><button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button></div></td></tr>)}</tbody>
+            </table></div>}
           {overdue.length>0&&<div style={S.card}><div style={S.ct}>🔴 Overdue Invoices</div>
             <table style={S.tbl}><thead><tr>{["Invoice #","Client","Date","Due","Total",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
             <tbody>{overdue.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:T.text }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}>{inv.dueDate||"—"}</td><td style={S.td}><strong style={{ color:T.red }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm(T.green)} onClick={()=>setStatus(inv.id,"paid")}>Mark Paid</button><button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button></div></td></tr>)}</tbody>
@@ -2433,7 +2412,9 @@ function Invoices({ locs, addLog, isGuest }) {
                       {!isGuest && <button style={S.bsm("#60a5fa")} onClick={()=>startEdit(inv)}>Edit</button>}
                       <button style={S.bsm("#a78bfa")} onClick={()=>printInvoiceHTML(inv)}>🖨 PDF</button>
                       <button style={S.bsm("#ea4335")} title="Opens Gmail compose — remember to attach the PDF manually" onClick={()=>sendGmail(inv)}>✉ Send</button>
-                      {!isGuest && inv.status!=="paid"&&<button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"paid")}>Paid</button>}
+                      {!isGuest && inv.status==="draft" && <button style={S.bsm("#3b82f6")} onClick={()=>setStatus(inv.id,"outstanding")}>Mark Outstanding</button>}
+                      {!isGuest && (inv.status==="outstanding"||inv.status==="sent") && <button style={S.bsm("#3b82f6")} onClick={()=>setStatus(inv.id,"sent")}>✉ Sent</button>}
+                      {!isGuest && inv.status!=="paid"&&inv.status!=="draft"&&<button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"paid")}>Paid</button>}
                       {!isGuest && inv.status==="outstanding"&&<button style={S.bsm("#ef4444")} onClick={()=>setStatus(inv.id,"overdue")}>Overdue</button>}
                       {!isGuest && <button style={S.bd} onClick={()=>delInv(inv.id)}>✕</button>}
                     </div></td>
@@ -2497,7 +2478,9 @@ function Invoices({ locs, addLog, isGuest }) {
               </div>
               <div><label style={S.lbl}>Status</label>
                 <select style={S.sel} value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))}>
+                  <option value="draft">Draft</option>
                   <option value="outstanding">Outstanding</option>
+                  <option value="sent">Sent</option>
                   <option value="overdue">Overdue</option>
                   <option value="paid">Paid</option>
                 </select>
@@ -2625,6 +2608,10 @@ function Invoices({ locs, addLog, isGuest }) {
                             </div>
                           )}
                         </div>
+                        <input style={{ ...S.inp, marginTop:"4px", fontSize:"11px", color:T.textSub, background:"#f8faff" }}
+                          value={it.subDesc||""}
+                          onChange={e=>setItem(i,"subDesc",e.target.value)}
+                          placeholder="Sub-description (e.g. Number of Hours — 3 days)"/>
                       </td>
                       <td style={S.td}><input style={{ ...S.inp, width:"65px" }} type="number" min="0" value={it.qty} onChange={e=>setItem(i,"qty",e.target.value)}/></td>
                       <td style={S.td}><input style={{ ...S.inp, width:"100px" }} type="number" step="0.01" min="0" value={it.price} onChange={e=>setItem(i,"price",e.target.value)}/></td>
@@ -2833,6 +2820,10 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [logEntries, setLogEntries] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  // Persistent report filters — survive page navigation
+  const [repSd, setRepSd] = useState(() => new Date(Date.now()-14*86400000).toISOString().slice(0,10));
+  const [repEd, setRepEd] = useState(() => new Date().toISOString().slice(0,10));
+  const [repSl, setRepSl] = useState("all");
 
   const isGuest = role === "guest";
 
@@ -2925,7 +2916,7 @@ export default function App() {
         {tab==="emp" && <Employees guards={guards} setGuards={setGuards} addLog={addLog} isGuest={isGuest} />}
         {tab==="loc" && <Locations locs={locs} setLocs={setLocs} addLog={addLog} isGuest={isGuest} />}
         {tab==="cal" && <Calendar guards={guards} locs={locs} scs={scs} setScs={setScs} ovs={ovs} setOvs={setOvs} addLog={addLog} isGuest={isGuest} />}
-        {tab==="rep" && <Reports guards={guards} locs={locs} scs={scs} ovs={ovs} history={history} setHistory={setHistory} addLog={addLog} isGuest={isGuest} />}
+        {tab==="rep" && <Reports guards={guards} locs={locs} scs={scs} ovs={ovs} history={history} setHistory={setHistory} addLog={addLog} isGuest={isGuest} sd={repSd} setSd={setRepSd} ed={repEd} setEd={setRepEd} sl={repSl} setSl={setRepSl}/>}
         {tab==="his" && <History history={history} setHistory={setHistory} addLog={addLog} isGuest={isGuest} />}
         {tab==="act" && !isGuest && <ActivityLog logEntries={logEntries} setLogEntries={setLogEntries} />}
         {tab==="inv" && <Invoices locs={locs} addLog={addLog} isGuest={isGuest} />}
