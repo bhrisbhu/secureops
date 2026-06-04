@@ -36,7 +36,6 @@ const LogoMark = ({ size = 32, radius = 8 }) => (
 // ─── storage ──────────────────────────────────────────────────────────────────
 const K = { g:"so_g", l:"so_l", sc:"so_sc", ov:"so_ov", hi:"so_hi", pay:"so_pay", leads:"so_lds", inv:"so_inv", co:"so_co", log:"so_log" };
 import { load, save } from './supabase.js';
-
 // ─── utils ────────────────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).slice(2, 9);
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -819,6 +818,11 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
   };
   const saveAdj = () => {
     if (!adjG) return;
+    // Location is required — can't save without one
+    if (!adj.absent && !adj.locationId) {
+      alert("Please select a location before saving. Hours must be tied to a location for reports to be accurate.");
+      return;
+    }
     const ds = dStr(yr,mo,sel);
     const base = ovs.filter(o=>!(o.date===ds&&o.guardId===adjG.id));
     const existing = ovs.find(o=>o.date===ds&&o.guardId===adjG.id);
@@ -890,6 +894,15 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
             </label>
             {!adj.absent && (
               <div>
+                <div style={{ marginBottom:"12px" }}>
+                  <label style={{ ...S.lbl, color: adj.locationId ? T.textSub : T.red }}>
+                    Location * <span style={{ fontWeight:"400", fontSize:"10px" }}>{adj.locationId ? "" : "— required for reports"}</span>
+                  </label>
+                  <select style={{ ...S.sel, borderColor: adj.locationId ? T.border : T.red }} value={adj.locationId} onChange={e=>setAdj(p=>({...p,locationId:e.target.value}))}>
+                    <option value="">Select location…</option>
+                    {locs.map(l=><option key={l.id} value={l.id}>{l.name}{l.client?" — "+l.client:""}</option>)}
+                  </select>
+                </div>
                 <div style={S.g2}>
                   <Inp label="Shift Start" type="time" value={adj.startTime} onChange={e=>{
                     const s=e.target.value, en=adj.endTime;
@@ -911,20 +924,19 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                   Night shift crossing into stat? Enter only the hours <em>after midnight</em> on the stat day as stat hours.
                 </div>
                 <div style={{ marginTop:"10px" }}>
-                  <Sel label="Location" value={adj.locationId} onChange={e=>setAdj(p=>({...p,locationId:e.target.value}))}>
-                    <option value="">Select…</option>
-                    {locs.map(l=><option key={l.id} value={l.id}>{l.name}</option>)}
-                  </Sel>
-                </div>
-                <div style={{ marginTop:"10px" }}>
                   <Inp label="Notes" value={adj.notes} onChange={e=>setAdj(p=>({...p,notes:e.target.value}))} placeholder="Reason for adjustment…"/>
                 </div>
               </div>
             )}
             <F style={{ marginTop:"16px" }}>
-              <button style={S.bp} onClick={saveAdj}>Save Hours</button>
+              <button style={{ ...S.bp, opacity:(!adj.absent && !adj.locationId) ? 0.5 : 1 }} onClick={saveAdj}>Save Hours</button>
               <button style={S.bo} onClick={()=>setAdjG(null)}>Cancel</button>
             </F>
+            {!adj.absent && !adj.locationId && (
+              <div style={{ marginTop:"8px", fontSize:"11px", color:T.red }}>
+                ⚠ Select a location to enable saving — required for accurate reports.
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -2356,7 +2368,7 @@ function Invoices({ locs, addLog, isGuest }) {
       {view==="dashboard" && (
         <div>
           <div style={{ display:"flex", gap:"9px", marginBottom:"14px", flexWrap:"wrap" }}>
-            {[["Drafts",drafts.length,"#94a3b8"],["Outstanding",outstanding.length,"#f59e0b"],["Sent",sent.length,"#3b82f6"],["Overdue",overdue.length,"#ef4444"],["Paid (All Time)",paid.length,"#10b981"],["Total Invoices",invs.length,T.text]].map(([l,v,c])=>(
+            {[["Drafts",drafts.length,"#94a3b8"],["Outstanding",outstanding.length,"#f59e0b"],["Overdue",overdue.length,"#ef4444"],["Paid (All Time)",paid.length,"#10b981"],["Total Invoices",invs.length,T.text]].map(([l,v,c])=>(
               <div key={l} style={{ ...S.stat, flex:"1", minWidth:"90px", borderTop:`3px solid ${c}` }}>
                 <div style={{ ...S.sn, color:c, fontSize:"20px" }}>{v}</div><div style={S.sl}>{l}</div>
               </div>
@@ -2373,10 +2385,6 @@ function Invoices({ locs, addLog, isGuest }) {
             <tbody>{drafts.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:T.text }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}><strong style={{ color:"#94a3b8" }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button><button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"outstanding")}>Send →</button></div></td></tr>)}</tbody>
             </table></div>}
           {/* Sent */}
-          {sent.length>0&&<div style={S.card}><div style={S.ct}>✉ Sent — Awaiting Payment</div>
-            <table style={S.tbl}><thead><tr>{["Invoice #","Client","Date","Due","Total",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-            <tbody>{sent.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:T.text }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}>{inv.dueDate||"—"}</td><td style={S.td}><strong style={{ color:T.blue }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"paid")}>Mark Paid</button><button style={S.bsm(T.red)} onClick={()=>setStatus(inv.id,"overdue")}>Overdue</button><button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button></div></td></tr>)}</tbody>
-            </table></div>}
           {overdue.length>0&&<div style={S.card}><div style={S.ct}>🔴 Overdue Invoices</div>
             <table style={S.tbl}><thead><tr>{["Invoice #","Client","Date","Due","Total",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
             <tbody>{overdue.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:T.text }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}>{inv.dueDate||"—"}</td><td style={S.td}><strong style={{ color:T.red }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm(T.green)} onClick={()=>setStatus(inv.id,"paid")}>Mark Paid</button><button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button></div></td></tr>)}</tbody>
