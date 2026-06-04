@@ -36,6 +36,7 @@ const LogoMark = ({ size = 32, radius = 8 }) => (
 // ─── storage ──────────────────────────────────────────────────────────────────
 const K = { g:"so_g", l:"so_l", sc:"so_sc", ov:"so_ov", hi:"so_hi", pay:"so_pay", leads:"so_lds", inv:"so_inv", co:"so_co", log:"so_log" };
 import { load, save } from './supabase.js';
+
 // ─── utils ────────────────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).slice(2, 9);
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -737,6 +738,15 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
   const [bulkResult, setBulkResult] = useState(null);
   const [statDate, setStatDate] = useState("");
   const [scSearch, setScSearch] = useState("");
+  // CRA remittance reminder — dismissed per month (stored as "YYYY-MM")
+  const [crasDismissed, setCrasDismissed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("so_cra_dismissed")||"[]"); } catch { return []; }
+  });
+  const dismissCra = (key) => {
+    const updated = [...crasDismissed, key];
+    setCrasDismissed(updated);
+    try { localStorage.setItem("so_cra_dismissed", JSON.stringify(updated)); } catch {}
+  };
 
   const dim = new Date(yr,mo+1,0).getDate();
   const fd = new Date(yr,mo,1).getDay();
@@ -1306,6 +1316,40 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
       )}
       {sub==="cal" && (
         <div>
+          {/* ── CRA PAYROLL REMITTANCE REMINDER ── */}
+          {(() => {
+            const now = new Date();
+            const todayDay = now.getDate();
+            const todayMo  = now.getMonth();
+            const todayYr  = now.getFullYear();
+            // Show reminder for the current real month only, on days 1–14
+            const isCurrentMonth = (mo === todayMo && yr === todayYr);
+            const isBeforeDue = todayDay <= 14;
+            const craKey = `${todayYr}-${String(todayMo+1).padStart(2,"0")}`;
+            const isDismissed = crasDismissed.includes(craKey);
+            if (!isCurrentMonth || !isBeforeDue || isDismissed) return null;
+            return (
+              <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"10px", padding:"12px 16px", marginBottom:"14px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"10px" }}>
+                <div style={{ display:"flex", alignItems:"flex-start", gap:"10px" }}>
+                  <span style={{ fontSize:"20px", marginTop:"1px" }}>🇨🇦</span>
+                  <div>
+                    <div style={{ fontWeight:"700", color:"#dc2626", fontSize:"13px", marginBottom:"3px" }}>
+                      CRA Payroll Remittance Due by the 15th
+                    </div>
+                    <div style={{ fontSize:"12px", color:T.textSub, lineHeight:1.6 }}>
+                      Remember to submit your payroll remittance to the CRA for <strong>{MONTHS[todayMo]} {todayYr}</strong> before the <strong>15th</strong>.
+                      This includes CPP contributions, EI premiums, and income tax deducted from employee pay.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  style={{ flexShrink:0, background:"transparent", border:"1px solid #fecaca", borderRadius:"6px", padding:"5px 12px", fontSize:"11px", color:"#dc2626", cursor:"pointer", fontWeight:"600", whiteSpace:"nowrap" }}
+                  onClick={()=>dismissCra(craKey)}>
+                  ✓ Already Paid
+                </button>
+              </div>
+            );
+          })()}
           {/* ── UNSCHEDULED EMPLOYEE ALERT ── */}
           {(() => {
             const activeGuards = guards.filter(g => g.status === "Active");
