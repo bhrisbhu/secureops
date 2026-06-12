@@ -2312,7 +2312,7 @@ function Invoices({ locs, addLog, isGuest }) {
     clientLocationId:"", clientName:"", clientAddress:"", clientEmail:"",
     clientPhone:"", clientContact:"",
     items:[{ desc:"Security Services", qty:1, price:"" }],
-    hst:true, notes:"", status:"outstanding",
+    hst:true, notes:"", status:"draft",
     discount:"", discountType:"percent", discountNote:"",
     currency:"CAD",
     attachments:[],
@@ -2431,7 +2431,7 @@ function Invoices({ locs, addLog, isGuest }) {
           {/* Drafts */}
           {drafts.length>0&&<div style={S.card}><div style={S.ct}>📝 Drafts</div>
             <table style={S.tbl}><thead><tr>{["Invoice #","Client","Date","Total",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-            <tbody>{drafts.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:T.text }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}><strong style={{ color:"#94a3b8" }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button><button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"outstanding")}>Send →</button></div></td></tr>)}</tbody>
+            <tbody>{drafts.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:T.text }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}><strong style={{ color:"#94a3b8" }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button><button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"outstanding")}>✉ Mark as Sent</button></div></td></tr>)}</tbody>
             </table></div>}
           {/* Sent */}
           {overdue.length>0&&<div style={S.card}><div style={S.ct}>🔴 Overdue Invoices</div>
@@ -2469,10 +2469,10 @@ function Invoices({ locs, addLog, isGuest }) {
                       {!isGuest && <button style={S.bsm("#60a5fa")} onClick={()=>startEdit(inv)}>Edit</button>}
                       <button style={S.bsm("#a78bfa")} onClick={()=>printInvoiceHTML(inv)}>🖨 PDF</button>
                       <button style={S.bsm("#ea4335")} title="Opens Gmail compose — remember to attach the PDF manually" onClick={()=>sendGmail(inv)}>✉ Send</button>
-                      {!isGuest && inv.status==="draft" && <button style={S.bsm("#3b82f6")} onClick={()=>setStatus(inv.id,"outstanding")}>Mark Outstanding</button>}
-                      {!isGuest && (inv.status==="outstanding"||inv.status==="sent") && <button style={S.bsm("#3b82f6")} onClick={()=>setStatus(inv.id,"sent")}>✉ Sent</button>}
-                      {!isGuest && inv.status!=="paid"&&inv.status!=="draft"&&<button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"paid")}>Paid</button>}
-                      {!isGuest && inv.status==="outstanding"&&<button style={S.bsm("#ef4444")} onClick={()=>setStatus(inv.id,"overdue")}>Overdue</button>}
+                      {!isGuest && inv.status==="draft" && <button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"outstanding")}>Mark as Sent</button>}
+                      {!isGuest && inv.status==="outstanding" && <button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"paid")}>Paid</button>}
+                      {!isGuest && inv.status==="outstanding" && <button style={S.bsm("#ef4444")} onClick={()=>setStatus(inv.id,"overdue")}>Overdue</button>}
+                      {!isGuest && <button style={S.bd} onClick={()=>delInv(inv.id)}>✕</button>}
                       {!isGuest && <button style={S.bd} onClick={()=>delInv(inv.id)}>✕</button>}
                     </div></td>
                   </tr>
