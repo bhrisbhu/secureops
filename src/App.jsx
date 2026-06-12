@@ -2862,8 +2862,34 @@ const PAGE_META = {
   sal: { title:"Sales",         subtitle:"Lead pipeline and client acquisition" },
 };
 
+// ─── inject viewport meta and mobile CSS once ────────────────────────────────
+if (!document.querySelector('meta[name="viewport"]')) {
+  const vm = document.createElement("meta");
+  vm.name = "viewport"; vm.content = "width=device-width, initial-scale=1, maximum-scale=1";
+  document.head.appendChild(vm);
+}
+if (!document.getElementById("so-mobile-css")) {
+  const st = document.createElement("style");
+  st.id = "so-mobile-css";
+  st.textContent = `
+    @media (max-width: 768px) {
+      .so-sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
+      .so-sidebar.open { transform: translateX(0); box-shadow: 4px 0 32px rgba(0,0,0,0.18); }
+      .so-overlay { display: block !important; }
+      .so-main { margin-left: 0 !important; padding: 68px 14px 40px !important; }
+      .so-topbar { display: flex !important; }
+    }
+    @media (min-width: 769px) {
+      .so-sidebar { transform: none !important; }
+      .so-topbar { display: none !important; }
+      .so-overlay { display: none !important; }
+    }
+  `;
+  document.head.appendChild(st);
+}
+
 export default function App() {
-  const [role, setRole] = useState(null); // null | "admin" | "guest"
+  const [role, setRole] = useState(null);
   const [tab, setTab] = useState("emp");
   const [guards, setGuards] = useState([]);
   const [locs, setLocs] = useState([]);
@@ -2872,7 +2898,7 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [logEntries, setLogEntries] = useState([]);
   const [loaded, setLoaded] = useState(false);
-  // Persistent report filters — survive page navigation
+  const [menuOpen, setMenuOpen] = useState(false);
   const [repSd, setRepSd] = useState(() => new Date(Date.now()-14*86400000).toISOString().slice(0,10));
   const [repEd, setRepEd] = useState(() => new Date().toISOString().slice(0,10));
   const [repSl, setRepSl] = useState("all");
@@ -2889,7 +2915,7 @@ export default function App() {
   }, []);
 
   const addLog = (action, category, description, detail="") => {
-    if (isGuest) return; // guests don't generate activity log entries
+    if (isGuest) return;
     const entry = { id:uid(), timestamp:new Date().toISOString(), action, category, description, detail };
     setLogEntries(prev => {
       const updated = [entry, ...prev].slice(0, 500);
@@ -2902,9 +2928,7 @@ export default function App() {
   if (!loaded) return (
     <div style={{ ...S.app, display:"flex", alignItems:"center", justifyContent:"center", height:"100vh" }}>
       <div style={{ textAlign:"center" }}>
-        <div style={{ width:"40px", height:"40px", margin:"0 auto 16px" }}>
-          <LogoMark size={40} radius={10}/>
-        </div>
+        <div style={{ width:"40px", height:"40px", margin:"0 auto 16px" }}><LogoMark size={40} radius={10}/></div>
         <div style={{ color:T.textSub, fontSize:"13px" }}>Loading SecureOps…</div>
       </div>
     </div>
@@ -2912,16 +2936,60 @@ export default function App() {
 
   const sections = ["Operations", "Finance"];
   const meta = PAGE_META[tab];
+  const visibleTabs = isGuest ? TABS.filter(t => !["act"].includes(t.id)) : TABS;
 
-  // Tabs visible to guests — all pages are visible but edit-locked
-  const visibleTabs = isGuest
-    ? TABS.filter(t => !["act"].includes(t.id)) // hide Activity Log from guests
-    : TABS;
+  const navContent = (
+    <>
+      {isGuest && (
+        <div style={{ margin:"10px 10px 0", padding:"8px 12px", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:"8px", fontSize:"11px", color:"#92400e", lineHeight:1.5 }}>
+          👁 <strong>View only.</strong> You can view all data, generate reports, and download PDFs.
+        </div>
+      )}
+      <nav style={S.sidebarNav}>
+        {sections.map(section => (
+          <div key={section}>
+            <div style={S.sidebarSection}>{section}</div>
+            {visibleTabs.filter(t=>t.section===section).map(t => (
+              <button key={t.id} style={S.navItem(tab===t.id)} onClick={() => { setTab(t.id); setMenuOpen(false); }}>
+                <span style={S.navIcon}>{t.icon}</span>
+                <span>{t.label}</span>
+                {!isGuest && t.id==="act" && logEntries.length>0 && (
+                  <span style={{ marginLeft:"auto", background:T.blue, color:"#fff", fontSize:"9px", fontWeight:"700", padding:"1px 6px", borderRadius:"10px" }}>
+                    {logEntries.length > 99 ? "99+" : logEntries.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        ))}
+      </nav>
+      <div style={S.sidebarBottom}>
+        <button style={S.signOutBtn} onClick={() => { setRole(null); setTab("emp"); setMenuOpen(false); }}>
+          <span style={S.navIcon}>↩</span>
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </>
+  );
 
   return (
     <div style={S.app}>
-      {/* ── SIDEBAR ── */}
-      <aside style={S.sidebar}>
+      {/* ── MOBILE TOP BAR ── */}
+      <div className="so-topbar" style={{ display:"none", position:"fixed", top:0, left:0, right:0, height:"52px", background:T.surface, borderBottom:`1px solid ${T.border}`, zIndex:200, alignItems:"center", justifyContent:"space-between", padding:"0 16px", boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+          <LogoMark size={28} radius={7}/>
+          <span style={{ fontWeight:"700", fontSize:"14px", color:T.text }}>SecureOps</span>
+        </div>
+        <button onClick={()=>setMenuOpen(o=>!o)} style={{ background:"transparent", border:"none", cursor:"pointer", padding:"6px", fontSize:"20px", color:T.text, lineHeight:1 }}>
+          {menuOpen ? "✕" : "☰"}
+        </button>
+      </div>
+
+      {/* ── MOBILE OVERLAY ── */}
+      <div className="so-overlay" style={{ display:"none", position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", zIndex:149, backdropFilter:"blur(2px)" }} onClick={()=>setMenuOpen(false)}/>
+
+      {/* ── SIDEBAR (desktop fixed, mobile slide-out) ── */}
+      <aside className={`so-sidebar${menuOpen?" open":""}`} style={{ ...S.sidebar, zIndex:150 }}>
         <div style={S.sidebarLogo}>
           <LogoMark size={32} radius={8}/>
           <div>
@@ -2929,40 +2997,13 @@ export default function App() {
             <div style={{ fontSize:"10px", color:T.textMute }}>{isGuest ? "Guest View" : "Management"}</div>
           </div>
         </div>
-        {/* Guest banner */}
-        {isGuest && (
-          <div style={{ margin:"10px 10px 0", padding:"8px 12px", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:"8px", fontSize:"11px", color:"#92400e", lineHeight:1.5 }}>
-            👁 <strong>View only.</strong> You can view all data, generate reports, and download PDFs.
-          </div>
-        )}
-        <nav style={S.sidebarNav}>
-          {sections.map(section => (
-            <div key={section}>
-              <div style={S.sidebarSection}>{section}</div>
-              {visibleTabs.filter(t=>t.section===section).map(t => (
-                <button key={t.id} style={S.navItem(tab===t.id)} onClick={() => setTab(t.id)}>
-                  <span style={S.navIcon}>{t.icon}</span>
-                  <span>{t.label}</span>
-                  {!isGuest && t.id==="act" && logEntries.length>0 && (
-                    <span style={{ marginLeft:"auto", background:T.blue, color:"#fff", fontSize:"9px", fontWeight:"700", padding:"1px 6px", borderRadius:"10px" }}>
-                      {logEntries.length > 99 ? "99+" : logEntries.length}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          ))}
-        </nav>
-        <div style={S.sidebarBottom}>
-          <button style={S.signOutBtn} onClick={() => { setRole(null); setTab("emp"); }}>
-            <span style={S.navIcon}>↩</span>
-            <span>Sign Out</span>
-          </button>
-        </div>
+        {navContent}
       </aside>
 
       {/* ── MAIN CONTENT ── */}
-      <main style={S.main}>
+      <main className="so-main" style={{ ...S.main, paddingTop:"28px" }}>
+        {/* spacer for mobile top bar */}
+        <div style={{ height:"0px" }} className="so-mobile-spacer"/>
         <div style={S.pageTitle}>{meta.title}</div>
         <div style={S.pageSubtitle}>{meta.subtitle}</div>
         {tab==="emp" && <Employees guards={guards} setGuards={setGuards} addLog={addLog} isGuest={isGuest} />}
