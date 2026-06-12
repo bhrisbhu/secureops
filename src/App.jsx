@@ -2875,14 +2875,12 @@ if (!document.getElementById("so-mobile-css")) {
     @media (max-width: 768px) {
       .so-sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
       .so-sidebar.open { transform: translateX(0); box-shadow: 4px 0 32px rgba(0,0,0,0.18); }
-      .so-overlay { display: block !important; }
       .so-main { margin-left: 0 !important; padding: 68px 14px 40px !important; }
       .so-topbar { display: flex !important; }
     }
     @media (min-width: 769px) {
       .so-sidebar { transform: none !important; }
       .so-topbar { display: none !important; }
-      .so-overlay { display: none !important; }
     }
   `;
   document.head.appendChild(st);
@@ -2985,8 +2983,10 @@ export default function App() {
         </button>
       </div>
 
-      {/* ── MOBILE OVERLAY ── */}
-      <div className="so-overlay" style={{ display:"none", position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", zIndex:149, backdropFilter:"blur(2px)" }} onClick={()=>setMenuOpen(false)}/>
+      {/* ── MOBILE OVERLAY — only render when menu is open ── */}
+      {menuOpen && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", zIndex:149, backdropFilter:"blur(2px)" }} onClick={()=>setMenuOpen(false)}/>
+      )}
 
       {/* ── SIDEBAR (desktop fixed, mobile slide-out) ── */}
       <aside className={`so-sidebar${menuOpen?" open":""}`} style={{ ...S.sidebar, zIndex:150 }}>
