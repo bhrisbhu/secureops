@@ -113,12 +113,14 @@ const T = {
 const S = {
   app: {
     minHeight:"100vh",
+    minHeight:"100dvh",
     background:T.bg,
     backgroundImage:[
       "radial-gradient(ellipse 80% 40% at 50% -10%, #dbeafe88 0%, transparent 70%)",
       "radial-gradient(circle, #cbd5e133 1px, transparent 1px)",
     ].join(", "),
     backgroundSize:"100% 100%, 26px 26px",
+    backgroundAttachment:"fixed",
     color:T.text,
     fontFamily:"'Plus Jakarta Sans', -apple-system, 'Segoe UI', sans-serif",
     fontSize:"14px",
@@ -220,7 +222,8 @@ const Stat = ({ label, value, color, min="120px", icon }) => (
 // ─── confirm dialog ───────────────────────────────────────────────────────────
 function Confirm({ msg, onYes, onNo }) {
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.4)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, backdropFilter:"blur(4px)" }}>
+    <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.4)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, backdropFilter:"blur(4px)" }}
+      onWheel={e=>e.stopPropagation()} onTouchMove={e=>e.stopPropagation()}>
       <div style={{ background:T.surface, border:`1px solid #fecaca`, borderRadius:"16px", padding:"28px 32px", maxWidth:"380px", width:"90%", boxShadow:"0 20px 60px rgba(0,0,0,0.15)", textAlign:"center" }}>
         <div style={{ width:"48px", height:"48px", borderRadius:"50%", background:"#fef2f2", border:"1px solid #fecaca", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", fontSize:"22px" }}>⚠️</div>
         <div style={{ fontSize:"14px", color:T.text, marginBottom:"6px", fontWeight:"600" }}>Are you sure?</div>
@@ -890,8 +893,10 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
 
       {/* ── ADJUST MODAL ── */}
       {adjG && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.4)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9990, backdropFilter:"blur(3px)" }}>
-          <div style={{ background:T.surface, border:`1px solid ${T.blue}44`, borderRadius:"14px", padding:"24px 28px", width:"100%", maxWidth:"460px", boxShadow:"0 20px 60px rgba(0,0,0,0.15)" }}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9990, backdropFilter:"blur(3px)", padding:"16px", overflowY:"auto" }}
+          onWheel={e=>e.stopPropagation()}
+          onTouchMove={e=>e.stopPropagation()}>
+          <div style={{ background:T.surface, border:`1px solid ${T.blue}44`, borderRadius:"14px", padding:"24px 28px", width:"100%", maxWidth:"460px", boxShadow:"0 20px 60px rgba(0,0,0,0.15)", overflowY:"auto", maxHeight:"90vh", WebkitOverflowScrolling:"touch" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"16px" }}>
               <div style={{ fontWeight:"700", color:T.text, fontSize:"15px" }}>
                 Adjust: <span style={{ color:gc(gIdx(adjG.id)) }}>{adjG.name}</span>
@@ -2872,6 +2877,8 @@ if (!document.getElementById("so-mobile-css")) {
   const st = document.createElement("style");
   st.id = "so-mobile-css";
   st.textContent = `
+    html, body { height: 100%; }
+    body { background: ${T.bg}; }
     @media (max-width: 768px) {
       .so-sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
       .so-sidebar.open { transform: translateX(0); box-shadow: 4px 0 32px rgba(0,0,0,0.18); }
