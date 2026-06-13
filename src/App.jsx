@@ -92,21 +92,21 @@ function mkCSV(fname, headers, rows) {
 
 // ─── design tokens ────────────────────────────────────────────────────────────
 const T = {
-  bg:       "#f7f8fc",   // page background — pearl off-white
-  surface:  "#ffffff",   // card surface — pure white
-  surface2: "#f0f4fb",   // elevated / secondary surface
-  border:   "#e2e8f0",   // default border — soft grey
-  borderHi: "#bfcfe8",   // highlighted border
-  blue:     "#2563eb",   // primary accent
-  blueDim:  "#1d4ed8",   // darker blue
-  blueGlow: "#2563eb14", // blue glow bg
-  text:     "#0f172a",   // primary text — near black
-  textSub:  "#475569",   // secondary text — slate
-  textMute: "#94a3b8",   // muted text — light slate
-  green:    "#059669",
-  amber:    "#d97706",
-  red:      "#dc2626",
-  purple:   "#7c3aed",
+  bg:       "#eef2f7",   // page background — cool blue-grey
+  surface:  "rgba(255,255,255,0.82)",   // frosted glass card
+  surface2: "rgba(240,246,255,0.9)",    // elevated surface
+  border:   "rgba(255,255,255,0.9)",    // glass border — bright
+  borderHi: "rgba(0,80,255,0.15)",      // highlighted border
+  blue:     "#0050ff",   // primary accent — electric blue
+  blueDim:  "#0040cc",   // darker blue
+  blueGlow: "rgba(0,80,255,0.08)",      // blue glow bg
+  text:     "#0a0f1e",   // primary text — near black
+  textSub:  "#4a5568",   // secondary text
+  textMute: "#a0aec0",   // muted text
+  green:    "#00b894",
+  amber:    "#f6ad55",
+  red:      "#e53e3e",
+  purple:   "#7b61ff",
 };
 
 // ─── styles ───────────────────────────────────────────────────────────────────
@@ -114,70 +114,65 @@ const S = {
   app: {
     minHeight:"100vh",
     minHeight:"100dvh",
-    background:T.bg,
-    backgroundImage:[
-      "radial-gradient(ellipse 80% 40% at 50% -10%, #dbeafe88 0%, transparent 70%)",
-      "radial-gradient(circle, #cbd5e133 1px, transparent 1px)",
-    ].join(", "),
-    backgroundSize:"100% 100%, 26px 26px",
+    background:"linear-gradient(135deg, #f2f6ff 0%, #f8f2ff 50%, #f2f9ff 100%)",
     backgroundAttachment:"fixed",
     color:T.text,
     fontFamily:"'Plus Jakarta Sans', -apple-system, 'Segoe UI', sans-serif",
     fontSize:"14px",
   },
 
-  // sidebar
-  sidebar: { position:"fixed", top:0, left:0, bottom:0, width:"220px", background:T.surface, borderRight:`1px solid ${T.border}`, display:"flex", flexDirection:"column", zIndex:100, boxShadow:"2px 0 16px rgba(0,0,0,0.07)" },
-  sidebarLogo: { padding:"24px 20px 20px", borderBottom:`1px solid ${T.border}`, display:"flex", alignItems:"center", gap:"10px" },
-  sidebarLogoIcon: { width:"32px", height:"32px", background:"linear-gradient(135deg,#1d4ed8,#3b82f6)", borderRadius:"8px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px", boxShadow:"0 2px 8px #3b82f640" },
-  sidebarLogoText: { fontSize:"15px", fontWeight:"700", color:T.text, letterSpacing:"0.5px" },
+  // sidebar — frosted glass
+  sidebar: { position:"fixed", top:0, left:0, bottom:0, width:"220px", background:"rgba(255,255,255,0.75)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", borderRight:"1px solid rgba(255,255,255,0.9)", display:"flex", flexDirection:"column", zIndex:100, boxShadow:"2px 0 24px rgba(0,80,255,0.06)" },
+  sidebarLogo: { padding:"24px 20px 20px", borderBottom:"1px solid rgba(0,80,255,0.07)", display:"flex", alignItems:"center", gap:"10px" },
+  sidebarLogoIcon: { width:"32px", height:"32px", background:"linear-gradient(135deg,#0040cc,#0050ff)", borderRadius:"10px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px", boxShadow:"0 4px 12px rgba(0,80,255,0.3)" },
+  sidebarLogoText: { fontSize:"15px", fontWeight:"700", color:T.text, letterSpacing:"-0.3px" },
   sidebarNav: { flex:1, padding:"12px 10px", overflowY:"auto" },
-  sidebarSection: { fontSize:"9px", fontWeight:"700", color:T.textMute, textTransform:"uppercase", letterSpacing:"1.5px", padding:"8px 10px 4px" },
+  sidebarSection: { fontSize:"9px", fontWeight:"700", color:T.textMute, textTransform:"uppercase", letterSpacing:"1.5px", padding:"10px 10px 4px" },
   navItem: active => ({
     display:"flex", alignItems:"center", gap:"10px", padding:"9px 12px", borderRadius:"8px",
-    cursor:"pointer", border:"none", width:"100%", textAlign:"left", fontSize:"13px", fontWeight:"500",
+    cursor:"pointer", border:"none", width:"100%", textAlign:"left", fontSize:"12px", fontWeight: active ? "600" : "400",
     transition:"all 0.15s",
-    background: active ? T.blueGlow : "transparent",
-    color: active ? T.blue : T.textSub,
+    background: active ? "rgba(0,80,255,0.08)" : "transparent",
+    color: active ? T.blue : "#4a5568",
     borderLeft: active ? `2px solid ${T.blue}` : "2px solid transparent",
-    marginBottom:"2px",
+    marginBottom:"1px",
   }),
-  navIcon: { fontSize:"15px", width:"20px", textAlign:"center" },
-  sidebarBottom: { padding:"12px 10px", borderTop:`1px solid ${T.border}` },
-  signOutBtn: { display:"flex", alignItems:"center", gap:"10px", padding:"9px 12px", borderRadius:"8px", cursor:"pointer", border:"none", width:"100%", textAlign:"left", fontSize:"13px", fontWeight:"500", background:"transparent", color:"#dc2626", transition:"all 0.15s" },
+  navIcon: { fontSize:"14px", width:"18px", textAlign:"center" },
+  sidebarBottom: { padding:"12px 10px", borderTop:"1px solid rgba(0,80,255,0.07)" },
+  signOutBtn: { display:"flex", alignItems:"center", gap:"10px", padding:"9px 12px", borderRadius:"8px", cursor:"pointer", border:"none", width:"100%", textAlign:"left", fontSize:"12px", fontWeight:"500", background:"transparent", color:T.red, transition:"all 0.15s" },
 
   // main content
-  main: { marginLeft:"220px", padding:"28px 32px", maxWidth:"1100px" },
-  pageTitle: { fontSize:"22px", fontWeight:"700", color:T.text, marginBottom:"6px", letterSpacing:"-0.3px" },
-  pageSubtitle: { fontSize:"13px", color:T.textSub, marginBottom:"24px" },
+  main: { marginLeft:"220px", padding:"28px 32px", maxWidth:"1120px" },
+  pageTitle: { fontSize:"22px", fontWeight:"700", color:T.text, marginBottom:"4px", letterSpacing:"-0.5px" },
+  pageSubtitle: { fontSize:"12px", color:T.textMute, marginBottom:"24px" },
 
-  // cards
-  card: { background:T.surface, borderRadius:"12px", border:`1px solid ${T.border}`, padding:"20px", marginBottom:"16px", boxShadow:"0 1px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)" },
-  cardElevated: { background:T.surface, borderRadius:"12px", border:`1px solid ${T.borderHi}`, padding:"20px", marginBottom:"16px", boxShadow:"0 4px 16px rgba(0,0,0,0.1)" },
-  ct: { fontSize:"11px", fontWeight:"700", color:T.textMute, marginBottom:"14px", textTransform:"uppercase", letterSpacing:"1px", display:"flex", alignItems:"center", gap:"6px" },
+  // cards — frosted glass
+  card: { background:"rgba(255,255,255,0.8)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)", borderRadius:"14px", border:"1px solid rgba(255,255,255,0.9)", padding:"20px", marginBottom:"16px", boxShadow:"0 2px 16px rgba(0,80,255,0.05), 0 1px 3px rgba(0,0,0,0.04)" },
+  cardElevated: { background:"rgba(255,255,255,0.92)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", borderRadius:"14px", border:"1px solid rgba(0,80,255,0.12)", padding:"20px", marginBottom:"16px", boxShadow:"0 8px 32px rgba(0,80,255,0.1)" },
+  ct: { fontSize:"10px", fontWeight:"700", color:T.textMute, marginBottom:"14px", textTransform:"uppercase", letterSpacing:"1.2px", display:"flex", alignItems:"center", gap:"6px" },
 
   // form elements
   lbl: { display:"block", fontSize:"11px", fontWeight:"600", color:T.textSub, marginBottom:"5px" },
-  inp: { width:"100%", background:"#f8faff", border:`1px solid ${T.border}`, borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box", transition:"border-color 0.15s" },
-  sel: { width:"100%", background:"#f8faff", border:`1px solid ${T.border}`, borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box" },
-  ta: { width:"100%", background:"#f8faff", border:`1px solid ${T.border}`, borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box", resize:"vertical", minHeight:"72px", lineHeight:"1.5" },
+  inp: { width:"100%", background:"rgba(255,255,255,0.9)", border:"1px solid rgba(0,80,255,0.12)", borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box", transition:"border-color 0.15s" },
+  sel: { width:"100%", background:"rgba(255,255,255,0.9)", border:"1px solid rgba(0,80,255,0.12)", borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box" },
+  ta: { width:"100%", background:"rgba(255,255,255,0.9)", border:"1px solid rgba(0,80,255,0.12)", borderRadius:"8px", padding:"9px 12px", color:T.text, fontSize:"13px", outline:"none", boxSizing:"border-box", resize:"vertical", minHeight:"72px", lineHeight:"1.5" },
 
   // buttons
-  bp: { background:"linear-gradient(135deg,#1d4ed8,#2563eb)", color:"#fff", border:"none", borderRadius:"8px", padding:"9px 18px", fontWeight:"600", fontSize:"13px", cursor:"pointer", boxShadow:"0 2px 8px #2563eb30", transition:"all 0.15s" },
-  bs: { background:"#f0fdf4", color:"#15803d", border:`1px solid #bbf7d0`, borderRadius:"8px", padding:"9px 16px", fontWeight:"600", fontSize:"13px", cursor:"pointer", transition:"all 0.15s" },
-  bo: { background:"transparent", color:T.textSub, border:`1px solid ${T.border}`, borderRadius:"8px", padding:"8px 16px", fontWeight:"600", fontSize:"13px", cursor:"pointer", transition:"all 0.15s" },
-  bd: { background:"transparent", color:"#dc2626", border:`1px solid #fecaca`, borderRadius:"6px", padding:"5px 10px", fontSize:"12px", cursor:"pointer", transition:"all 0.15s" },
-  bsm: c => ({ background:"transparent", color:c||T.textSub, border:`1px solid ${c ? c+"44" : T.border}`, borderRadius:"6px", padding:"4px 10px", fontSize:"11px", cursor:"pointer", fontWeight:"600", transition:"all 0.15s" }),
+  bp: { background:"linear-gradient(135deg,#0040cc,#0050ff)", color:"#fff", border:"none", borderRadius:"8px", padding:"9px 18px", fontWeight:"600", fontSize:"13px", cursor:"pointer", boxShadow:"0 4px 12px rgba(0,80,255,0.3)", transition:"all 0.15s" },
+  bs: { background:"rgba(0,184,148,0.08)", color:"#00a07a", border:"1px solid rgba(0,184,148,0.25)", borderRadius:"8px", padding:"9px 16px", fontWeight:"600", fontSize:"13px", cursor:"pointer", transition:"all 0.15s" },
+  bo: { background:"rgba(255,255,255,0.8)", color:T.textSub, border:"1px solid rgba(0,80,255,0.12)", borderRadius:"8px", padding:"8px 16px", fontWeight:"600", fontSize:"13px", cursor:"pointer", transition:"all 0.15s" },
+  bd: { background:"transparent", color:T.red, border:"1px solid rgba(229,62,62,0.25)", borderRadius:"6px", padding:"5px 10px", fontSize:"12px", cursor:"pointer", transition:"all 0.15s" },
+  bsm: c => ({ background:"transparent", color:c||T.textSub, border:`1px solid ${c ? c+"33" : "rgba(0,80,255,0.12)"}`, borderRadius:"6px", padding:"4px 10px", fontSize:"11px", cursor:"pointer", fontWeight:"600", transition:"all 0.15s" }),
 
   // table
   tbl: { width:"100%", borderCollapse:"collapse" },
-  th: { textAlign:"left", padding:"10px 14px", fontSize:"11px", fontWeight:"600", color:T.textMute, textTransform:"uppercase", letterSpacing:"0.8px", borderBottom:`1px solid ${T.border}`, background:"#f8faff" },
-  td: { padding:"12px 14px", fontSize:"13px", borderBottom:`1px solid ${T.border}`, transition:"background 0.1s" },
+  th: { textAlign:"left", padding:"10px 14px", fontSize:"10px", fontWeight:"700", color:T.textMute, textTransform:"uppercase", letterSpacing:"0.8px", borderBottom:"1px solid rgba(0,80,255,0.08)", background:"rgba(240,246,255,0.6)" },
+  td: { padding:"12px 14px", fontSize:"13px", borderBottom:"1px solid rgba(0,80,255,0.06)", transition:"background 0.1s" },
 
   // stat cards
-  stat: { background:T.surface, border:`1px solid ${T.border}`, borderRadius:"12px", padding:"18px 20px", textAlign:"left", boxShadow:"0 1px 3px rgba(0,0,0,0.06)" },
+  stat: { background:"rgba(255,255,255,0.8)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)", border:"1px solid rgba(255,255,255,0.9)", borderRadius:"14px", padding:"18px 20px", textAlign:"left", boxShadow:"0 2px 12px rgba(0,80,255,0.05)" },
   sn: { fontSize:"28px", fontWeight:"800", color:T.text, letterSpacing:"-1px", lineHeight:1 },
-  sl: { fontSize:"11px", color:T.textSub, marginTop:"6px", fontWeight:"500" },
+  sl: { fontSize:"11px", color:T.textMute, marginTop:"6px", fontWeight:"500" },
 
   // grids
   g2: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" },
@@ -191,7 +186,7 @@ const S = {
   pill: c => ({ display:"inline-flex", alignItems:"center", padding:"3px 10px", borderRadius:"20px", fontSize:"11px", fontWeight:"600", background:c+"18", color:c, border:`1px solid ${c}30` }),
 
   // divider
-  divider: { height:"1px", background:T.border, margin:"16px 0" },
+  divider: { height:"1px", background:"rgba(0,80,255,0.06)", margin:"16px 0" },
 };
 
 // ─── shared components ────────────────────────────────────────────────────────
@@ -261,7 +256,7 @@ function Login({ onLogin }) {
     }, 400);
   };
   return (
-    <div style={{ minHeight:"100vh", background:T.bg, backgroundImage:["radial-gradient(ellipse 80% 40% at 50% -10%, #dbeafe88 0%, transparent 70%)","radial-gradient(circle, #cbd5e133 1px, transparent 1px)"].join(", "), backgroundSize:"100% 100%, 26px 26px", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Plus Jakarta Sans',-apple-system,'Segoe UI',sans-serif" }}>
+    <div style={{ minHeight:"100vh", minHeight:"100dvh", background:"linear-gradient(135deg, #f2f6ff 0%, #f8f2ff 50%, #f2f9ff 100%)", backgroundAttachment:"fixed", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Plus Jakarta Sans',-apple-system,'Segoe UI',sans-serif" }}>
       <div style={{ width:"100%", maxWidth:"400px", padding:"0 20px" }}>
         <div style={{ textAlign:"center", marginBottom:"40px" }}>
           <div style={{ margin:"0 auto 16px", width:"56px", height:"56px", filter:"drop-shadow(0 8px 24px #3b82f650)" }}>
@@ -270,7 +265,7 @@ function Login({ onLogin }) {
           <div style={{ fontSize:"24px", fontWeight:"700", color:T.text, letterSpacing:"-0.5px" }}>SecureOps</div>
           <div style={{ fontSize:"13px", color:T.textSub, marginTop:"4px" }}>Business Administration Platform</div>
         </div>
-        <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:"16px", padding:"32px", boxShadow:"0 8px 40px rgba(0,0,0,0.1)" }}>
+        <div style={{ background:"rgba(255,255,255,0.85)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", border:"1px solid rgba(255,255,255,0.9)", borderRadius:"20px", padding:"36px", boxShadow:"0 8px 40px rgba(0,80,255,0.12)" }}>
           <div style={{ fontSize:"16px", fontWeight:"600", color:T.text, marginBottom:"24px" }}>Sign in to your account</div>
           <div style={{ marginBottom:"16px" }}>
             <label style={S.lbl}>Username</label>
@@ -2416,32 +2411,98 @@ function Invoices({ locs, addLog, isGuest }) {
       {/* ── DASHBOARD ── */}
       {view==="dashboard" && (
         <div>
-          <div style={{ display:"flex", gap:"9px", marginBottom:"14px", flexWrap:"wrap" }}>
-            {[["Drafts",drafts.length,"#94a3b8"],["Outstanding",outstanding.length,"#f59e0b"],["Overdue",overdue.length,"#ef4444"],["Paid (All Time)",paid.length,"#10b981"],["Total Invoices",invs.length,T.text]].map(([l,v,c])=>(
-              <div key={l} style={{ ...S.stat, flex:"1", minWidth:"90px", borderTop:`3px solid ${c}` }}>
-                <div style={{ ...S.sn, color:c, fontSize:"20px" }}>{v}</div><div style={S.sl}>{l}</div>
+          {/* ── STAT CARDS ── */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:"10px", marginBottom:"20px" }}>
+            {[["Drafts",drafts.length,"#94a3b8"],["Outstanding",outstanding.length,T.amber],["Overdue",overdue.length,T.red],["Paid",paid.length,T.green],["Total",invs.length,T.blue]].map(([l,v,c])=>(
+              <div key={l} style={{ ...S.stat }}>
+                <div style={{ fontSize:"26px", fontWeight:"800", color:c, letterSpacing:"-0.8px", lineHeight:1 }}>{v}</div>
+                <div style={{ fontSize:"11px", color:T.textMute, marginTop:"6px", fontWeight:"500" }}>{l}</div>
               </div>
             ))}
           </div>
-          <div style={{ ...S.card, background:"#eff6ff", border:`1px solid #bfdbfe` }}>
-            <div style={{ fontSize:"12px", color:"#1e40af" }}>
-              💡 For revenue totals, HST collected, and period breakdowns — visit the <strong>Revenue</strong> page in the sidebar.
+
+          {/* ── HINT ── */}
+          <div style={{ ...S.card, background:"rgba(0,80,255,0.05)", border:"1px solid rgba(0,80,255,0.1)", padding:"12px 16px", marginBottom:"16px" }}>
+            <div style={{ fontSize:"12px", color:T.blue }}>
+              💡 For revenue totals and HST — visit the <strong>Revenue</strong> page.
             </div>
           </div>
-          {/* Drafts */}
-          {drafts.length>0&&<div style={S.card}><div style={S.ct}>📝 Drafts</div>
-            <table style={S.tbl}><thead><tr>{["Invoice #","Client","Date","Total",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-            <tbody>{drafts.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:T.text }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}><strong style={{ color:"#94a3b8" }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button><button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"outstanding")}>✉ Mark as Sent</button></div></td></tr>)}</tbody>
-            </table></div>}
-          {/* Sent */}
-          {overdue.length>0&&<div style={S.card}><div style={S.ct}>🔴 Overdue Invoices</div>
-            <table style={S.tbl}><thead><tr>{["Invoice #","Client","Date","Due","Total",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-            <tbody>{overdue.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:T.text }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}>{inv.dueDate||"—"}</td><td style={S.td}><strong style={{ color:T.red }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm(T.green)} onClick={()=>setStatus(inv.id,"paid")}>Mark Paid</button><button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button></div></td></tr>)}</tbody>
-            </table></div>}
-          {outstanding.length>0&&<div style={S.card}><div style={S.ct}>🟡 Outstanding Invoices</div>
-            <table style={S.tbl}><thead><tr>{["Invoice #","Client","Date","Due","Total",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-            <tbody>{outstanding.map(inv=><tr key={inv.id}><td style={S.td}><strong style={{ color:T.text }}>{inv.number}</strong></td><td style={S.td}>{clientLabel(inv)}</td><td style={S.td}>{inv.date||"—"}</td><td style={S.td}>{inv.dueDate||"—"}</td><td style={S.td}><strong style={{ color:T.amber }}>${(inv.total||0).toFixed(2)}</strong></td><td style={S.td}><div style={{ display:"flex",gap:"5px" }}><button style={S.bsm(T.green)} onClick={()=>setStatus(inv.id,"paid")}>Mark Paid</button><button style={S.bsm(T.red)} onClick={()=>setStatus(inv.id,"overdue")}>Overdue</button><button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button></div></td></tr>)}</tbody>
-            </table></div>}
+
+          {/* ── TWO COLUMN: Drafts + Outstanding/Overdue ── */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px", alignItems:"start" }}>
+
+            {/* LEFT — Drafts */}
+            <div style={S.card}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"12px" }}>
+                <div style={S.ct}>📝 Drafts</div>
+                <button style={S.bp} onClick={startNew}>+ New</button>
+              </div>
+              {drafts.length===0 ? <div style={S.empty}>No drafts.</div> : drafts.map(inv=>(
+                <div key={inv.id} style={{ padding:"12px", background:"rgba(0,80,255,0.02)", borderRadius:"10px", border:"1px solid rgba(0,80,255,0.07)", marginBottom:"8px" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"6px" }}>
+                    <div>
+                      <div style={{ fontSize:"13px", fontWeight:"700", color:T.text }}>{inv.number}</div>
+                      <div style={{ fontSize:"11px", color:T.textMute, marginTop:"1px" }}>{clientLabel(inv)}</div>
+                    </div>
+                    <div style={{ fontSize:"13px", fontWeight:"700", color:"#94a3b8" }}>${(inv.total||0).toFixed(2)}</div>
+                  </div>
+                  <div style={{ display:"flex", gap:"6px" }}>
+                    <button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button>
+                    <button style={S.bsm(T.green)} onClick={()=>setStatus(inv.id,"outstanding")}>✉ Mark as Sent</button>
+                    <button style={S.bsm("#a78bfa")} onClick={()=>printInvoiceHTML(inv)}>PDF</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* RIGHT — Outstanding + Overdue */}
+            <div>
+              {outstanding.length>0 && <div style={{ ...S.card, marginBottom:"12px" }}>
+                <div style={S.ct}>🟡 Outstanding</div>
+                {outstanding.map(inv=>(
+                  <div key={inv.id} style={{ padding:"12px", background:"rgba(246,173,85,0.05)", borderRadius:"10px", border:"1px solid rgba(246,173,85,0.15)", marginBottom:"8px" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"6px" }}>
+                      <div>
+                        <div style={{ fontSize:"13px", fontWeight:"700", color:T.text }}>{inv.number}</div>
+                        <div style={{ fontSize:"11px", color:T.textMute }}>{clientLabel(inv)}{inv.dueDate ? ` · Due ${inv.dueDate}` : ""}</div>
+                      </div>
+                      <div style={{ fontSize:"13px", fontWeight:"700", color:T.amber }}>${(inv.total||0).toFixed(2)}</div>
+                    </div>
+                    <div style={{ display:"flex", gap:"6px" }}>
+                      <button style={S.bsm(T.green)} onClick={()=>setStatus(inv.id,"paid")}>✓ Paid</button>
+                      <button style={S.bsm(T.red)} onClick={()=>setStatus(inv.id,"overdue")}>Overdue</button>
+                      <button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button>
+                    </div>
+                  </div>
+                ))}
+              </div>}
+              {overdue.length>0 && <div style={S.card}>
+                <div style={S.ct}>🔴 Overdue</div>
+                {overdue.map(inv=>(
+                  <div key={inv.id} style={{ padding:"12px", background:"rgba(229,62,62,0.04)", borderRadius:"10px", border:"1px solid rgba(229,62,62,0.12)", marginBottom:"8px" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"6px" }}>
+                      <div>
+                        <div style={{ fontSize:"13px", fontWeight:"700", color:T.text }}>{inv.number}</div>
+                        <div style={{ fontSize:"11px", color:T.textMute }}>{clientLabel(inv)}{inv.dueDate ? ` · Due ${inv.dueDate}` : ""}</div>
+                      </div>
+                      <div style={{ fontSize:"13px", fontWeight:"700", color:T.red }}>${(inv.total||0).toFixed(2)}</div>
+                    </div>
+                    <div style={{ display:"flex", gap:"6px" }}>
+                      <button style={S.bsm(T.green)} onClick={()=>setStatus(inv.id,"paid")}>✓ Paid</button>
+                      <button style={S.bsm(T.blue)} onClick={()=>startEdit(inv)}>Edit</button>
+                    </div>
+                  </div>
+                ))}
+              </div>}
+              {outstanding.length===0 && overdue.length===0 && (
+                <div style={{ ...S.card, textAlign:"center" }}>
+                  <div style={{ fontSize:"24px", marginBottom:"8px" }}>✓</div>
+                  <div style={{ fontSize:"13px", color:T.green, fontWeight:"600" }}>All clear</div>
+                  <div style={{ fontSize:"12px", color:T.textMute, marginTop:"4px" }}>No outstanding or overdue invoices</div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -2843,7 +2904,356 @@ function ActivityLog({ logEntries, setLogEntries }) {
   );
 }
 
+// ─── inspirational quotes ─────────────────────────────────────────────────────
+const QUOTES = [
+  // Motivational
+  { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
+  { text: "Work hard in silence. Let success make the noise.", author: "" },
+  { text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
+  { text: "Success is not final, failure is not fatal — it is the courage to continue that counts.", author: "Winston Churchill" },
+  { text: "The harder you work for something, the greater you'll feel when you achieve it.", author: "" },
+  { text: "Dream it. Wish it. Do it.", author: "" },
+  { text: "Great things never come from comfort zones.", author: "" },
+  { text: "Push yourself, because no one else is going to do it for you.", author: "" },
+  { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
+  { text: "You didn't come this far to only come this far.", author: "" },
+  { text: "Opportunities don't happen. You create them.", author: "Chris Grosser" },
+  { text: "Don't limit your challenges. Challenge your limits.", author: "" },
+  { text: "Act as if what you do makes a difference. It does.", author: "William James" },
+  { text: "Success usually comes to those who are too busy to be looking for it.", author: "Henry David Thoreau" },
+  { text: "The way to get started is to quit talking and begin doing.", author: "Walt Disney" },
+  { text: "If you really look closely, most overnight successes took a long time.", author: "Steve Jobs" },
+  { text: "The only limit to our realization of tomorrow will be our doubts of today.", author: "Franklin D. Roosevelt" },
+  { text: "Do what you can with all you have, wherever you are.", author: "Theodore Roosevelt" },
+  { text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
+  { text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
+  { text: "You are never too old to set another goal or to dream a new dream.", author: "C.S. Lewis" },
+  { text: "Start where you are. Use what you have. Do what you can.", author: "Arthur Ashe" },
+  { text: "The best time to plant a tree was 20 years ago. The second best time is now.", author: "Chinese Proverb" },
+  { text: "Your time is limited, so don't waste it living someone else's life.", author: "Steve Jobs" },
+  { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
+  { text: "In the middle of every difficulty lies opportunity.", author: "Albert Einstein" },
+  { text: "It is during our darkest moments that we must focus to see the light.", author: "Aristotle" },
+  { text: "What you get by achieving your goals is not as important as what you become by achieving them.", author: "Zig Ziglar" },
+  { text: "Whoever is happy will make others happy too.", author: "Anne Frank" },
+  { text: "Try not to become a person of success, but rather try to become a person of value.", author: "Albert Einstein" },
+  { text: "Too many of us are not living our dreams because we are living our fears.", author: "Les Brown" },
+  { text: "A person who never made a mistake never tried anything new.", author: "Albert Einstein" },
+  { text: "Life is what happens when you're busy making other plans.", author: "John Lennon" },
+  { text: "Everything you've ever wanted is on the other side of fear.", author: "George Addair" },
+  { text: "Hardships often prepare ordinary people for an extraordinary destiny.", author: "C.S. Lewis" },
+  { text: "Strive not to be a success, but rather to be of value.", author: "Albert Einstein" },
+  { text: "We may encounter many defeats, but we must not be defeated.", author: "Maya Angelou" },
+  { text: "You miss 100% of the shots you don't take.", author: "Wayne Gretzky" },
+  { text: "I have not failed. I've just found 10,000 ways that won't work.", author: "Thomas Edison" },
+  { text: "Whether you think you can or you think you can't, you're right.", author: "Henry Ford" },
+  // Business / Security company specific
+  { text: "A business that makes nothing but money is a poor business.", author: "Henry Ford" },
+  { text: "The best investment you can make is in yourself.", author: "Warren Buffett" },
+  { text: "Chase the vision, not the money; the money will end up following you.", author: "Tony Hsieh" },
+  { text: "Your most unhappy customers are your greatest source of learning.", author: "Bill Gates" },
+  { text: "Earn trust, earn trust, earn trust. Then you can worry about the rest.", author: "Seth Godin" },
+  { text: "Every problem is a gift — without problems we would not grow.", author: "Anthony Robbins" },
+  { text: "Another day, another opportunity to build something great. 💼", author: "" },
+  { text: "Security is not a product, but a process.", author: "Bruce Schneier" },
+  // Funny / Light
+  { text: "Why do they call it rush hour when nothing moves? 🤔", author: "" },
+  { text: "I told my boss three companies were after me and I needed a raise. He asked which ones. I said gas, water, and electricity. 😄", author: "" },
+  { text: "Coffee: because adulting is hard. ☕", author: "" },
+  { text: "Dear Monday, I want to break up. I'm seeing Tuesday and dreaming about Friday. 📅", author: "" },
+  { text: "The brain is a wonderful organ. It starts working the moment you get up and doesn't stop until you open your email. 📧", author: "" },
+  { text: "I always give 100% at work: 13% Monday, 22% Tuesday, 26% Wednesday, 35% Thursday, 4% Friday. 📊", author: "" },
+  { text: "People say nothing is impossible, but I do nothing every day. Just kidding — back to work. 😅", author: "" },
+  { text: "Teamwork makes the dream work. Unless the team is just you and coffee. ☕", author: "" },
+  { text: "Behind every successful person is a substantial amount of coffee. ☕", author: "" },
+  { text: "Life is short. Smile while you still have teeth. 😁", author: "" },
+];
+
+// ─── sign-out quotes (funny, leaving-themed) ─────────────────────────────────
+const SIGN_OUT_QUOTES = [
+  { text: "Logging out like a responsible adult. See you on the other side. 👋", author: "" },
+  { text: "You have signed out. Your couch is waiting. 🛋️", author: "" },
+  { text: "Gone in 60 seconds. Or however long it takes to close this tab.", author: "" },
+  { text: "Session ended. Please locate the nearest exit. 🚪", author: "" },
+  { text: "Closing SecureOps... and opening the fridge. 🍕", author: "" },
+  { text: "You're leaving? But we were just getting started! 😢", author: "" },
+  { text: "And just like that... you're gone. Like a ninja. 🥷", author: "" },
+  { text: "Logged out successfully. You are now free to stare at the wall.", author: "" },
+  { text: "Bye! Don't forget to actually do the things on your to-do list. 📋", author: "" },
+  { text: "Farewell. The guards will continue guarding without you. 🛡️", author: "" },
+  { text: "You have escaped SecureOps. For now. We'll be here when you return. 😈", author: "" },
+  { text: "Signing out. Time to touch grass. 🌿", author: "" },
+  { text: "Access revoked. Your invoice won't pay itself though. Just saying. 💸", author: "" },
+  { text: "Goodbye! Remember, sleep is just a free trial of death. Use it wisely. 😴", author: "" },
+  { text: "SecureOps has left the chat. 💬", author: "" },
+  { text: "You are now offline. Much like your motivation on a Monday. 📴", author: "" },
+  { text: "Logged out. If found, please return to nearest laptop. 💻", author: "" },
+  { text: "That's a wrap! Same time tomorrow? 🎬", author: "" },
+  { text: "Out of office. Mentally, at least. 🧠", author: "" },
+  { text: "Session terminated. Go eat something, you've been staring at screens. 🥗", author: "" },
+  { text: "Signing off like it's the end of a very professional email. Best regards, SecureOps.", author: "" },
+  { text: "You did good today. Now go pretend you have a social life. 🎉", author: "" },
+  { text: "Logging you out before you make any more decisions today. 😅", author: "" },
+  { text: "The building is secure. You, on the other hand, are leaving. 🏃", author: "" },
+  { text: "Door's open, don't let the firewall hit you on the way out. 🔥", author: "" },
+];
+
+// ─── dashboard greetings ──────────────────────────────────────────────────────
+const GREETINGS_MORNING = [
+  "Good morning", "Rise and grind", "Morning, boss",
+  "Top of the morning", "Another day, another opportunity",
+  "Morning! Coffee's not going to drink itself ☕",
+  "Good morning. Let's make today count.",
+  "Up and at 'em",
+];
+const GREETINGS_AFTERNOON = [
+  "Good afternoon", "Hope the morning was productive",
+  "Afternoon hustle in progress 💪", "Halfway through the day — keep going",
+  "Good afternoon. The invoices aren't going to send themselves.",
+  "Afternoon check-in 📋",
+];
+const GREETINGS_EVENING = [
+  "Good evening", "Wrapping up for the day?",
+  "Evening grind 🌙", "Still at it — respect.",
+  "Good evening. Don't forget to rest too.",
+  "Evening mode: activated 🌆",
+  "Night owl hours 🦉",
+];
+function getGreeting() {
+  const h = new Date().getHours();
+  const arr = h < 12 ? GREETINGS_MORNING : h < 17 ? GREETINGS_AFTERNOON : GREETINGS_EVENING;
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+function QuoteFlash({ quote, onDone }) {
+  const [phase, setPhase] = useState("in"); // in | show | out
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase("show"), 400);
+    const t2 = setTimeout(() => setPhase("out"), 5200);  // show for ~4.8s
+    const t3 = setTimeout(() => onDone(), 5800);          // total ~5.8s
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+
+  function dismiss() { setPhase("out"); setTimeout(onDone, 600); }
+
+  const opacity = phase === "in" ? 0 : phase === "show" ? 1 : 0;
+  return (
+    <div
+      onClick={dismiss}
+      style={{ position:"fixed", inset:0, background:"rgba(0,20,80,0.6)", backdropFilter:"blur(8px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, transition:"opacity 0.55s ease", opacity, cursor:"pointer" }}>
+      <div style={{ textAlign:"center", padding:"48px 40px", maxWidth:"560px" }}>
+        <div style={{ fontSize:"11px", color:"rgba(255,255,255,0.4)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"20px" }}>
+          {quote.author ? "Wisdom" : "Today's thought"}
+        </div>
+        <div style={{ fontSize:"23px", fontWeight:"600", color:"#fff", lineHeight:1.55, letterSpacing:"-0.3px", marginBottom:"18px" }}>
+          "{quote.text}"
+        </div>
+        {quote.author && (
+          <div style={{ fontSize:"13px", color:"rgba(255,255,255,0.45)" }}>— {quote.author}</div>
+        )}
+        <div style={{ marginTop:"32px", fontSize:"11px", color:"rgba(255,255,255,0.25)", letterSpacing:"1px" }}>
+          tap anywhere to continue
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── App Dashboard ────────────────────────────────────────────────────────────
+function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab }) {
+  const today = new Date().toISOString().slice(0,10);
+  const todayShifts = locs.length > 0 || guards.length > 0 ? (() => {
+    const dow = new Date(today+"T00:00:00").getDay();
+    const ids = new Set();
+    scs.filter(s => s.days.includes(dow) && (!s.effectiveFrom||today>=s.effectiveFrom) && (!s.effectiveTo||today<=s.effectiveTo)).forEach(s=>ids.add(s.guardId));
+    ovs.filter(o=>o.date===today&&!o.absent).forEach(o=>ids.add(o.guardId));
+    return [...ids].map(id => {
+      const g = guards.find(x=>x.id===id); if(!g) return null;
+      const sh = effShift(today,id,scs,ovs); if(!sh) return null;
+      const loc = locs.find(l=>l.id===sh.locationId);
+      return { ...sh, guard:g, locName:loc?.name||loc?.client||"—" };
+    }).filter(Boolean);
+  })() : [];
+
+  const outstanding = invs.filter(x=>x.status==="outstanding");
+  const overdue     = invs.filter(x=>x.status==="overdue");
+  const drafts      = invs.filter(x=>x.status==="draft");
+  const activeGuards = guards.filter(g=>g.status==="Active");
+  const now = new Date();
+  const hour = now.getHours();
+  const [greeting] = useState(() => getGreeting());
+  const guardColors = ["#0050ff","#7b61ff","#00b894","#f6ad55","#e53e3e","#00d4ff","#f472b6"];
+
+  // To-do list state — persisted in localStorage
+  const [todos, setTodos] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("so_todos")||"[]"); } catch { return []; }
+  });
+  const [todoInput, setTodoInput] = useState("");
+  function addTodo() {
+    if (!todoInput.trim()) return;
+    const updated = [{ id:uid(), text:todoInput.trim(), done:false, created:new Date().toISOString() }, ...todos];
+    setTodos(updated); localStorage.setItem("so_todos", JSON.stringify(updated));
+    setTodoInput("");
+  }
+  function toggleTodo(id) {
+    const updated = todos.map(t => t.id===id ? {...t, done:!t.done} : t);
+    setTodos(updated); localStorage.setItem("so_todos", JSON.stringify(updated));
+  }
+  function deleteTodo(id) {
+    const updated = todos.filter(t => t.id!==id);
+    setTodos(updated); localStorage.setItem("so_todos", JSON.stringify(updated));
+  }
+  function clearDone() {
+    const updated = todos.filter(t => !t.done);
+    setTodos(updated); localStorage.setItem("so_todos", JSON.stringify(updated));
+  }
+  const doneCt = todos.filter(t=>t.done).length;
+
+  return (
+    <div>
+      {/* greeting */}
+      <div style={{ marginBottom:"28px" }}>
+        <div style={{ fontSize:"26px", fontWeight:"700", color:T.text, letterSpacing:"-0.5px" }}>{greeting}, Chris 👋</div>
+        <div style={{ fontSize:"13px", color:T.textMute, marginTop:"4px" }}>
+          {now.toLocaleDateString("en-CA", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}
+        </div>
+      </div>
+
+      {/* top stat cards */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"12px", marginBottom:"20px" }}>
+        {[
+          ["Active Employees", activeGuards.length, T.blue, "👤", ()=>setTab("emp")],
+          ["Locations", locs.length, T.purple, "📍", ()=>setTab("loc")],
+          ["On Shift Today", todayShifts.length, T.green, "🕐", ()=>setTab("cal")],
+          ["Invoices Due", outstanding.length+overdue.length, overdue.length>0?T.red:T.amber, "🧾", ()=>setTab("inv")],
+        ].map(([l,v,c,icon,onClick])=>(
+          <div key={l} style={{ ...S.stat, cursor:"pointer" }} onClick={onClick}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+              <div>
+                <div style={{ fontSize:"28px", fontWeight:"800", color:c, letterSpacing:"-1px", lineHeight:1 }}>{v}</div>
+                <div style={{ fontSize:"11px", color:T.textMute, marginTop:"6px", fontWeight:"500" }}>{l}</div>
+              </div>
+              <div style={{ fontSize:"22px", opacity:0.6 }}>{icon}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* two column */}
+      <div style={{ display:"grid", gridTemplateColumns:"1.3fr 1fr", gap:"16px" }}>
+        {/* today's shifts */}
+        <div style={S.card}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"14px" }}>
+            <div style={S.ct}>Today's Shifts</div>
+            <button style={{ ...S.bsm(T.blue), fontSize:"11px" }} onClick={()=>setTab("cal")}>View Calendar →</button>
+          </div>
+          {todayShifts.length === 0 ? (
+            <div style={S.empty}>No shifts scheduled for today.</div>
+          ) : todayShifts.map((s,i) => (
+            <div key={s.guardId} style={{ display:"flex", alignItems:"center", gap:"12px", padding:"10px 0", borderBottom:"1px solid rgba(0,80,255,0.06)" }}>
+              <div style={{ width:"34px", height:"34px", borderRadius:"10px", background:`${guardColors[i%guardColors.length]}15`, border:`1px solid ${guardColors[i%guardColors.length]}30`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"11px", fontWeight:"700", color:guardColors[i%guardColors.length], flexShrink:0 }}>
+                {s.guard.name.split(" ").map(x=>x[0]).join("").slice(0,2)}
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:"13px", fontWeight:"600", color:T.text }}>{s.guard.name}</div>
+                <div style={{ fontSize:"11px", color:T.textMute }}>{s.locName}</div>
+              </div>
+              <div style={{ fontSize:"11px", color:guardColors[i%guardColors.length], fontWeight:"600", whiteSpace:"nowrap" }}>
+                {s.startTime}–{s.endTime}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* right column */}
+        <div>
+          {/* invoices summary */}
+          <div style={{ ...S.card, marginBottom:"12px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"14px" }}>
+              <div style={S.ct}>Invoices</div>
+              <button style={{ ...S.bsm(T.blue), fontSize:"11px" }} onClick={()=>setTab("inv")}>View All →</button>
+            </div>
+            {[
+              ["Drafts", drafts.length, "#94a3b8"],
+              ["Outstanding", outstanding.length, T.amber],
+              ["Overdue", overdue.length, T.red],
+            ].map(([l,v,c]) => (
+              <div key={l} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(0,80,255,0.05)" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+                  <div style={{ width:"7px", height:"7px", borderRadius:"50%", background:c }}/>
+                  <span style={{ fontSize:"12px", color:T.textSub }}>{l}</span>
+                </div>
+                <span style={{ fontSize:"13px", fontWeight:"700", color:v>0?c:T.textMute }}>{v}</span>
+              </div>
+            ))}
+            {!isGuest && <button style={{ ...S.bp, width:"100%", marginTop:"12px", padding:"9px" }} onClick={()=>setTab("inv")}>+ New Invoice</button>}
+          </div>
+
+          {/* quick links */}
+          <div style={S.card}>
+            <div style={S.ct}>Quick Access</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px" }}>
+              {[["📊 Reports","rep"],["💰 Revenue","pay"],["🗂 Saved Reports","his"],["🎯 Sales","sal"]].map(([l,id])=>(
+                <button key={id} style={{ ...S.bo, padding:"10px", fontSize:"12px", textAlign:"center", borderRadius:"10px" }} onClick={()=>setTab(id)}>{l}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── TO-DO LIST ── */}
+      <div style={{ ...S.card, marginTop:"4px" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"14px" }}>
+          <div style={S.ct}>✅ To-Do List</div>
+          {doneCt > 0 && (
+            <button style={{ ...S.bsm("#94a3b8"), fontSize:"11px" }} onClick={clearDone}>
+              Clear {doneCt} done
+            </button>
+          )}
+        </div>
+        {/* input row */}
+        <div style={{ display:"flex", gap:"8px", marginBottom:"14px" }}>
+          <input
+            style={{ ...S.inp, flex:1 }}
+            placeholder="Add a task… e.g. Send invoice to ABC Corp"
+            value={todoInput}
+            onChange={e=>setTodoInput(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&addTodo()}
+          />
+          <button style={{ ...S.bp, padding:"9px 16px", whiteSpace:"nowrap" }} onClick={addTodo}>+ Add</button>
+        </div>
+        {/* task list */}
+        {todos.length === 0 ? (
+          <div style={{ ...S.empty, padding:"20px" }}>No tasks yet. Add something above.</div>
+        ) : (
+          <div>
+            {todos.map(t => (
+              <div key={t.id} style={{ display:"flex", alignItems:"center", gap:"10px", padding:"10px 12px", borderRadius:"10px", background:t.done?"rgba(0,184,148,0.04)":"rgba(255,255,255,0.6)", border:`1px solid ${t.done?"rgba(0,184,148,0.12)":"rgba(0,80,255,0.06)"}`, marginBottom:"6px", transition:"all 0.15s" }}>
+                <input
+                  type="checkbox"
+                  checked={t.done}
+                  onChange={()=>toggleTodo(t.id)}
+                  style={{ width:"16px", height:"16px", accentColor:T.blue, cursor:"pointer", flexShrink:0 }}
+                />
+                <span style={{ flex:1, fontSize:"13px", color:t.done?T.textMute:T.text, textDecoration:t.done?"line-through":"none", transition:"all 0.15s" }}>
+                  {t.text}
+                </span>
+                <button
+                  onClick={()=>deleteTodo(t.id)}
+                  style={{ background:"transparent", border:"none", cursor:"pointer", color:T.textMute, fontSize:"16px", lineHeight:1, padding:"2px 4px", borderRadius:"4px" }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const TABS = [
+  { id:"home", label:"Dashboard",    icon:"▦", section:"Operations" },
   { id:"emp",  label:"Employees",     icon:"👤", section:"Operations" },
   { id:"loc",  label:"Locations",     icon:"📍", section:"Operations" },
   { id:"cal",  label:"Calendar",      icon:"📅", section:"Operations" },
@@ -2856,6 +3266,7 @@ const TABS = [
 ];
 
 const PAGE_META = {
+  home: { title:"Dashboard",     subtitle:"Welcome back — here's what's happening today" },
   emp: { title:"Employees",     subtitle:"Manage your employee records and personnel information" },
   loc: { title:"Locations",     subtitle:"Client sites, contracts, and billing rates" },
   cal: { title:"Calendar",      subtitle:"Schedules, shifts, and daily attendance" },
@@ -2878,10 +3289,10 @@ if (!document.getElementById("so-mobile-css")) {
   st.id = "so-mobile-css";
   st.textContent = `
     html, body { height: 100%; }
-    body { background: ${T.bg}; }
+    body { background: linear-gradient(135deg, #f2f6ff 0%, #f8f2ff 50%, #f2f9ff 100%); background-attachment: fixed; }
     @media (max-width: 768px) {
       .so-sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
-      .so-sidebar.open { transform: translateX(0); box-shadow: 4px 0 32px rgba(0,0,0,0.18); }
+      .so-sidebar.open { transform: translateX(0); box-shadow: 4px 0 32px rgba(0,80,255,0.15); }
       .so-main { margin-left: 0 !important; padding: 68px 14px 40px !important; }
       .so-topbar { display: flex !important; }
     }
@@ -2895,15 +3306,18 @@ if (!document.getElementById("so-mobile-css")) {
 
 export default function App() {
   const [role, setRole] = useState(null);
-  const [tab, setTab] = useState("emp");
+  const [tab, setTab] = useState("home");
   const [guards, setGuards] = useState([]);
   const [locs, setLocs] = useState([]);
   const [scs, setScs] = useState([]);
   const [ovs, setOvs] = useState([]);
   const [history, setHistory] = useState([]);
   const [logEntries, setLogEntries] = useState([]);
+  const [invs, setInvsCache] = useState([]); // cached for dashboard
   const [loaded, setLoaded] = useState(false);
+  const [fadeIn, setFadeIn] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [quote, setQuote] = useState(null); // { text, author } | null
   const [repSd, setRepSd] = useState(() => new Date(Date.now()-14*86400000).toISOString().slice(0,10));
   const [repEd, setRepEd] = useState(() => new Date().toISOString().slice(0,10));
   const [repSl, setRepSl] = useState("all");
@@ -2912,12 +3326,15 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const [g,l,sc,ov,hi,lg] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log)]);
+      const [g,l,sc,ov,hi,lg,iv] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv)]);
       if(g) setGuards(g); if(l) setLocs(l); if(sc) setScs(sc); if(ov) setOvs(ov); if(hi) setHistory(hi);
-      if(lg) setLogEntries(lg);
+      if(lg) setLogEntries(lg); if(iv) setInvsCache(iv);
       setLoaded(true);
     })();
   }, []);
+
+  // Keep invs cache in sync when invoices change (passed via context trick)
+  const syncInvs = (u) => setInvsCache(u);
 
   const addLog = (action, category, description, detail="") => {
     if (isGuest) return;
@@ -2929,7 +3346,22 @@ export default function App() {
     });
   };
 
-  if (!role) return <Login onLogin={(r) => setRole(r)} />;
+  function handleLogin(r) {
+    const q = QUOTES[Math.floor(Math.random()*QUOTES.length)];
+    setRole(r);
+    setTab("home");
+    setFadeIn(false);
+    setQuote(q);
+    setTimeout(() => setFadeIn(true), 50);
+  }
+
+  function handleSignOut() {
+    const q = SIGN_OUT_QUOTES[Math.floor(Math.random()*SIGN_OUT_QUOTES.length)];
+    setQuote(q);
+    setTimeout(() => { setRole(null); setTab("home"); setFadeIn(false); }, 2800);
+  }
+
+  if (!role) return <Login onLogin={handleLogin} />;
   if (!loaded) return (
     <div style={{ ...S.app, display:"flex", alignItems:"center", justifyContent:"center", height:"100vh" }}>
       <div style={{ textAlign:"center" }}>
@@ -2940,13 +3372,13 @@ export default function App() {
   );
 
   const sections = ["Operations", "Finance"];
-  const meta = PAGE_META[tab];
+  const meta = PAGE_META[tab] || PAGE_META.home;
   const visibleTabs = isGuest ? TABS.filter(t => !["act"].includes(t.id)) : TABS;
 
   const navContent = (
     <>
       {isGuest && (
-        <div style={{ margin:"10px 10px 0", padding:"8px 12px", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:"8px", fontSize:"11px", color:"#92400e", lineHeight:1.5 }}>
+        <div style={{ margin:"10px 10px 0", padding:"8px 12px", background:"rgba(246,173,85,0.1)", border:"1px solid rgba(246,173,85,0.3)", borderRadius:"8px", fontSize:"11px", color:"#a07020", lineHeight:1.5 }}>
           👁 <strong>View only.</strong> You can view all data, generate reports, and download PDFs.
         </div>
       )}
@@ -2956,7 +3388,8 @@ export default function App() {
             <div style={S.sidebarSection}>{section}</div>
             {visibleTabs.filter(t=>t.section===section).map(t => (
               <button key={t.id} style={S.navItem(tab===t.id)} onClick={() => { setTab(t.id); setMenuOpen(false); }}>
-                <span style={S.navIcon}>{t.icon}</span>
+                <div style={{ width:"6px", height:"6px", borderRadius:"50%", background:tab===t.id?T.blue:"rgba(0,80,255,0.15)", flexShrink:0 }}/>
+                <span style={{ fontSize:"14px", lineHeight:1 }}>{t.icon}</span>
                 <span>{t.label}</span>
                 {!isGuest && t.id==="act" && logEntries.length>0 && (
                   <span style={{ marginLeft:"auto", background:T.blue, color:"#fff", fontSize:"9px", fontWeight:"700", padding:"1px 6px", borderRadius:"10px" }}>
@@ -2969,8 +3402,8 @@ export default function App() {
         ))}
       </nav>
       <div style={S.sidebarBottom}>
-        <button style={S.signOutBtn} onClick={() => { setRole(null); setTab("emp"); setMenuOpen(false); }}>
-          <span style={S.navIcon}>↩</span>
+        <button style={S.signOutBtn} onClick={handleSignOut}>
+          <span style={{ fontSize:"14px", lineHeight:1 }}>↩</span>
           <span>Sign Out</span>
         </button>
       </div>
@@ -2978,9 +3411,12 @@ export default function App() {
   );
 
   return (
-    <div style={S.app}>
+    <div style={{ ...S.app, opacity:fadeIn?1:0, transition:"opacity 0.5s ease" }}>
+      {/* Quote flash overlay */}
+      {quote && <QuoteFlash quote={quote} onDone={()=>setQuote(null)}/>}
+
       {/* ── MOBILE TOP BAR ── */}
-      <div className="so-topbar" style={{ display:"none", position:"fixed", top:0, left:0, right:0, height:"52px", background:T.surface, borderBottom:`1px solid ${T.border}`, zIndex:200, alignItems:"center", justifyContent:"space-between", padding:"0 16px", boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+      <div className="so-topbar" style={{ display:"none", position:"fixed", top:0, left:0, right:0, height:"52px", background:"rgba(255,255,255,0.85)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.9)", zIndex:200, alignItems:"center", justifyContent:"space-between", padding:"0 16px", boxShadow:"0 1px 12px rgba(0,80,255,0.08)" }}>
         <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
           <LogoMark size={28} radius={7}/>
           <span style={{ fontWeight:"700", fontSize:"14px", color:T.text }}>SecureOps</span>
@@ -2990,12 +3426,12 @@ export default function App() {
         </button>
       </div>
 
-      {/* ── MOBILE OVERLAY — only render when menu is open ── */}
+      {/* ── MOBILE OVERLAY ── */}
       {menuOpen && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", zIndex:149, backdropFilter:"blur(2px)" }} onClick={()=>setMenuOpen(false)}/>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.3)", zIndex:149, backdropFilter:"blur(2px)" }} onClick={()=>setMenuOpen(false)}/>
       )}
 
-      {/* ── SIDEBAR (desktop fixed, mobile slide-out) ── */}
+      {/* ── SIDEBAR ── */}
       <aside className={`so-sidebar${menuOpen?" open":""}`} style={{ ...S.sidebar, zIndex:150 }}>
         <div style={S.sidebarLogo}>
           <LogoMark size={32} radius={8}/>
@@ -3009,17 +3445,19 @@ export default function App() {
 
       {/* ── MAIN CONTENT ── */}
       <main className="so-main" style={{ ...S.main, paddingTop:"28px" }}>
-        {/* spacer for mobile top bar */}
         <div style={{ height:"0px" }} className="so-mobile-spacer"/>
-        <div style={S.pageTitle}>{meta.title}</div>
-        <div style={S.pageSubtitle}>{meta.subtitle}</div>
+        {tab !== "home" && <>
+          <div style={S.pageTitle}>{meta.title}</div>
+          <div style={S.pageSubtitle}>{meta.subtitle}</div>
+        </>}
+        {tab==="home" && <AppDashboard guards={guards} locs={locs} scs={scs} ovs={ovs} invs={invs} isGuest={isGuest} setTab={setTab}/>}
         {tab==="emp" && <Employees guards={guards} setGuards={setGuards} addLog={addLog} isGuest={isGuest} />}
         {tab==="loc" && <Locations locs={locs} setLocs={setLocs} addLog={addLog} isGuest={isGuest} />}
         {tab==="cal" && <Calendar guards={guards} locs={locs} scs={scs} setScs={setScs} ovs={ovs} setOvs={setOvs} addLog={addLog} isGuest={isGuest} />}
         {tab==="rep" && <Reports guards={guards} locs={locs} scs={scs} ovs={ovs} history={history} setHistory={setHistory} addLog={addLog} isGuest={isGuest} sd={repSd} setSd={setRepSd} ed={repEd} setEd={setRepEd} sl={repSl} setSl={setRepSl}/>}
         {tab==="his" && <History history={history} setHistory={setHistory} addLog={addLog} isGuest={isGuest} />}
         {tab==="act" && !isGuest && <ActivityLog logEntries={logEntries} setLogEntries={setLogEntries} />}
-        {tab==="inv" && <Invoices locs={locs} addLog={addLog} isGuest={isGuest} />}
+        {tab==="inv" && <Invoices locs={locs} addLog={addLog} isGuest={isGuest} onInvsChange={syncInvs}/>}
         {tab==="pay" && <Revenue locs={locs} addLog={addLog} isGuest={isGuest} />}
         {tab==="sal" && <Sales addLog={addLog} isGuest={isGuest} />}
       </main>
