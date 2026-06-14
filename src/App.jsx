@@ -45,6 +45,8 @@ const MS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","D
 const COLS = ["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#f97316","#84cc16","#ec4899","#14b8a6","#a78bfa","#fb923c"];
 const gc = i => COLS[i % COLS.length];
 const dStr = (y,m,d) => `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+// Returns TODAY's date in LOCAL time as YYYY-MM-DD (not UTC — avoids timezone rollover bugs)
+const todayStr = () => { const d = new Date(); return dStr(d.getFullYear(), d.getMonth(), d.getDate()); };
 const pDate = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); };
 const toMin = t => { if (!t) return 0; const [h,m] = t.split(":").map(Number); return h*60+(m||0); };
 const calcH = (s,e) => { let a=toMin(s),b=toMin(e); if(b<=a)b+=1440; return Math.round((b-a)/60*100)/100; };
@@ -601,7 +603,7 @@ function Locations({ locs, setLocs, addLog, isGuest }) {
   }
 
   function currentRate(loc) {
-    const today = new Date().toISOString().slice(0,10);
+    const today = todayStr();
     const past = (loc.rates||[]).filter(r=>r.effectiveDate<=today).sort((a,b)=>b.effectiveDate.localeCompare(a.effectiveDate));
     return past[0] || null;
   }
@@ -639,7 +641,7 @@ function Locations({ locs, setLocs, addLog, isGuest }) {
           </div>
           <div style={{ ...S.g2, marginTop:"8px" }}>
             <div><label style={S.lbl}>Contract Start Date</label><input style={S.inp} type="date" value={form.contractStart} onChange={ff("contractStart")}/></div>
-            <div><label style={S.lbl}>Contract End Date</label><input style={{ ...S.inp, borderColor: form.contractEnd && form.contractEnd < new Date().toISOString().slice(0,10) ? "#ef4444" : undefined }} type="date" value={form.contractEnd} onChange={ff("contractEnd")}/></div>
+            <div><label style={S.lbl}>Contract End Date</label><input style={{ ...S.inp, borderColor: form.contractEnd && form.contractEnd < todayStr() ? "#ef4444" : undefined }} type="date" value={form.contractEnd} onChange={ff("contractEnd")}/></div>
           </div>
           <div style={{ marginTop:"8px" }}><label style={S.lbl}>Notes</label><textarea style={S.ta} value={form.notes} onChange={ff("notes")} placeholder="Contract terms, special instructions…"/></div>
           <div style={{ display:"flex", gap:"8px", marginTop:"10px" }}>
@@ -654,7 +656,7 @@ function Locations({ locs, setLocs, addLog, isGuest }) {
         locs.map(l => {
           const cr = currentRate(l);
           const isExp = expanded===l.id;
-          const contractExpired = l.contractEnd && l.contractEnd < new Date().toISOString().slice(0,10);
+          const contractExpired = l.contractEnd && l.contractEnd < todayStr();
           return (
             <div key={l.id} style={S.card}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:"8px" }}>
@@ -773,10 +775,11 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
 
       // Bake every past scheduled day into a permanent override
       // so historical calendar data survives the schedule deletion.
-      const today = new Date().toISOString().slice(0,10);
+      const today = todayStr();
       const start = sc.effectiveFrom || "2020-01-01";
       // End at yesterday (today's shift may still be in progress) or the schedule's end date, whichever is earlier
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+      const yd = new Date(); yd.setDate(yd.getDate()-1);
+      const yesterday = dStr(yd.getFullYear(), yd.getMonth(), yd.getDate());
       const end = sc.effectiveTo && sc.effectiveTo < yesterday ? sc.effectiveTo : yesterday;
 
       const newOvs = [...ovs];
@@ -1013,7 +1016,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                   <thead><tr>{["Employee","Location","Days","Shift","Hours","Active From","Active To",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
                   <tbody>
                     {filtered.map(sc => {
-                      const today = new Date().toISOString().slice(0,10);
+                      const today = todayStr();
                       const isActive = (!sc.effectiveFrom||today>=sc.effectiveFrom) && (!sc.effectiveTo||today<=sc.effectiveTo);
                       const isPast   = sc.effectiveTo && today > sc.effectiveTo;
                       return (
@@ -1715,7 +1718,7 @@ function Revenue({ locs, addLog, isGuest }) {
   const [rdy, setRdy] = useState(false);
   const [fCl, setFCl] = useState("all");
   const [fSd, setFSd] = useState(`${new Date().getFullYear()}-01-01`);
-  const [fEd, setFEd] = useState(new Date().toISOString().slice(0,10));
+  const [fEd, setFEd] = useState(todayStr());
   const [show, setShow] = useState(false);
   const [editing, setEditing] = useState(null);
   const blank = { locationId:"", clientName:"", billingStart:"", billingEnd:"", amountBilled:"", received:false, depositDate:"", notes:"", fromInvoice:false };
@@ -1998,11 +2001,11 @@ function Sales({ addLog, isGuest }) {
   useEffect(()=>{(async()=>{const d=await load(K.leads);if(d)setLeads(d);setRdy(true);})();},[]);
   const saveLeads = u => { setLeads(u); save(K.leads,u); };
   const ff = k => e => setForm(p=>({...p,[k]:e.target.value}));
-  const startNew = () => { setForm({...blank,createdAt:new Date().toISOString().slice(0,10)}); setEditing(null); setView("form"); };
+  const startNew = () => { setForm({...blank,createdAt:todayStr()}); setEditing(null); setView("form"); };
   const startEdit = l => { setForm({...blank,...l}); setEditing(l.id); setView("form"); };
   function submit() {
     if (!form.companyName.trim()) return;
-    const e={...form,id:editing||uid(),createdAt:form.createdAt||new Date().toISOString().slice(0,10)};
+    const e={...form,id:editing||uid(),createdAt:form.createdAt||todayStr()};
     saveLeads(editing?leads.map(l=>l.id===editing?e:l):[...leads,e]);
     if(editing) addLog("Updated","Sales",`Updated lead: ${e.companyName}`,`Stage: ${e.stage}`);
     else addLog("Created","Sales",`Added new lead: ${e.companyName}`,`Stage: ${e.stage}${e.estimatedValue?" · $"+e.estimatedValue+"/mo":""}`);
@@ -2013,7 +2016,7 @@ function Sales({ addLog, isGuest }) {
     saveLeads(leads.filter(l=>l.id!==id));
     addLog("Deleted","Sales",`Deleted lead: ${l?.companyName||"Unknown"}`);
   });
-  const advance = id => { const l=leads.find(x=>x.id===id); if(!l)return; const i=STAGES.indexOf(l.stage); if(i<STAGES.length-2) saveLeads(leads.map(x=>x.id===id?{...x,stage:STAGES[i+1],contractDate:STAGES[i+1]==="Signed Contract"?new Date().toISOString().slice(0,10):x.contractDate}:x)); };
+  const advance = id => { const l=leads.find(x=>x.id===id); if(!l)return; const i=STAGES.indexOf(l.stage); if(i<STAGES.length-2) saveLeads(leads.map(x=>x.id===id?{...x,stage:STAGES[i+1],contractDate:STAGES[i+1]==="Signed Contract"?todayStr():x.contractDate}:x)); };
   const fLeads = leads.filter(l=>(fStage==="all"||l.stage===fStage)&&(srch===""||l.companyName.toLowerCase().includes(srch.toLowerCase())||l.contactName.toLowerCase().includes(srch.toLowerCase())));
   const signed = leads.filter(l=>l.stage==="Signed Contract");
   const active = leads.filter(l=>l.stage!=="Lost"&&l.stage!=="Signed Contract");
@@ -2303,7 +2306,7 @@ function Invoices({ locs, addLog, isGuest }) {
   const [logoB64, setLogoB64] = useState("");
 
   const blankForm = () => ({
-    number:"", date:new Date().toISOString().slice(0,10), dueDate:"", summary:"",
+    number:"", date:todayStr(), dueDate:"", summary:"",
     clientLocationId:"", clientName:"", clientAddress:"", clientEmail:"",
     clientPhone:"", clientContact:"",
     items:[{ desc:"Security Services", qty:1, price:"" }],
@@ -3060,9 +3063,9 @@ function QuoteFlash({ quote, onDone }) {
 
 // ─── App Dashboard ────────────────────────────────────────────────────────────
 function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab }) {
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayStr();
   const todayShifts = locs.length > 0 || guards.length > 0 ? (() => {
-    const dow = new Date(today+"T00:00:00").getDay();
+    const dow = pDate(today).getDay();
     const ids = new Set();
     scs.filter(s => s.days.includes(dow) && (!s.effectiveFrom||today>=s.effectiveFrom) && (!s.effectiveTo||today<=s.effectiveTo)).forEach(s=>ids.add(s.guardId));
     ovs.filter(o=>o.date===today&&!o.absent).forEach(o=>ids.add(o.guardId));
@@ -3319,7 +3322,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [quote, setQuote] = useState(null); // { text, author } | null
   const [repSd, setRepSd] = useState(() => new Date(Date.now()-14*86400000).toISOString().slice(0,10));
-  const [repEd, setRepEd] = useState(() => new Date().toISOString().slice(0,10));
+  const [repEd, setRepEd] = useState(() => todayStr());
   const [repSl, setRepSl] = useState("all");
 
   const isGuest = role === "guest";
