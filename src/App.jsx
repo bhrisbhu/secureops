@@ -747,6 +747,14 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
     setCrasDismissed(updated);
     try { localStorage.setItem("so_cra_dismissed", JSON.stringify(updated)); } catch {}
   };
+  const [ccDismissed, setCcDismissed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("so_cc_dismissed")||"[]"); } catch { return []; }
+  });
+  const dismissCc = (key) => {
+    const updated = [...ccDismissed, key];
+    setCcDismissed(updated);
+    try { localStorage.setItem("so_cc_dismissed", JSON.stringify(updated)); } catch {}
+  };
 
   const dim = new Date(yr,mo+1,0).getDate();
   const fd = new Date(yr,mo,1).getDay();
@@ -1348,6 +1356,38 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                 <button
                   style={{ flexShrink:0, background:"transparent", border:"1px solid #fecaca", borderRadius:"6px", padding:"5px 12px", fontSize:"11px", color:"#dc2626", cursor:"pointer", fontWeight:"600", whiteSpace:"nowrap" }}
                   onClick={()=>dismissCra(craKey)}>
+                  ✓ Already Paid
+                </button>
+              </div>
+            );
+          })()}
+          {/* ── CREDIT CARD REMINDER ── */}
+          {(() => {
+            const now = new Date();
+            const todayDay = now.getDate();
+            const todayMo  = now.getMonth();
+            const todayYr  = now.getFullYear();
+            const isCurrentMonth = (mo === todayMo && yr === todayYr);
+            const isBeforeDue = todayDay <= 14;
+            const ccKey = `cc-${todayYr}-${String(todayMo+1).padStart(2,"0")}`;
+            const isDismissed = ccDismissed.includes(ccKey);
+            if (!isCurrentMonth || !isBeforeDue || isDismissed) return null;
+            return (
+              <div style={{ background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:"10px", padding:"12px 16px", marginBottom:"14px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"10px" }}>
+                <div style={{ display:"flex", alignItems:"flex-start", gap:"10px" }}>
+                  <span style={{ fontSize:"20px", marginTop:"1px" }}>💳</span>
+                  <div>
+                    <div style={{ fontWeight:"700", color:"#1d4ed8", fontSize:"13px", marginBottom:"3px" }}>
+                      Company Credit Card Bill Due by the 15th
+                    </div>
+                    <div style={{ fontSize:"12px", color:T.textSub, lineHeight:1.6 }}>
+                      Don't forget to pay the company credit card bill for <strong>{MONTHS[todayMo]} {todayYr}</strong> before the <strong>15th</strong> to avoid interest charges.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  style={{ flexShrink:0, background:"transparent", border:"1px solid #bfdbfe", borderRadius:"6px", padding:"5px 12px", fontSize:"11px", color:"#1d4ed8", cursor:"pointer", fontWeight:"600", whiteSpace:"nowrap" }}
+                  onClick={()=>dismissCc(ccKey)}>
                   ✓ Already Paid
                 </button>
               </div>
@@ -3141,6 +3181,55 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab }) {
         ))}
       </div>
 
+      {/* ── TO-DO LIST ── */}
+      <div style={{ ...S.card, marginBottom:"16px" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"14px" }}>
+          <div style={S.ct}>✅ To-Do List</div>
+          {doneCt > 0 && (
+            <button style={{ ...S.bsm("#94a3b8"), fontSize:"11px" }} onClick={clearDone}>
+              Clear {doneCt} done
+            </button>
+          )}
+        </div>
+        {/* input row */}
+        <div style={{ display:"flex", gap:"8px", marginBottom:"14px" }}>
+          <input
+            style={{ ...S.inp, flex:1 }}
+            placeholder="Add a task… e.g. Send invoice to ABC Corp"
+            value={todoInput}
+            onChange={e=>setTodoInput(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&addTodo()}
+          />
+          <button style={{ ...S.bp, padding:"9px 16px", whiteSpace:"nowrap" }} onClick={addTodo}>+ Add</button>
+        </div>
+        {/* task list */}
+        {todos.length === 0 ? (
+          <div style={{ ...S.empty, padding:"20px" }}>No tasks yet. Add something above.</div>
+        ) : (
+          <div>
+            {todos.map(t => (
+              <div key={t.id} style={{ display:"flex", alignItems:"center", gap:"10px", padding:"10px 12px", borderRadius:"10px", background:t.done?"rgba(0,184,148,0.04)":"rgba(255,255,255,0.6)", border:`1px solid ${t.done?"rgba(0,184,148,0.12)":"rgba(0,80,255,0.06)"}`, marginBottom:"6px", transition:"all 0.15s" }}>
+                <input
+                  type="checkbox"
+                  checked={t.done}
+                  onChange={()=>toggleTodo(t.id)}
+                  style={{ width:"16px", height:"16px", accentColor:T.blue, cursor:"pointer", flexShrink:0 }}
+                />
+                <span style={{ flex:1, fontSize:"13px", color:t.done?T.textMute:T.text, textDecoration:t.done?"line-through":"none", transition:"all 0.15s" }}>
+                  {t.text}
+                </span>
+                <button
+                  onClick={()=>deleteTodo(t.id)}
+                  style={{ background:"transparent", border:"none", cursor:"pointer", color:T.textMute, fontSize:"16px", lineHeight:1, padding:"2px 4px", borderRadius:"4px" }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* two column */}
       <div style={{ display:"grid", gridTemplateColumns:"1.3fr 1fr", gap:"16px" }}>
         {/* today's shifts */}
@@ -3201,55 +3290,6 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab }) {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* ── TO-DO LIST ── */}
-      <div style={{ ...S.card, marginTop:"4px" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"14px" }}>
-          <div style={S.ct}>✅ To-Do List</div>
-          {doneCt > 0 && (
-            <button style={{ ...S.bsm("#94a3b8"), fontSize:"11px" }} onClick={clearDone}>
-              Clear {doneCt} done
-            </button>
-          )}
-        </div>
-        {/* input row */}
-        <div style={{ display:"flex", gap:"8px", marginBottom:"14px" }}>
-          <input
-            style={{ ...S.inp, flex:1 }}
-            placeholder="Add a task… e.g. Send invoice to ABC Corp"
-            value={todoInput}
-            onChange={e=>setTodoInput(e.target.value)}
-            onKeyDown={e=>e.key==="Enter"&&addTodo()}
-          />
-          <button style={{ ...S.bp, padding:"9px 16px", whiteSpace:"nowrap" }} onClick={addTodo}>+ Add</button>
-        </div>
-        {/* task list */}
-        {todos.length === 0 ? (
-          <div style={{ ...S.empty, padding:"20px" }}>No tasks yet. Add something above.</div>
-        ) : (
-          <div>
-            {todos.map(t => (
-              <div key={t.id} style={{ display:"flex", alignItems:"center", gap:"10px", padding:"10px 12px", borderRadius:"10px", background:t.done?"rgba(0,184,148,0.04)":"rgba(255,255,255,0.6)", border:`1px solid ${t.done?"rgba(0,184,148,0.12)":"rgba(0,80,255,0.06)"}`, marginBottom:"6px", transition:"all 0.15s" }}>
-                <input
-                  type="checkbox"
-                  checked={t.done}
-                  onChange={()=>toggleTodo(t.id)}
-                  style={{ width:"16px", height:"16px", accentColor:T.blue, cursor:"pointer", flexShrink:0 }}
-                />
-                <span style={{ flex:1, fontSize:"13px", color:t.done?T.textMute:T.text, textDecoration:t.done?"line-through":"none", transition:"all 0.15s" }}>
-                  {t.text}
-                </span>
-                <button
-                  onClick={()=>deleteTodo(t.id)}
-                  style={{ background:"transparent", border:"none", cursor:"pointer", color:T.textMute, fontSize:"16px", lineHeight:1, padding:"2px 4px", borderRadius:"4px" }}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
