@@ -738,6 +738,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
   const [bulkResult, setBulkResult] = useState(null);
   const [statDate, setStatDate] = useState("");
   const [scSearch, setScSearch] = useState("");
+  const [editingSc, setEditingSc] = useState(null);
   // CRA remittance reminder — dismissed per month (stored as "YYYY-MM")
   const [crasDismissed, setCrasDismissed] = useState(() => {
     try { return JSON.parse(localStorage.getItem("so_cra_dismissed")||"[]"); } catch { return []; }
@@ -1027,17 +1028,87 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                       const today = todayStr();
                       const isActive = (!sc.effectiveFrom||today>=sc.effectiveFrom) && (!sc.effectiveTo||today<=sc.effectiveTo);
                       const isPast   = sc.effectiveTo && today > sc.effectiveTo;
+                      const isEditing = editingSc?.id === sc.id;
                       return (
-                        <tr key={sc.id} style={{ opacity: isPast ? 0.5 : 1 }}>
-                          <td style={S.td}><span style={{ color:gc(gIdx(sc.guardId)), fontWeight:"700" }}>{gName(sc.guardId)}</span></td>
-                          <td style={S.td}>{lName(sc.locationId)}</td>
-                          <td style={S.td}>{sc.days.map(d=>DAYS[d]).join(", ")}</td>
-                          <td style={S.td}>{sc.startTime}–{sc.endTime}{shiftLabel(sc.startTime) ? " "+shiftLabel(sc.startTime) : ""}</td>
-                          <td style={S.td}>{sc.hours}h</td>
-                          <td style={S.td}><span style={S.pill(isActive&&!isPast ? T.blue : T.textMute)}>{sc.effectiveFrom||"—"}</span></td>
-                          <td style={S.td}>{sc.effectiveTo ? <span style={S.pill(isPast?"#6b7280":T.amber)}>{sc.effectiveTo}{isPast?" (ended)":""}</span> : <span style={S.pill(T.green)}>Ongoing</span>}</td>
-                          <td style={S.td}><button style={S.bd} onClick={()=>delSc(sc.id)}>Remove</button></td>
-                        </tr>
+                        <>
+                          <tr key={sc.id} style={{ opacity: isPast ? 0.5 : 1 }}>
+                            <td style={S.td}><span style={{ color:gc(gIdx(sc.guardId)), fontWeight:"700" }}>{gName(sc.guardId)}</span></td>
+                            <td style={S.td}>{lName(sc.locationId)}</td>
+                            <td style={S.td}>{sc.days.map(d=>DAYS[d]).join(", ")}</td>
+                            <td style={S.td}>{sc.startTime}–{sc.endTime}{shiftLabel(sc.startTime) ? " "+shiftLabel(sc.startTime) : ""}</td>
+                            <td style={S.td}>{sc.hours}h</td>
+                            <td style={S.td}><span style={S.pill(isActive&&!isPast ? T.blue : T.textMute)}>{sc.effectiveFrom||"—"}</span></td>
+                            <td style={S.td}>{sc.effectiveTo ? <span style={S.pill(isPast?"#6b7280":T.amber)}>{sc.effectiveTo}{isPast?" (ended)":""}</span> : <span style={S.pill(T.green)}>Ongoing</span>}</td>
+                            <td style={S.td}>
+                              <div style={{ display:"flex", gap:"5px" }}>
+                                <button style={S.bsm(T.blue)} onClick={()=>setEditingSc(isEditing ? null : {...sc})}>
+                                  {isEditing ? "Cancel" : "Edit"}
+                                </button>
+                                <button style={S.bd} onClick={()=>delSc(sc.id)}>Remove</button>
+                              </div>
+                            </td>
+                          </tr>
+                          {isEditing && (
+                            <tr key={sc.id+"-edit"}>
+                              <td colSpan="8" style={{ padding:"0", background:"rgba(0,80,255,0.03)" }}>
+                                <div style={{ padding:"16px 20px", borderTop:`2px solid ${T.blue}22`, borderBottom:`1px solid ${T.border}` }}>
+                                  <div style={{ fontSize:"11px", fontWeight:"600", color:T.blue, marginBottom:"12px", letterSpacing:"0.5px" }}>
+                                    EDITING: {gName(sc.guardId)} @ {lName(sc.locationId)}
+                                  </div>
+                                  <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:"10px", alignItems:"end" }}>
+                                    <div>
+                                      <label style={S.lbl}>Location</label>
+                                      <select style={S.sel} value={editingSc.locationId} onChange={e=>setEditingSc(p=>({...p,locationId:e.target.value}))}>
+                                        {locs.map(l=><option key={l.id} value={l.id}>{l.name||l.client}</option>)}
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label style={S.lbl}>Start Time</label>
+                                      <input style={S.inp} type="time" value={editingSc.startTime} onChange={e=>setEditingSc(p=>({...p, startTime:e.target.value, hours:calcH(e.target.value,p.endTime)}))}/>
+                                    </div>
+                                    <div>
+                                      <label style={S.lbl}>End Time</label>
+                                      <input style={S.inp} type="time" value={editingSc.endTime} onChange={e=>setEditingSc(p=>({...p, endTime:e.target.value, hours:calcH(p.startTime,e.target.value)}))}/>
+                                    </div>
+                                    <div>
+                                      <label style={S.lbl}>Active From</label>
+                                      <input style={S.inp} type="date" value={editingSc.effectiveFrom||""} onChange={e=>setEditingSc(p=>({...p,effectiveFrom:e.target.value}))}/>
+                                    </div>
+                                    <div>
+                                      <label style={S.lbl}>Active To (leave blank = ongoing)</label>
+                                      <input style={S.inp} type="date" value={editingSc.effectiveTo||""} onChange={e=>setEditingSc(p=>({...p,effectiveTo:e.target.value}))}/>
+                                    </div>
+                                  </div>
+                                  <div style={{ marginTop:"10px" }}>
+                                    <label style={S.lbl}>Days</label>
+                                    <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
+                                      {DAYS.map((d,i)=>(
+                                        <button key={i} onClick={()=>setEditingSc(p=>({...p, days:p.days.includes(i)?p.days.filter(x=>x!==i):[...p.days,i]}))}
+                                          style={{ padding:"5px 12px", borderRadius:"6px", fontSize:"12px", cursor:"pointer", fontWeight:"600", border:`1px solid ${editingSc.days.includes(i)?T.blue:T.border}`, background:editingSc.days.includes(i)?"rgba(0,80,255,0.08)":"transparent", color:editingSc.days.includes(i)?T.blue:T.textSub }}>
+                                          {d}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div style={{ display:"flex", gap:"8px", marginTop:"14px" }}>
+                                    <button style={S.bp} onClick={()=>{
+                                      const updated = scs.map(s=>s.id===editingSc.id ? {...editingSc} : s);
+                                      setScs(updated); save(K.sc, updated);
+                                      addLog("Updated","Schedule",`Updated schedule for ${gName(editingSc.guardId)} at ${lName(editingSc.locationId)}`);
+                                      setEditingSc(null);
+                                    }}>Save Changes</button>
+                                    <button style={S.bo} onClick={()=>setEditingSc(null)}>Cancel</button>
+                                    {editingSc.effectiveTo && (
+                                      <button style={{ ...S.bsm(T.green) }} onClick={()=>setEditingSc(p=>({...p,effectiveTo:""}))}>
+                                        Clear End Date (make ongoing)
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </>
                       );
                     })}
                   </tbody>
