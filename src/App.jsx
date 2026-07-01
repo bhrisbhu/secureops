@@ -668,7 +668,7 @@ function Locations({ locs, setLocs, addLog, isGuest }) {
                   {l.clientAddress && <div style={{ fontSize:"10px", color:"#94a3b8", marginTop:"1px" }}>{l.clientAddress}</div>}
                   <div style={{ display:"flex", gap:"8px", marginTop:"4px", flexWrap:"wrap" }}>
                     {cr && <span style={S.pill("#10b981")}>Rate: ${parseFloat(cr.rate).toFixed(2)}/hr</span>}
-                    {l.contractEnd && <span style={S.pill(contractExpired?"#ef4444":"#3b82f6")}>{contractExpired?"Expired":"Until"}: {l.contractEnd}</span>}
+                    {l.contractEnd && <span style={S.pill(contractExpired?"#ef4444":"#3b82f6")}>{contractExpired?"Contract Expired":"Contract Until"}: {l.contractEnd}</span>}
 </div>
                 </div>
                 <div style={{ display:"flex", gap:"5px", flexWrap:"wrap" }}>
@@ -1548,41 +1548,88 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
               <div style={S.card}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"10px" }}>
                   <div style={S.ct}>{DAYS[selDow]}, {MONTHS[mo]} {sel}</div>
-                  <span style={{ fontSize:"9px", color:"#94a3b8" }}>{allOn.length} on duty</span>
+                  <span style={{ fontSize:"9px", color:T.textMute }}>{allOn.length} on duty</span>
                 </div>
                 {allOn.length > 0 && (
                   <input
-                    style={{ ...S.inp, marginBottom:"10px" }}
+                    style={{ ...S.inp, marginBottom:"12px" }}
                     placeholder="Search employee…"
                     value={daySearch}
                     onChange={e => setDaySearch(e.target.value)}
                   />
                 )}
                 {allOn.length===0 && <div style={{ ...S.empty, padding:"10px" }}>No employees scheduled.</div>}
-                {allOn
-                  .filter(g => g.name.toLowerCase().includes(daySearch.toLowerCase()))
-                  .map(g => {
-                  const sh = effShift(selDs,g.id,scs,ovs);
-                  const ov = ovs.find(o=>o.date===selDs&&o.guardId===g.id);
-                  const idx = gIdx(g.id);
-                  const reg = sh?.regularHours||sh?.hours||0, stat = sh?.statHours||0;
-                  return (
-                    <div key={g.id} style={{ background:"#f8faff", borderRadius:"5px", padding:"8px", marginBottom:"6px", borderLeft:`3px solid ${gc(idx)}` }}>
-                      <div style={{ display:"flex", justifyContent:"space-between" }}>
-                        <div><div style={{ fontWeight:"700", color:gc(idx), fontSize:"11px" }}>{g.name}</div><div style={{ fontSize:"9px", color:"#94a3b8" }}>{sh?.locationId?lName(sh.locationId):"—"}{sh?.startTime?` · ${sh.startTime}–${sh.endTime}`:""}</div></div>
-                        <div style={{ textAlign:"right" }}>{sh?.absent?<span style={S.pill("#ef4444")}>Absent</span>:<div>{reg>0&&<div style={{ fontSize:"10px", color:"#0f172a", fontWeight:"700" }}>{reg}h reg</div>}{stat>0&&<div style={{ fontSize:"9px", color:"#fbbf24" }}>{stat}h stat ★</div>}</div>}{ov&&<div style={{ fontSize:"8px", color:"#34d399" }}>adj</div>}</div>
-                      </div>
-                      <F style={{ marginTop:"6px" }}>
-                        {!isGuest && <button style={S.bsm("#60a5fa")} onClick={()=>openAdj(g)}>Adjust</button>}
-                        {!isGuest && ov&&<button style={S.bsm("#f87171")} onClick={()=>remAdj(g.id)}>Reset</button>}
-                      </F>
-                    </div>
+
+                {allOn.length > 0 && (() => {
+                  const filtered = allOn.filter(g => g.name.toLowerCase().includes(daySearch.toLowerCase()));
+                  if (filtered.length === 0) return (
+                    <div style={{ fontSize:"11px", color:T.textMute, textAlign:"center", padding:"10px 0" }}>No employees match "{daySearch}"</div>
                   );
-                })}
-                {daySearch && allOn.filter(g=>g.name.toLowerCase().includes(daySearch.toLowerCase())).length===0 && (
-                  <div style={{ fontSize:"11px", color:"#94a3b8", textAlign:"center", padding:"10px 0" }}>No employees match "{daySearch}"</div>
-                )}
-                {!isGuest && <div style={{ marginTop:"8px", borderTop:"1px solid #e2e8f0", paddingTop:"8px" }}>
+
+                  // Group by location
+                  const groups = {};
+                  filtered.forEach(g => {
+                    const sh = effShift(selDs, g.id, scs, ovs);
+                    const locId = sh?.locationId || "__none__";
+                    if (!groups[locId]) groups[locId] = { locId, employees:[] };
+                    groups[locId].employees.push({ g, sh });
+                  });
+
+                  return Object.values(groups).map(({ locId, employees }) => {
+                    const loc = locs.find(l => l.id === locId);
+                    const locLabel = loc ? (loc.name || loc.client) : "No Location";
+                    const locColor = locId === "__none__" ? T.textMute : gc(locs.findIndex(l=>l.id===locId) % 7);
+                    return (
+                      <div key={locId} style={{ marginBottom:"10px" }}>
+                        {/* location header bubble */}
+                        <div style={{ display:"flex", alignItems:"center", gap:"7px", marginBottom:"6px" }}>
+                          <div style={{ width:"8px", height:"8px", borderRadius:"50%", background:locColor, flexShrink:0 }}/>
+                          <div style={{ fontSize:"10px", fontWeight:"700", color:locColor, textTransform:"uppercase", letterSpacing:"0.8px" }}>
+                            {locLabel}
+                          </div>
+                          <div style={{ flex:1, height:"1px", background:`${locColor}22` }}/>
+                          <div style={{ fontSize:"9px", color:T.textMute }}>{employees.length} emp.</div>
+                        </div>
+                        {/* employee chips grid */}
+                        <div style={{ display:"flex", flexDirection:"column", gap:"5px", paddingLeft:"15px" }}>
+                          {employees.map(({ g, sh }) => {
+                            const ov = ovs.find(o=>o.date===selDs&&o.guardId===g.id);
+                            const idx = gIdx(g.id);
+                            const reg = sh?.regularHours||sh?.hours||0;
+                            const stat = sh?.statHours||0;
+                            return (
+                              <div key={g.id} style={{ background:"rgba(255,255,255,0.7)", borderRadius:"8px", padding:"7px 10px", border:`1px solid ${locColor}22`, display:"flex", alignItems:"center", gap:"8px" }}>
+                                {/* avatar */}
+                                <div style={{ width:"26px", height:"26px", borderRadius:"6px", background:`${gc(idx)}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"9px", fontWeight:"700", color:gc(idx), flexShrink:0 }}>
+                                  {g.name.split(" ").map(x=>x[0]).join("").slice(0,2)}
+                                </div>
+                                {/* name + shift */}
+                                <div style={{ flex:1, minWidth:0 }}>
+                                  <div style={{ fontSize:"12px", fontWeight:"600", color:T.text }}>{g.name}</div>
+                                  <div style={{ fontSize:"10px", color:T.textMute }}>
+                                    {sh?.absent ? "Absent" : `${sh?.startTime||""}${sh?.endTime?"–"+sh.endTime:""}`}
+                                    {reg>0 && ` · ${reg}h`}
+                                    {stat>0 && ` · ${stat}h★`}
+                                    {ov && <span style={{ color:T.green, marginLeft:"4px" }}>✎ adj</span>}
+                                  </div>
+                                </div>
+                                {/* actions */}
+                                {!isGuest && (
+                                  <div style={{ display:"flex", gap:"4px" }}>
+                                    <button style={{ ...S.bsm(T.blue), fontSize:"10px", padding:"3px 8px" }} onClick={()=>openAdj(g)}>Adjust</button>
+                                    {ov && <button style={{ ...S.bsm(T.red), fontSize:"10px", padding:"3px 8px" }} onClick={()=>remAdj(g.id)}>Reset</button>}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+
+                {!isGuest && <div style={{ marginTop:"10px", borderTop:`1px solid ${T.border}`, paddingTop:"10px" }}>
                   <label style={S.lbl}>Add employee for this day</label>
                   <select style={S.sel} value="" onChange={e=>{ if(e.target.value){ const g=guards.find(x=>x.id===e.target.value); if(g) openAdj(g); } }}><option value="">Select…</option>{unsch.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
                 </div>}
@@ -2237,8 +2284,6 @@ function sendGmail(inv) {
 `Hello,
 
 Please find attached Invoice for ${inv.summary||inv.number}.
-
-Don't hesitate to reach out if you have any questions!
 
 Best regards,
 Chris
