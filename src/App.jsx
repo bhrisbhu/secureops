@@ -1144,13 +1144,29 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                 .filter(s => !s.absent && ((s.regularHours||s.hours||0)+(s.statHours||0))>0);
 
               // 2. Employees with a shift starting the PREVIOUS day that crosses midnight INTO the stat day
+              // We look at the schedule (not just the override) to get startTime/endTime,
+              // because manual overrides often only store hours, not the actual times.
               const prevShifts = shiftsOn(prevDate, guards, scs, ovs)
-                .filter(s => !s.absent && s.startTime && s.endTime && toMin(s.endTime) < toMin(s.startTime));
+                .map(s => {
+                  // If the override lacks start/end times, look them up from the schedule
+                  if (!s.startTime || !s.endTime) {
+                    const dow = pDate(prevDate).getDay();
+                    const sc = scs.find(x =>
+                      x.guardId===s.guardId &&
+                      x.days.includes(dow) &&
+                      (!x.effectiveFrom || prevDate >= x.effectiveFrom) &&
+                      (!x.effectiveTo   || prevDate <= x.effectiveTo)
+                    );
+                    if (sc) return { ...s, startTime: sc.startTime, endTime: sc.endTime };
+                  }
+                  return s;
+                })
+                .filter(s => !s.absent && s.startTime && s.endTime && toMin(s.endTime) <= toMin(s.startTime) && toMin(s.endTime) > 0);
               const crossingIn = prevShifts
                 .filter(s => !statShifts.find(x=>x.guardId===s.guardId))
                 .map(s => {
-                  const statMins = toMin(s.endTime);
-                  const regularMins = (1440 - toMin(s.startTime));
+                  const statMins    = toMin(s.endTime);                  // midnight → shift end on stat day
+                  const regularMins = 1440 - toMin(s.startTime);         // shift start → midnight on prev day
                   return { ...s, isCrossingIn:true, prevDate, regularHoursOnPrev:Math.round(regularMins/60*100)/100, statHoursOnStat:Math.round(statMins/60*100)/100 };
                 })
                 .filter(s => s.statHoursOnStat > 0);
