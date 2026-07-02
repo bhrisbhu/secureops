@@ -1163,10 +1163,9 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                 })
                 .filter(s => !s.absent && s.startTime && s.endTime && toMin(s.endTime) <= toMin(s.startTime) && toMin(s.endTime) > 0);
               const crossingIn = prevShifts
-                .filter(s => !statShifts.find(x=>x.guardId===s.guardId))
                 .map(s => {
-                  const statMins    = toMin(s.endTime);                  // midnight → shift end on stat day
-                  const regularMins = 1440 - toMin(s.startTime);         // shift start → midnight on prev day
+                  const statMins    = toMin(s.endTime);
+                  const regularMins = 1440 - toMin(s.startTime);
                   return { ...s, isCrossingIn:true, prevDate, regularHoursOnPrev:Math.round(regularMins/60*100)/100, statHoursOnStat:Math.round(statMins/60*100)/100 };
                 })
                 .filter(s => s.statHoursOnStat > 0);
@@ -1176,7 +1175,9 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
               const crossingOut = statShifts
                 .filter(s => s.startTime && s.endTime && toMin(s.endTime) < toMin(s.startTime));
 
-              const totalEligible = statShifts.length + crossingIn.length;
+              // Total unique employees affected (an employee can appear in both statShifts and crossingIn)
+              const allAffectedIds = new Set([...statShifts.map(s=>s.guardId), ...crossingIn.map(s=>s.guardId)]);
+              const totalEligible = allAffectedIds.size;
 
               return (
                 <div style={{ marginTop:"14px" }}>
@@ -1268,12 +1269,27 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
 
                             // Employees crossing IN from previous night
                             crossingIn.forEach(s => {
+                              // Update prev day override: cap at midnight, mark regular hours only
                               const prevIdx = newOvs.findIndex(o=>o.date===prevDate&&o.guardId===s.guardId);
                               if (prevIdx!==-1) newOvs.splice(prevIdx,1);
-                              newOvs.push({ id:uid(), date:prevDate, guardId:s.guardId, locationId:s.locationId||"", startTime:s.startTime||"", endTime:"23:59", regularHours:s.regularHoursOnPrev, statHours:0, absent:false, notes:`Night shift — stat holiday split (regular portion)` });
+                              newOvs.push({ id:uid(), date:prevDate, guardId:s.guardId, locationId:s.locationId||"", startTime:s.startTime||"", endTime:"23:59", regularHours:s.regularHoursOnPrev, statHours:0, absent:false, notes:`Night shift — stat holiday split (regular portion on ${prevDate})` });
+
+                              // For the stat day: if there is already an override (e.g. the 11am–4pm manual entry),
+                              // ADD the crossing stat hours to the existing stat hours rather than replacing the record.
                               const statIdx = newOvs.findIndex(o=>o.date===statDate&&o.guardId===s.guardId);
-                              if (statIdx!==-1) newOvs.splice(statIdx,1);
-                              newOvs.push({ id:uid(), date:statDate, guardId:s.guardId, locationId:s.locationId||"", startTime:"00:00", endTime:s.endTime||"", regularHours:0, statHours:s.statHoursOnStat, absent:false, notes:`Stat holiday — ${statDate} (crossed from night shift on ${prevDate})` });
+                              if (statIdx !== -1) {
+                                // Merge: keep existing entry but add the crossing stat hours
+                                const existing = newOvs[statIdx];
+                                newOvs.splice(statIdx, 1);
+                                newOvs.push({
+                                  ...existing,
+                                  statHours: Math.round(((existing.statHours||0) + s.statHoursOnStat)*100)/100,
+                                  notes: (existing.notes||"") + ` + ${s.statHoursOnStat}h stat from night shift on ${prevDate}`,
+                                });
+                              } else {
+                                // No existing entry — create a new one for the crossing hours
+                                newOvs.push({ id:uid(), date:statDate, guardId:s.guardId, locationId:s.locationId||"", startTime:"00:00", endTime:s.endTime||"", regularHours:0, statHours:s.statHoursOnStat, absent:false, notes:`Stat holiday — ${statDate} (crossed from night shift on ${prevDate})` });
+                              }
                             });
 
                             setOvs(newOvs); save(K.ov, newOvs);
