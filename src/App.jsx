@@ -34,7 +34,7 @@ const LogoMark = ({ size = 32, radius = 8 }) => (
 );
 
 // ─── storage ──────────────────────────────────────────────────────────────────
-const K = { g:"so_g", l:"so_l", sc:"so_sc", ov:"so_ov", hi:"so_hi", pay:"so_pay", leads:"so_lds", inv:"so_inv", co:"so_co", log:"so_log" };
+const K = { g:"so_g", l:"so_l", sc:"so_sc", ov:"so_ov", hi:"so_hi", pay:"so_pay", leads:"so_lds", inv:"so_inv", co:"so_co", log:"so_log", td:"so_td" };
 import { load, save } from './supabase.js';
 
 // ─── utils ────────────────────────────────────────────────────────────────────
@@ -3250,7 +3250,7 @@ function QuoteFlash({ quote, onDone }) {
 }
 
 // ─── App Dashboard ────────────────────────────────────────────────────────────
-function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab }) {
+function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, setTodos }) {
   const today = todayStr();
   const todayShifts = locs.length > 0 || guards.length > 0 ? (() => {
     const dow = pDate(today).getDay();
@@ -3274,28 +3274,24 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab }) {
   const [greeting] = useState(() => getGreeting());
   const guardColors = ["#0050ff","#7b61ff","#00b894","#f6ad55","#e53e3e","#00d4ff","#f472b6"];
 
-  // To-do list state — persisted in localStorage
-  const [todos, setTodos] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("so_todos")||"[]"); } catch { return []; }
-  });
   const [todoInput, setTodoInput] = useState("");
   function addTodo() {
     if (!todoInput.trim()) return;
     const updated = [{ id:uid(), text:todoInput.trim(), done:false, created:new Date().toISOString() }, ...todos];
-    setTodos(updated); localStorage.setItem("so_todos", JSON.stringify(updated));
+    setTodos(updated); save(K.td, updated);
     setTodoInput("");
   }
   function toggleTodo(id) {
     const updated = todos.map(t => t.id===id ? {...t, done:!t.done} : t);
-    setTodos(updated); localStorage.setItem("so_todos", JSON.stringify(updated));
+    setTodos(updated); save(K.td, updated);
   }
   function deleteTodo(id) {
     const updated = todos.filter(t => t.id!==id);
-    setTodos(updated); localStorage.setItem("so_todos", JSON.stringify(updated));
+    setTodos(updated); save(K.td, updated);
   }
   function clearDone() {
     const updated = todos.filter(t => !t.done);
-    setTodos(updated); localStorage.setItem("so_todos", JSON.stringify(updated));
+    setTodos(updated); save(K.td, updated);
   }
   const doneCt = todos.filter(t=>t.done).length;
 
@@ -3504,7 +3500,8 @@ export default function App() {
   const [ovs, setOvs] = useState([]);
   const [history, setHistory] = useState([]);
   const [logEntries, setLogEntries] = useState([]);
-  const [invs, setInvsCache] = useState([]); // cached for dashboard
+  const [invs, setInvsCache] = useState([]);
+  const [todos, setTodos] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [fadeIn, setFadeIn] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -3517,9 +3514,9 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const [g,l,sc,ov,hi,lg,iv] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv)]);
+      const [g,l,sc,ov,hi,lg,iv,td] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv),load(K.td)]);
       if(g) setGuards(g); if(l) setLocs(l); if(sc) setScs(sc); if(ov) setOvs(ov); if(hi) setHistory(hi);
-      if(lg) setLogEntries(lg); if(iv) setInvsCache(iv);
+      if(lg) setLogEntries(lg); if(iv) setInvsCache(iv); if(td) setTodos(td);
       setLoaded(true);
     })();
   }, []);
@@ -3641,7 +3638,7 @@ export default function App() {
           <div style={S.pageTitle}>{meta.title}</div>
           <div style={S.pageSubtitle}>{meta.subtitle}</div>
         </>}
-        {tab==="home" && <AppDashboard guards={guards} locs={locs} scs={scs} ovs={ovs} invs={invs} isGuest={isGuest} setTab={setTab}/>}
+        {tab==="home" && <AppDashboard guards={guards} locs={locs} scs={scs} ovs={ovs} invs={invs} isGuest={isGuest} setTab={setTab} todos={todos} setTodos={setTodos}/>}
         {tab==="emp" && <Employees guards={guards} setGuards={setGuards} addLog={addLog} isGuest={isGuest} />}
         {tab==="loc" && <Locations locs={locs} setLocs={setLocs} addLog={addLog} isGuest={isGuest} />}
         {tab==="cal" && <Calendar guards={guards} locs={locs} scs={scs} setScs={setScs} ovs={ovs} setOvs={setOvs} addLog={addLog} isGuest={isGuest} />}
