@@ -1696,7 +1696,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                                       </div>
                                       {allOvs.length > 1 && allOvs.map(ov => (
                                         <button key={ov.id} style={{ ...S.bsm(T.red), fontSize:"9px", padding:"2px 7px" }}
-                                          onClick={()=>{ const u=ovs.filter(o=>o.id!==ov.id); setOvs(u); save(K.ov,u); }}>
+                                          onClick={()=>ask(`Delete the ${ov.startTime||"—"}–${ov.endTime||"—"} shift for ${g.name}?`, ()=>{ const u=ovs.filter(o=>o.id!==ov.id); setOvs(u); save(K.ov,u); })}>
                                           ✕ {ov.startTime||"—"}–{ov.endTime||"—"}
                                         </button>
                                       ))}
