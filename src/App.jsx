@@ -1678,7 +1678,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                                         {((ov.regularHours||0)>0||(ov.statHours||0)>0) && <span style={{ color:T.textMute }}>·</span>}
                                         {(ov.regularHours||0)>0 && <span style={{ whiteSpace:"nowrap" }}>{ov.regularHours}h reg</span>}
                                         {(ov.statHours||0)>0 && <span style={{ color:T.amber, whiteSpace:"nowrap" }}>{ov.statHours}h★</span>}
-                                        {!isGuest && <button style={{ ...S.bsm(T.red), fontSize:"9px", padding:"1px 5px", marginLeft:"2px" }} onClick={()=>{ const u=ovs.filter(o=>o.id!==ov.id); setOvs(u); save(K.ov,u); }}>✕</button>}
+
                                       </div>
                                     )) : (
                                       <div style={{ fontSize:"10px", color:T.textMute, whiteSpace:"nowrap" }}>
@@ -1689,9 +1689,17 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                                     )}
                                   </div>
                                   {!isGuest && (
-                                    <div style={{ display:"flex", gap:"4px", flexShrink:0 }}>
-                                      <button style={{ ...S.bsm(T.blue), fontSize:"10px", padding:"3px 8px" }} onClick={()=>openAdj(g)}>Edit</button>
-                                      <button style={{ ...S.bsm(T.green), fontSize:"10px", padding:"3px 8px" }} onClick={()=>openAdj(g,true)}>+ Shift</button>
+                                    <div style={{ display:"flex", flexDirection:"column", gap:"4px", flexShrink:0, alignItems:"flex-end" }}>
+                                      <div style={{ display:"flex", gap:"4px" }}>
+                                        <button style={{ ...S.bsm(T.blue), fontSize:"10px", padding:"3px 8px" }} onClick={()=>openAdj(g)}>Edit</button>
+                                        <button style={{ ...S.bsm(T.green), fontSize:"10px", padding:"3px 8px" }} onClick={()=>openAdj(g,true)}>+ Shift</button>
+                                      </div>
+                                      {allOvs.length > 1 && allOvs.map(ov => (
+                                        <button key={ov.id} style={{ ...S.bsm(T.red), fontSize:"9px", padding:"2px 7px" }}
+                                          onClick={()=>{ const u=ovs.filter(o=>o.id!==ov.id); setOvs(u); save(K.ov,u); }}>
+                                          ✕ {ov.startTime||"—"}–{ov.endTime||"—"}
+                                        </button>
+                                      ))}
                                     </div>
                                   )}
                                 </div>
