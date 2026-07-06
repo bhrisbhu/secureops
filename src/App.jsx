@@ -730,6 +730,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
   const [sf, setSf] = useState({ guardId:"", locationId:"", days:[], startTime:"", endTime:"", effectiveFrom:"", effectiveTo:"" });
   const [adjG, setAdjG] = useState(null);
   const [adj, setAdj] = useState({ startTime:"", endTime:"", regularHours:"", statHours:"", absent:false, locationId:"", notes:"" });
+  const [adjAddNew, setAdjAddNew] = useState(false);
   const [adjSaved, setAdjSaved] = useState(false);
   const [scSaved, setScSaved] = useState(false);
   const [confirmEl, ask] = useConfirm();
@@ -830,37 +831,41 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
   );
   const togDay = d => setSf(p => ({ ...p, days: p.days.includes(d)?p.days.filter(x=>x!==d):[...p.days,d] }));
 
-  const openAdj = g => {
+  const openAdj = (g, addNew=false) => {
     const ds = dStr(yr,mo,sel);
     const sh = effShift(ds, g.id, scs, ovs);
     setAdjG(g);
-    setAdj({ startTime:sh?.startTime||"", endTime:sh?.endTime||"", regularHours:sh?.regularHours!==undefined?sh.regularHours:(sh?.hours||""), statHours:sh?.statHours||0, absent:sh?.absent||false, locationId:sh?.locationId||"", notes:sh?.notes||"" });
+    setAdjAddNew(addNew);
+    if (addNew) {
+      // Start blank — user fills in the new shift from scratch
+      setAdj({ startTime:"", endTime:"", regularHours:"", statHours:0, absent:false, locationId:sh?.locationId||"", notes:"" });
+    } else {
+      setAdj({ startTime:sh?.startTime||"", endTime:sh?.endTime||"", regularHours:sh?.regularHours!==undefined?sh.regularHours:(sh?.hours||""), statHours:sh?.statHours||0, absent:sh?.absent||false, locationId:sh?.locationId||"", notes:sh?.notes||"" });
+    }
   };
   const saveAdj = () => {
     if (!adjG) return;
-    // Location is required — can't save without one
     if (!adj.absent && !adj.locationId) {
       alert("Please select a location before saving. Hours must be tied to a location for reports to be accurate.");
       return;
     }
     const ds = dStr(yr,mo,sel);
-    const base = ovs.filter(o=>!(o.date===ds&&o.guardId===adjG.id));
-    const existing = ovs.find(o=>o.date===ds&&o.guardId===adjG.id);
     const ov = { id:uid(), date:ds, guardId:adjG.id, locationId:adj.locationId, startTime:adj.startTime, endTime:adj.endTime, regularHours:adj.absent?0:(parseFloat(adj.regularHours)||0), statHours:adj.absent?0:(parseFloat(adj.statHours)||0), absent:adj.absent, notes:adj.notes };
-    const u=[...base,ov]; setOvs(u); save(K.ov,u); setAdjG(null);
-    setAdjSaved(true); setTimeout(()=>setAdjSaved(false), 2500);
-    // Only log if something actually changed
-    const changed = !existing ||
-      existing.regularHours !== ov.regularHours ||
-      existing.statHours    !== ov.statHours ||
-      existing.absent       !== ov.absent ||
-      existing.startTime    !== ov.startTime ||
-      existing.endTime      !== ov.endTime ||
-      existing.locationId   !== ov.locationId;
-    if (changed) {
-      const gn = adjG.name;
-      addLog("Adjusted","Hours",`Adjusted hours for ${gn} on ${ds}`, ov.absent?"Marked absent":`${ov.regularHours}h reg${ov.statHours>0?" + "+ov.statHours+"h stat":""}`);
+    let u;
+    if (adjAddNew) {
+      // Keep ALL existing overrides for this employee+day, just append the new one
+      u = [...ovs, ov];
+    } else {
+      // Replace the single existing override (legacy behaviour)
+      const existing = ovs.find(o=>o.date===ds&&o.guardId===adjG.id);
+      const base = ovs.filter(o=>!(o.date===ds&&o.guardId===adjG.id));
+      u = [...base, ov];
+      const changed = !existing || existing.regularHours!==ov.regularHours || existing.statHours!==ov.statHours || existing.absent!==ov.absent || existing.startTime!==ov.startTime || existing.endTime!==ov.endTime || existing.locationId!==ov.locationId;
+      if (!changed) { setAdjG(null); return; }
     }
+    setOvs(u); save(K.ov,u); setAdjG(null);
+    setAdjSaved(true); setTimeout(()=>setAdjSaved(false), 2500);
+    addLog("Adjusted","Hours",`${adjAddNew?"Added extra shift":"Adjusted hours"} for ${adjG.name} on ${ds}`, ov.absent?"Marked absent":`${ov.regularHours}h reg${ov.statHours>0?" + "+ov.statHours+"h stat":""}`);
   };
   const remAdj = gid => ask("Reset this day's adjustment back to scheduled hours?", ()=>{ const ds=dStr(yr,mo,sel); const u=ovs.filter(o=>!(o.date===ds&&o.guardId===gid)); setOvs(u); save(K.ov,u); });
 
@@ -906,10 +911,16 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
           <div style={{ background:T.surface, border:`1px solid ${T.blue}44`, borderRadius:"14px", padding:"24px 28px", width:"100%", maxWidth:"460px", boxShadow:"0 20px 60px rgba(0,0,0,0.15)", overflowY:"auto", maxHeight:"90vh", WebkitOverflowScrolling:"touch" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"16px" }}>
               <div style={{ fontWeight:"700", color:T.text, fontSize:"15px" }}>
-                Adjust: <span style={{ color:gc(gIdx(adjG.id)) }}>{adjG.name}</span>
+                {adjAddNew ? "➕ Add Shift: " : "Edit: "}
+                <span style={{ color:gc(gIdx(adjG.id)) }}>{adjG.name}</span>
               </div>
               <div style={{ fontSize:"12px", color:T.textSub }}>{selDs} ({selDs ? DAYS[new Date(selDs+"T00:00:00").getDay()] : ""})</div>
             </div>
+            {adjAddNew && (
+              <div style={{ background:"rgba(0,80,255,0.05)", border:`1px solid ${T.borderHi}`, borderRadius:"8px", padding:"8px 12px", fontSize:"11px", color:T.blue, marginBottom:"12px" }}>
+                This will be saved as an <strong>additional shift</strong> alongside existing entries for this day — nothing will be removed.
+              </div>
+            )}
             <label style={{ display:"flex", alignItems:"center", gap:"8px", fontSize:"13px", color:T.text, cursor:"pointer", marginBottom:"14px" }}>
               <input type="checkbox" checked={adj.absent} onChange={e=>setAdj(p=>({...p,absent:e.target.checked}))} style={{ width:"16px", height:"16px" }}/>
               Mark as Absent (no hours)
@@ -951,7 +962,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
               </div>
             )}
             <F style={{ marginTop:"16px" }}>
-              <button style={{ ...S.bp, opacity:(!adj.absent && !adj.locationId) ? 0.5 : 1 }} onClick={saveAdj}>Save Hours</button>
+              <button style={{ ...S.bp, opacity:(!adj.absent && !adj.locationId) ? 0.5 : 1 }} onClick={saveAdj}>{adjAddNew ? "Save New Shift" : "Save Hours"}</button>
               <button style={S.bo} onClick={()=>setAdjG(null)}>Cancel</button>
             </F>
             {!adj.absent && !adj.locationId && (
@@ -1171,9 +1182,18 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                 .filter(s => s.statHoursOnStat > 0);
 
               // 3. Employees with a shift starting ON the stat day that crosses midnight INTO the next day
-              //    These get: stat hours on the stat day (start → midnight), regular hours on next day (midnight → end)
+              //    Only count a shift as crossing out if BOTH startTime and endTime are real non-zero times
+              //    AND endTime < startTime (overnight pattern). Empty/missing times must NOT match.
               const crossingOut = statShifts
-                .filter(s => s.startTime && s.endTime && toMin(s.endTime) < toMin(s.startTime));
+                .filter(s => {
+                  const st = toMin(s.startTime);
+                  const et = toMin(s.endTime);
+                  // Both must be real times (non-zero or explicitly "00:00") and et must be less than st
+                  // We require endTime to be a valid "HH:MM" string with length > 0
+                  if (!s.startTime || !s.endTime) return false;
+                  if (s.endTime === "00:00") return false; // ending exactly at midnight = not crossing
+                  return et < st && et > 0; // et > 0 ensures we don't falsely match empty strings
+                });
 
               // Total unique employees affected (an employee can appear in both statShifts and crossingIn)
               const allAffectedIds = new Set([...statShifts.map(s=>s.guardId), ...crossingIn.map(s=>s.guardId)]);
@@ -1246,8 +1266,10 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                             // Employees working fully within the stat day
                             statShifts.filter(s=>!crossingOut.find(x=>x.guardId===s.guardId)).forEach(s => {
                               const total = (s.regularHours||s.hours||0)+(s.statHours||0);
-                              const idx = newOvs.findIndex(o=>o.date===statDate&&o.guardId===s.guardId);
-                              if (idx!==-1) newOvs.splice(idx,1);
+                              // Remove ALL existing overrides for this employee on the stat day
+                              while (newOvs.findIndex(o=>o.date===statDate&&o.guardId===s.guardId) !== -1) {
+                                newOvs.splice(newOvs.findIndex(o=>o.date===statDate&&o.guardId===s.guardId), 1);
+                              }
                               newOvs.push({ id:uid(), date:statDate, guardId:s.guardId, locationId:s.locationId||"", startTime:s.startTime||"", endTime:s.endTime||"", regularHours:0, statHours:total, absent:false, notes:`Stat holiday — ${statDate}` });
                             });
 
@@ -1257,14 +1279,27 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                               const regMins  = toMin(s.endTime);
                               const statH = Math.round(statMins/60*100)/100;
                               const regH  = Math.round(regMins/60*100)/100;
-                              // Stat day: from start to midnight
-                              const idx = newOvs.findIndex(o=>o.date===statDate&&o.guardId===s.guardId);
-                              if (idx!==-1) newOvs.splice(idx,1);
+
+                              // Stat day: from start → midnight, all stat hours — remove ALL existing overrides first
+                              while (newOvs.findIndex(o=>o.date===statDate&&o.guardId===s.guardId) !== -1) {
+                                newOvs.splice(newOvs.findIndex(o=>o.date===statDate&&o.guardId===s.guardId), 1);
+                              }
                               newOvs.push({ id:uid(), date:statDate, guardId:s.guardId, locationId:s.locationId||"", startTime:s.startTime||"", endTime:"23:59", regularHours:0, statHours:statH, absent:false, notes:`Stat holiday — ${statDate} (shift crosses into ${nextDate})` });
-                              // Next day: from midnight to shift end
-                              const nIdx = newOvs.findIndex(o=>o.date===nextDate&&o.guardId===s.guardId);
-                              if (nIdx!==-1) newOvs.splice(nIdx,1);
-                              newOvs.push({ id:uid(), date:nextDate, guardId:s.guardId, locationId:s.locationId||"", startTime:"00:00", endTime:s.endTime||"", regularHours:regH, statHours:0, absent:false, notes:`Regular hours — continuation of stat shift from ${statDate}` });
+
+                              // Next day: only write the midnight→endTime crossing portion
+                              // IF the employee has no existing independent shift on next day.
+                              // This prevents deleting a real separately-scheduled shift.
+                              const hasExistingNextDay = (() => {
+                                if (ovs.find(o=>o.date===nextDate&&o.guardId===s.guardId)) return true;
+                                const nextDow = pDate(nextDate).getDay();
+                                return !!scs.find(x => x.guardId===s.guardId && x.days.includes(nextDow) && (!x.effectiveFrom||nextDate>=x.effectiveFrom) && (!x.effectiveTo||nextDate<=x.effectiveTo));
+                              })();
+                              if (!hasExistingNextDay) {
+                                const nIdx = newOvs.findIndex(o=>o.date===nextDate&&o.guardId===s.guardId);
+                                if (nIdx!==-1) newOvs.splice(nIdx,1);
+                                newOvs.push({ id:uid(), date:nextDate, guardId:s.guardId, locationId:s.locationId||"", startTime:"00:00", endTime:s.endTime||"", regularHours:regH, statHours:0, absent:false, notes:`Regular hours — continuation of stat shift from ${statDate}` });
+                              }
+                              // If they DO have an existing shift on next day, leave it completely untouched.
                             });
 
                             // Employees crossing IN from previous night
@@ -1624,34 +1659,41 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                         </div>
                         {/* employee chips grid */}
                         <div style={{ display:"flex", flexDirection:"column", gap:"5px", paddingLeft:"15px" }}>
-                          {employees.map(({ g, sh }) => {
-                            const ov = ovs.find(o=>o.date===selDs&&o.guardId===g.id);
+                  {employees.map(({ g, sh }) => {
+                            // Get ALL overrides for this employee on this day
+                            const allOvs = ovs.filter(o=>o.date===selDs&&o.guardId===g.id);
                             const idx = gIdx(g.id);
-                            const reg = sh?.regularHours||sh?.hours||0;
-                            const stat = sh?.statHours||0;
                             return (
-                              <div key={g.id} style={{ background:"rgba(255,255,255,0.7)", borderRadius:"8px", padding:"7px 10px", border:`1px solid ${locColor}22`, display:"flex", alignItems:"center", gap:"8px" }}>
-                                {/* avatar */}
-                                <div style={{ width:"26px", height:"26px", borderRadius:"6px", background:`${gc(idx)}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"9px", fontWeight:"700", color:gc(idx), flexShrink:0 }}>
-                                  {g.name.split(" ").map(x=>x[0]).join("").slice(0,2)}
-                                </div>
-                                {/* name + shift */}
-                                <div style={{ flex:1, minWidth:0 }}>
-                                  <div style={{ fontSize:"12px", fontWeight:"600", color:T.text }}>{g.name}</div>
-                                  <div style={{ fontSize:"10px", color:T.textMute }}>
-                                    {sh?.absent ? "Absent" : `${sh?.startTime||""}${sh?.endTime?"–"+sh.endTime:""}`}
-                                    {reg>0 && ` · ${reg}h`}
-                                    {stat>0 && ` · ${stat}h★`}
-                                    {ov && <span style={{ color:T.green, marginLeft:"4px" }}>✎ adj</span>}
+                              <div key={g.id} style={{ background:"rgba(255,255,255,0.7)", borderRadius:"8px", padding:"7px 10px", border:`1px solid ${locColor}22`, marginBottom:"4px" }}>
+                                <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+                                  {/* avatar */}
+                                  <div style={{ width:"26px", height:"26px", borderRadius:"6px", background:`${gc(idx)}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"9px", fontWeight:"700", color:gc(idx), flexShrink:0 }}>
+                                    {g.name.split(" ").map(x=>x[0]).join("").slice(0,2)}
                                   </div>
-                                </div>
-                                {/* actions */}
-                                {!isGuest && (
-                                  <div style={{ display:"flex", gap:"4px" }}>
-                                    <button style={{ ...S.bsm(T.blue), fontSize:"10px", padding:"3px 8px" }} onClick={()=>openAdj(g)}>Adjust</button>
-                                    {ov && <button style={{ ...S.bsm(T.red), fontSize:"10px", padding:"3px 8px" }} onClick={()=>remAdj(g.id)}>Reset</button>}
+                                  <div style={{ flex:1, minWidth:0 }}>
+                                    <div style={{ fontSize:"12px", fontWeight:"600", color:T.text }}>{g.name}</div>
+                                    {allOvs.length > 0 ? allOvs.map((ov,i) => (
+                                      <div key={ov.id} style={{ fontSize:"10px", color:T.textMute, display:"flex", alignItems:"center", gap:"6px", marginTop:"1px" }}>
+                                        <span>{ov.absent?"Absent":`${ov.startTime||""}${ov.endTime?"–"+ov.endTime:""}`}</span>
+                                        {(ov.regularHours||0)>0 && <span>· {ov.regularHours}h reg</span>}
+                                        {(ov.statHours||0)>0 && <span style={{ color:T.amber }}>· {ov.statHours}h★</span>}
+                                        {!isGuest && <button style={{ ...S.bsm(T.red), fontSize:"9px", padding:"1px 6px" }} onClick={()=>{ const u=ovs.filter(o=>o.id!==ov.id); setOvs(u); save(K.ov,u); }}>✕</button>}
+                                      </div>
+                                    )) : (
+                                      <div style={{ fontSize:"10px", color:T.textMute }}>
+                                        {sh?.startTime||""}{sh?.endTime?"–"+sh.endTime:""}
+                                        {(sh?.regularHours||sh?.hours||0)>0 && ` · ${sh?.regularHours||sh?.hours}h reg`}
+                                        {(sh?.statHours||0)>0 && ` · ${sh.statHours}h★`}
+                                      </div>
+                                    )}
                                   </div>
-                                )}
+                                  {!isGuest && (
+                                    <div style={{ display:"flex", gap:"4px", flexShrink:0 }}>
+                                      <button style={{ ...S.bsm(T.blue), fontSize:"10px", padding:"3px 8px" }} onClick={()=>openAdj(g)}>Edit</button>
+                                      <button style={{ ...S.bsm(T.green), fontSize:"10px", padding:"3px 8px" }} onClick={()=>openAdj(g,true)}>+ Shift</button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             );
                           })}
@@ -1662,8 +1704,15 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                 })()}
 
                 {!isGuest && <div style={{ marginTop:"10px", borderTop:`1px solid ${T.border}`, paddingTop:"10px" }}>
-                  <label style={S.lbl}>Add employee for this day</label>
-                  <select style={S.sel} value="" onChange={e=>{ if(e.target.value){ const g=guards.find(x=>x.id===e.target.value); if(g) openAdj(g); } }}><option value="">Select…</option>{unsch.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
+                  <label style={S.lbl}>Add / adjust employee for this day</label>
+                  <select style={S.sel} value="" onChange={e=>{ if(e.target.value){ const g=guards.find(x=>x.id===e.target.value); if(g) openAdj(g); } }}>
+                    <option value="">Select employee…</option>
+                    {guards.filter(g=>g.status==="Active").map(g => {
+                      const alreadyOn = allOn.find(x=>x.id===g.id);
+                      return <option key={g.id} value={g.id}>{g.name}{alreadyOn?" (already scheduled)":""}</option>;
+                    })}
+                  </select>
+                  <div style={{ fontSize:"10px", color:T.textMute, marginTop:"4px" }}>Already-scheduled employees are shown with a note — selecting them will open their adjustment modal to edit or add a second entry.</div>
                 </div>}
               </div>
             </div>
@@ -1684,12 +1733,32 @@ function Reports({ guards, locs, scs, ovs, history, setHistory, addLog, isGuest,
   function buildRpt(lid) {
     const start=pDate(sd),end=pDate(ed); const gm={};
     for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
-      const ds=d.toISOString().slice(0,10);
-      shiftsOn(ds,guards,scs,ovs).filter(s=>s.locationId===lid).forEach(s=>{
-        if(!gm[s.guardId])gm[s.guardId]={name:s.guard.name,regular:0,stat:0,days:[]};
-        const r=s.regularHours||s.hours||0,st=s.statHours||0;
-        gm[s.guardId].regular+=r; gm[s.guardId].stat+=st;
-        gm[s.guardId].days.push({date:ds,startTime:s.startTime,endTime:s.endTime,regular:r,stat:st});
+      const ds=dStr(d.getFullYear(),d.getMonth(),d.getDate());
+      // Get all overrides for this day at this location
+      const dayOvs = ovs.filter(o=>o.date===ds&&o.locationId===lid&&!o.absent);
+      const guardsSeen = new Set();
+
+      // First pass: handle guards with overrides (possibly multiple per day)
+      dayOvs.forEach(o=>{
+        const g=guards.find(x=>x.id===o.guardId); if(!g) return;
+        if(!gm[o.guardId]) gm[o.guardId]={name:g.name,regular:0,stat:0,days:[]};
+        const r=parseFloat(o.regularHours)||0, st=parseFloat(o.statHours)||0;
+        gm[o.guardId].regular+=r; gm[o.guardId].stat+=st;
+        gm[o.guardId].days.push({date:ds,startTime:o.startTime,endTime:o.endTime,regular:r,stat:st});
+        guardsSeen.add(o.guardId);
+      });
+
+      // Second pass: handle guards on recurring schedule (no override) at this location
+      const dow=d.getDay();
+      scs.filter(s=>s.locationId===lid&&s.days.includes(dow)&&(!s.effectiveFrom||ds>=s.effectiveFrom)&&(!s.effectiveTo||ds<=s.effectiveTo)).forEach(s=>{
+        if(guardsSeen.has(s.guardId)) return; // already handled via override
+        // Check they don't have an override for a *different* location that day (would mean they swapped sites)
+        if(ovs.some(o=>o.date===ds&&o.guardId===s.guardId)) return;
+        const g=guards.find(x=>x.id===s.guardId); if(!g) return;
+        if(!gm[s.guardId]) gm[s.guardId]={name:g.name,regular:0,stat:0,days:[]};
+        const r=s.hours||0;
+        gm[s.guardId].regular+=r;
+        gm[s.guardId].days.push({date:ds,startTime:s.startTime,endTime:s.endTime,regular:r,stat:0});
       });
     }
     return gm;
