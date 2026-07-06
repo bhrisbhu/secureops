@@ -1672,16 +1672,17 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
                                   </div>
                                   <div style={{ flex:1, minWidth:0 }}>
                                     <div style={{ fontSize:"12px", fontWeight:"600", color:T.text }}>{g.name}</div>
-                                    {allOvs.length > 0 ? allOvs.map((ov,i) => (
-                                      <div key={ov.id} style={{ fontSize:"10px", color:T.textMute, display:"flex", alignItems:"center", gap:"6px", marginTop:"1px" }}>
-                                        <span>{ov.absent?"Absent":`${ov.startTime||""}${ov.endTime?"–"+ov.endTime:""}`}</span>
-                                        {(ov.regularHours||0)>0 && <span>· {ov.regularHours}h reg</span>}
-                                        {(ov.statHours||0)>0 && <span style={{ color:T.amber }}>· {ov.statHours}h★</span>}
-                                        {!isGuest && <button style={{ ...S.bsm(T.red), fontSize:"9px", padding:"1px 6px" }} onClick={()=>{ const u=ovs.filter(o=>o.id!==ov.id); setOvs(u); save(K.ov,u); }}>✕</button>}
+                                    {allOvs.length > 0 ? allOvs.map((ov) => (
+                                      <div key={ov.id} style={{ fontSize:"10px", color:T.textMute, display:"flex", alignItems:"center", gap:"4px", marginTop:"2px", flexWrap:"nowrap" }}>
+                                        <span style={{ whiteSpace:"nowrap" }}>{ov.absent?"Absent":`${ov.startTime||"—"}–${ov.endTime||"—"}`}</span>
+                                        {((ov.regularHours||0)>0||(ov.statHours||0)>0) && <span style={{ color:T.textMute }}>·</span>}
+                                        {(ov.regularHours||0)>0 && <span style={{ whiteSpace:"nowrap" }}>{ov.regularHours}h reg</span>}
+                                        {(ov.statHours||0)>0 && <span style={{ color:T.amber, whiteSpace:"nowrap" }}>{ov.statHours}h★</span>}
+                                        {!isGuest && <button style={{ ...S.bsm(T.red), fontSize:"9px", padding:"1px 5px", marginLeft:"2px" }} onClick={()=>{ const u=ovs.filter(o=>o.id!==ov.id); setOvs(u); save(K.ov,u); }}>✕</button>}
                                       </div>
                                     )) : (
-                                      <div style={{ fontSize:"10px", color:T.textMute }}>
-                                        {sh?.startTime||""}{sh?.endTime?"–"+sh.endTime:""}
+                                      <div style={{ fontSize:"10px", color:T.textMute, whiteSpace:"nowrap" }}>
+                                        {sh?.absent?"Absent":`${sh?.startTime||""}${sh?.endTime?"–"+sh.endTime:""}`}
                                         {(sh?.regularHours||sh?.hours||0)>0 && ` · ${sh?.regularHours||sh?.hours}h reg`}
                                         {(sh?.statHours||0)>0 && ` · ${sh.statHours}h★`}
                                       </div>
