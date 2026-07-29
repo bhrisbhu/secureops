@@ -3353,6 +3353,8 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
   const guardColors = ["#0050ff","#7b61ff","#00b894","#f6ad55","#e53e3e","#00d4ff","#f472b6"];
 
   const [todoInput, setTodoInput] = useState("");
+  const [editingTodoId, setEditingTodoId] = useState(null);
+  const [editingTodoText, setEditingTodoText] = useState("");
   function addTodo() {
     if (!todoInput.trim()) return;
     const updated = [{ id:uid(), text:todoInput.trim(), done:false, created:new Date().toISOString() }, ...todos];
@@ -3366,6 +3368,12 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
   function deleteTodo(id) {
     const updated = todos.filter(t => t.id!==id);
     setTodos(updated); save(K.td, updated);
+  }
+  function saveEditTodo(id) {
+    if (!editingTodoText.trim()) return;
+    const updated = todos.map(t => t.id===id ? {...t, text:editingTodoText.trim()} : t);
+    setTodos(updated); save(K.td, updated);
+    setEditingTodoId(null); setEditingTodoText("");
   }
   function clearDone() {
     const updated = todos.filter(t => !t.done);
@@ -3437,12 +3445,27 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
                   onChange={()=>toggleTodo(t.id)}
                   style={{ width:"16px", height:"16px", accentColor:T.blue, cursor:"pointer", flexShrink:0 }}
                 />
-                <span style={{ flex:1, fontSize:"13px", color:t.done?T.textMute:T.text, textDecoration:t.done?"line-through":"none", transition:"all 0.15s" }}>
-                  {t.text}
-                </span>
+                {editingTodoId === t.id ? (
+                  <input
+                    autoFocus
+                    style={{ ...S.inp, flex:1, fontSize:"13px", padding:"4px 8px" }}
+                    value={editingTodoText}
+                    onChange={e=>setEditingTodoText(e.target.value)}
+                    onKeyDown={e=>{ if(e.key==="Enter") saveEditTodo(t.id); if(e.key==="Escape"){ setEditingTodoId(null); setEditingTodoText(""); } }}
+                    onBlur={()=>saveEditTodo(t.id)}
+                  />
+                ) : (
+                  <span
+                    title="Click to edit"
+                    onClick={()=>{ setEditingTodoId(t.id); setEditingTodoText(t.text); }}
+                    style={{ flex:1, fontSize:"13px", color:t.done?T.textMute:T.text, textDecoration:t.done?"line-through":"none", transition:"all 0.15s", cursor:"text" }}
+                  >
+                    {t.text}
+                  </span>
+                )}
                 <button
                   onClick={()=>deleteTodo(t.id)}
-                  style={{ background:"transparent", border:"none", cursor:"pointer", color:T.textMute, fontSize:"16px", lineHeight:1, padding:"2px 4px", borderRadius:"4px" }}
+                  style={{ background:"transparent", border:"none", cursor:"pointer", color:T.textMute, fontSize:"16px", lineHeight:1, padding:"2px 4px", borderRadius:"4px", flexShrink:0 }}
                 >
                   ✕
                 </button>
