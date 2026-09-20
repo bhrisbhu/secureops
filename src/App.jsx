@@ -34,7 +34,7 @@ const LogoMark = ({ size = 32, radius = 8 }) => (
 );
 
 // ─── storage ──────────────────────────────────────────────────────────────────
-const K = { g:"so_g", l:"so_l", sc:"so_sc", ov:"so_ov", hi:"so_hi", pay:"so_pay", leads:"so_lds", inv:"so_inv", co:"so_co", log:"so_log", td:"so_td" };
+const K = { g:"so_g", l:"so_l", sc:"so_sc", ov:"so_ov", hi:"so_hi", pay:"so_pay", leads:"so_lds", inv:"so_inv", co:"so_co", log:"so_log", td:"so_td", st:"so_st" };
 import { load, save } from './supabase.js';
 
 // ─── utils ────────────────────────────────────────────────────────────────────
@@ -265,7 +265,7 @@ function Login({ onLogin }) {
             <LogoMark size={56} radius={14}/>
           </div>
           <div style={{ fontSize:"24px", fontWeight:"700", color:T.text, letterSpacing:"-0.5px" }}>SecureOps</div>
-          <div style={{ fontSize:"13px", color:T.textSub, marginTop:"4px" }}>Business Administration Platform</div>
+          <div style={{ fontSize:"13px", color:T.textSub, marginTop:"4px" }}>The World's #1 Business Administration Platform</div>
         </div>
         <div style={{ background:"rgba(255,255,255,0.85)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", border:"1px solid rgba(255,255,255,0.9)", borderRadius:"20px", padding:"36px", boxShadow:"0 8px 40px rgba(0,80,255,0.12)" }}>
           <div style={{ fontSize:"16px", fontWeight:"600", color:T.text, marginBottom:"24px" }}>Sign in to your account</div>
@@ -424,6 +424,7 @@ function Employees({ guards, setGuards, addLog, isGuest }) {
   const [search, setSearch] = useState(""); const [exp, setExp] = useState(null);
   const [confirmEl, ask] = useConfirm();
   const [saved, setSaved] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
   const formRef = useRef(null);
   const origRef = useRef(null);
   const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
@@ -456,8 +457,14 @@ function Employees({ guards, setGuards, addLog, isGuest }) {
       {confirmEl}
       {/* saved toast */}
       {saved && (
-        <div style={{ position:"fixed", bottom:"28px", right:"28px", background:T.green, color:"#fff", padding:"12px 20px", borderRadius:"10px", fontSize:"13px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.4)", zIndex:999, display:"flex", alignItems:"center", gap:"8px" }}>
+        <div style={{ position:"fixed", bottom:"28px", right:"28px", background:T.green, color:"#fff", padding:"12px 20px", borderRadius:"10px", fontSize:"13px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.15)", zIndex:999, display:"flex", alignItems:"center", gap:"8px" }}>
           ✓ Changes saved
+        </div>
+      )}
+      {/* cancelled toast */}
+      {cancelled && (
+        <div style={{ position:"fixed", bottom:"28px", right:"28px", background:T.textSub, color:"#fff", padding:"12px 20px", borderRadius:"10px", fontSize:"13px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.15)", zIndex:999, display:"flex", alignItems:"center", gap:"8px" }}>
+          ✕ Edit cancelled — no changes made
         </div>
       )}
       <F style={{ marginBottom:"14px", flexWrap:"wrap" }}>
@@ -486,7 +493,7 @@ function Employees({ guards, setGuards, addLog, isGuest }) {
         </div>
         <F style={{ marginTop:"10px" }}>
           <button style={S.bp} onClick={submit}>{editing?"Save Changes":"Add Employee"}</button>
-          {editing && <button style={S.bo} onClick={()=>{setForm(blank);setEditing(null);}}>Cancel</button>}
+          {editing && <button style={S.bo} onClick={()=>{ setForm(blank); setEditing(null); setCancelled(true); setTimeout(()=>setCancelled(false), 2500); }}>Cancel</button>}
         </F>
       </div>}
       </div>
@@ -723,7 +730,8 @@ function Locations({ locs, setLocs, addLog, isGuest }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // CALENDAR
 // ═══════════════════════════════════════════════════════════════════════════════
-function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
+function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest, settings={} }) {
+  const cfg = { ...DEFAULT_SETTINGS, ...settings };
   const today = new Date();
   const [yr, setYr] = useState(today.getFullYear()); const [mo, setMo] = useState(today.getMonth());
   const [sel, setSel] = useState(null); const [sub, setSub] = useState("cal");
@@ -756,6 +764,14 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
     const updated = [...ccDismissed, key];
     setCcDismissed(updated);
     try { localStorage.setItem("so_cc_dismissed", JSON.stringify(updated)); } catch {}
+  };
+  const [wsibDismissed, setWsibDismissed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("so_wsib_dismissed")||"[]"); } catch { return []; }
+  });
+  const dismissWsib = (key) => {
+    const updated = [...wsibDismissed, key];
+    setWsibDismissed(updated);
+    try { localStorage.setItem("so_wsib_dismissed", JSON.stringify(updated)); } catch {}
   };
 
   const dim = new Date(yr,mo+1,0).getDate();
@@ -1466,68 +1482,113 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest }) {
       {sub==="cal" && (
         <div>
           {/* ── CRA PAYROLL REMITTANCE REMINDER ── */}
-          {(() => {
+          {cfg.craEnabled && (() => {
             const now = new Date();
-            const todayDay = now.getDate();
-            const todayMo  = now.getMonth();
-            const todayYr  = now.getFullYear();
-            // Show reminder for the current real month only, on days 1–14
-            const isCurrentMonth = (mo === todayMo && yr === todayYr);
-            const isBeforeDue = todayDay <= 14;
+            const todayDay = now.getDate(), todayMo = now.getMonth(), todayYr = now.getFullYear();
+            const isCurrentMonth = (mo===todayMo && yr===todayYr);
+            const dueDay = parseInt(cfg.craDueDay||15);
             const craKey = `${todayYr}-${String(todayMo+1).padStart(2,"0")}`;
-            const isDismissed = crasDismissed.includes(craKey);
-            if (!isCurrentMonth || !isBeforeDue || isDismissed) return null;
+            if (!isCurrentMonth || todayDay > dueDay || crasDismissed.includes(craKey)) return null;
             return (
               <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"10px", padding:"12px 16px", marginBottom:"14px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"10px" }}>
                 <div style={{ display:"flex", alignItems:"flex-start", gap:"10px" }}>
                   <span style={{ fontSize:"20px", marginTop:"1px" }}>🇨🇦</span>
                   <div>
-                    <div style={{ fontWeight:"700", color:"#dc2626", fontSize:"13px", marginBottom:"3px" }}>
-                      CRA Payroll Remittance Due by the 15th
-                    </div>
+                    <div style={{ fontWeight:"700", color:"#dc2626", fontSize:"13px", marginBottom:"3px" }}>CRA Payroll Remittance Due by the {dueDay}th</div>
                     <div style={{ fontSize:"12px", color:T.textSub, lineHeight:1.6 }}>
-                      Remember to submit your payroll remittance to the CRA for <strong>{MONTHS[todayMo]} {todayYr}</strong> before the <strong>15th</strong>.
-                      This includes CPP contributions, EI premiums, and income tax deducted from employee pay.
+                      Submit your payroll remittance to the CRA for <strong>{MONTHS[todayMo]} {todayYr}</strong> before the <strong>{dueDay}th</strong>. Includes CPP, EI, and income tax.
                     </div>
                   </div>
                 </div>
-                <button
-                  style={{ flexShrink:0, background:"transparent", border:"1px solid #fecaca", borderRadius:"6px", padding:"5px 12px", fontSize:"11px", color:"#dc2626", cursor:"pointer", fontWeight:"600", whiteSpace:"nowrap" }}
-                  onClick={()=>dismissCra(craKey)}>
-                  ✓ Already Paid
-                </button>
+                <button style={{ flexShrink:0, background:"transparent", border:"1px solid #fecaca", borderRadius:"6px", padding:"5px 12px", fontSize:"11px", color:"#dc2626", cursor:"pointer", fontWeight:"600", whiteSpace:"nowrap" }} onClick={()=>dismissCra(craKey)}>✓ Already Paid</button>
+              </div>
+            );
+          })()}
+          {/* ── CRA QUARTERLY INSTALLMENTS REMINDER ── */}
+          {cfg.craQEnabled && (() => {
+            const now = new Date();
+            const todayDay = now.getDate(), todayMo = now.getMonth(), todayYr = now.getFullYear();
+            const isCurrentMonth = (mo===todayMo && yr===todayYr);
+            if (!isCurrentMonth) return null;
+            // Check each custom quarterly date
+            const quarters = [cfg.craQ1, cfg.craQ2, cfg.craQ3, cfg.craQ4].filter(Boolean);
+            const matchingQ = quarters.find(q => {
+              const [mm, dd] = q.split("-").map(Number);
+              if (!mm||!dd||mm<1||mm>12) return false;
+              return (todayMo+1) === mm && todayDay >= 1 && todayDay <= dd;
+            });
+            if (!matchingQ) return null;
+            const [mm, dd] = matchingQ.split("-").map(Number);
+            const qKey = `craq-${todayYr}-${String(mm).padStart(2,"0")}`;
+            if (crasDismissed.includes(qKey)) return null;
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            return (
+              <div style={{ background:"#f5f3ff", border:"1px solid #ddd6fe", borderRadius:"10px", padding:"12px 16px", marginBottom:"14px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"10px" }}>
+                <div style={{ display:"flex", alignItems:"flex-start", gap:"10px" }}>
+                  <span style={{ fontSize:"20px", marginTop:"1px" }}>📅</span>
+                  <div>
+                    <div style={{ fontWeight:"700", color:"#7c3aed", fontSize:"13px", marginBottom:"3px" }}>CRA Quarterly Tax Installment Due {months[mm-1]} {dd}</div>
+                    <div style={{ fontSize:"12px", color:T.textSub, lineHeight:1.6 }}>
+                      Your quarterly installment is due by <strong>{months[mm-1]} {dd}, {todayYr}</strong>.
+                    </div>
+                  </div>
+                </div>
+                <button style={{ flexShrink:0, background:"transparent", border:"1px solid #ddd6fe", borderRadius:"6px", padding:"5px 12px", fontSize:"11px", color:"#7c3aed", cursor:"pointer", fontWeight:"600", whiteSpace:"nowrap" }} onClick={()=>dismissCra(qKey)}>✓ Already Paid</button>
               </div>
             );
           })()}
           {/* ── CREDIT CARD REMINDER ── */}
-          {(() => {
+          {cfg.ccEnabled && (() => {
             const now = new Date();
-            const todayDay = now.getDate();
-            const todayMo  = now.getMonth();
-            const todayYr  = now.getFullYear();
-            const isCurrentMonth = (mo === todayMo && yr === todayYr);
-            const isBeforeDue = todayDay <= 14;
+            const todayDay = now.getDate(), todayMo = now.getMonth(), todayYr = now.getFullYear();
+            const isCurrentMonth = (mo===todayMo && yr===todayYr);
+            const dueDay = parseInt(cfg.ccDueDay||15);
             const ccKey = `cc-${todayYr}-${String(todayMo+1).padStart(2,"0")}`;
-            const isDismissed = ccDismissed.includes(ccKey);
-            if (!isCurrentMonth || !isBeforeDue || isDismissed) return null;
+            if (!isCurrentMonth || todayDay > dueDay || ccDismissed.includes(ccKey)) return null;
             return (
               <div style={{ background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:"10px", padding:"12px 16px", marginBottom:"14px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"10px" }}>
                 <div style={{ display:"flex", alignItems:"flex-start", gap:"10px" }}>
                   <span style={{ fontSize:"20px", marginTop:"1px" }}>💳</span>
                   <div>
-                    <div style={{ fontWeight:"700", color:"#1d4ed8", fontSize:"13px", marginBottom:"3px" }}>
-                      Company Credit Card Bill Due by the 15th
-                    </div>
+                    <div style={{ fontWeight:"700", color:"#1d4ed8", fontSize:"13px", marginBottom:"3px" }}>Company Credit Card Bill Due by the {dueDay}th</div>
                     <div style={{ fontSize:"12px", color:T.textSub, lineHeight:1.6 }}>
-                      Don't forget to pay the company credit card bill for <strong>{MONTHS[todayMo]} {todayYr}</strong> before the <strong>15th</strong> to avoid interest charges.
+                      Pay the company credit card bill for <strong>{MONTHS[todayMo]} {todayYr}</strong> before the <strong>{dueDay}th</strong>.
                     </div>
                   </div>
                 </div>
-                <button
-                  style={{ flexShrink:0, background:"transparent", border:"1px solid #bfdbfe", borderRadius:"6px", padding:"5px 12px", fontSize:"11px", color:"#1d4ed8", cursor:"pointer", fontWeight:"600", whiteSpace:"nowrap" }}
-                  onClick={()=>dismissCc(ccKey)}>
-                  ✓ Already Paid
-                </button>
+                <button style={{ flexShrink:0, background:"transparent", border:"1px solid #bfdbfe", borderRadius:"6px", padding:"5px 12px", fontSize:"11px", color:"#1d4ed8", cursor:"pointer", fontWeight:"600", whiteSpace:"nowrap" }} onClick={()=>dismissCc(ccKey)}>✓ Already Paid</button>
+              </div>
+            );
+          })()}
+          {/* ── WSIB QUARTERLY REMINDER ── */}
+          {cfg.wsibEnabled && (() => {
+            const now = new Date();
+            const todayDay = now.getDate(), todayMo = now.getMonth(), todayYr = now.getFullYear();
+            const isCurrentMonth = (mo===todayMo && yr===todayYr);
+            if (!isCurrentMonth) return null;
+            const quarters = [cfg.wsibQ1, cfg.wsibQ2, cfg.wsibQ3, cfg.wsibQ4].filter(Boolean);
+            const matchingQ = quarters.find(q => {
+              const [mm, dd] = q.split("-").map(Number);
+              if (!mm||!dd||mm<1||mm>12) return false;
+              return (todayMo+1) === mm && todayDay >= 1 && todayDay <= dd;
+            });
+            if (!matchingQ) return null;
+            const [mm, dd] = matchingQ.split("-").map(Number);
+            const wsibKey = `wsib-${todayYr}-${String(mm).padStart(2,"0")}`;
+            if (wsibDismissed.includes(wsibKey)) return null;
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            return (
+              <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:"10px", padding:"12px 16px", marginBottom:"14px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"10px" }}>
+                <div style={{ display:"flex", alignItems:"flex-start", gap:"10px" }}>
+                  <span style={{ fontSize:"20px", marginTop:"1px" }}>🏥</span>
+                  <div>
+                    <div style={{ fontWeight:"700", color:"#15803d", fontSize:"13px", marginBottom:"3px" }}>WSIB Quarterly Payment Due {months[mm-1]} {dd}</div>
+                    <div style={{ fontSize:"12px", color:T.textSub, lineHeight:1.6 }}>
+                      Your WSIB quarterly premium payment is due by <strong>{months[mm-1]} {dd}, {todayYr}</strong>.
+                    </div>
+                  </div>
+                </div>
+                <button style={{ flexShrink:0, background:"transparent", border:"1px solid #bbf7d0", borderRadius:"6px", padding:"5px 12px", fontSize:"11px", color:"#15803d", cursor:"pointer", fontWeight:"600", whiteSpace:"nowrap" }} onClick={()=>dismissWsib(wsibKey)}>✓ Already Paid</button>
               </div>
             );
           })()}
@@ -1740,7 +1801,14 @@ function Reports({ guards, locs, scs, ovs, history, setHistory, addLog, isGuest,
   const gIdx = id => guards.findIndex(g=>g.id===id);
 
   function buildRpt(lid) {
-    const start=pDate(sd),end=pDate(ed); const gm={};
+    // Validate dates before looping — an invalid or far-future year causes an infinite loop
+    const start=pDate(sd), end=pDate(ed);
+    if (!sd || !ed || isNaN(start) || isNaN(end)) return {};
+    if (end < start) return {};
+    // Cap the range at 2 years (730 days) to prevent accidental freeze from typos like year 9802
+    const diffDays = (end - start) / 86400000;
+    if (diffDays > 730) return {};
+    const gm={};
     for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
       const ds=dStr(d.getFullYear(),d.getMonth(),d.getDate());
       // Get all overrides for this day at this location
@@ -1798,7 +1866,16 @@ function Reports({ guards, locs, scs, ovs, history, setHistory, addLog, isGuest,
           {!isGuest && <button style={{ ...S.bs, marginTop:"13px" }} onClick={saveHist}>💾 Save to History</button>}
         </F>
       </div>
-      {shown.length===0&&<div style={S.card}><div style={S.empty}>No locations added yet.</div></div>}
+      {/* Date validation warning */}
+      {(() => {
+        if (!sd || !ed) return null;
+        const start=pDate(sd), end=pDate(ed);
+        if (isNaN(start)||isNaN(end)) return <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"10px", padding:"12px 16px", color:"#dc2626", fontSize:"13px", marginBottom:"14px" }}>⚠ Invalid date — please check the start or end date.</div>;
+        if (end<start) return <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"10px", padding:"12px 16px", color:"#dc2626", fontSize:"13px", marginBottom:"14px" }}>⚠ End date must be after start date.</div>;
+        const diff=(end-start)/86400000;
+        if (diff>730) return <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"10px", padding:"12px 16px", color:"#dc2626", fontSize:"13px", marginBottom:"14px" }}>⚠ Date range is over 2 years — please check for a typo in the year (e.g. 9802 instead of 2026).</div>;
+        return null;
+      })()}
 
       {/* ── EMPLOYEE TOTALS SUMMARY (only when viewing all locations) ── */}
       {sl==="all" && shown.length > 0 && (() => {
@@ -1943,6 +2020,9 @@ function Reports({ guards, locs, scs, ovs, history, setHistory, addLog, isGuest,
 function History({ history, setHistory, addLog, isGuest }) {
   const [exp, setExp] = useState(null);
   const [confirmEl, ask] = useConfirm();
+  const [filterSd, setFilterSd] = useState("");
+  const [filterEd, setFilterEd] = useState("");
+
   const del = id => ask("Delete this saved report?", ()=>{
     const h=history.find(x=>x.id===id);
     const u=history.filter(h=>h.id!==id); setHistory(u); save(K.hi,u); if(exp===id)setExp(null);
@@ -1954,11 +2034,40 @@ function History({ history, setHistory, addLog, isGuest }) {
     if(!rows.length) h.data.forEach(l=>Object.values(l.guards).forEach(g=>rows.push([h.startDate,h.endDate,l.locationName,l.client||"",g.name,"","","",g.regular,g.stat,g.regular+g.stat])));
     mkCSV(`history_${h.startDate}_${h.endDate}`,["Period Start","Period End","Location","Client","Employee","Date","Start","End","Regular","Stat","Total"],rows);
   }
+
+  // Filter reports by date range — a report matches if its period overlaps the filter range
+  const filtered = history.filter(h => {
+    if (!filterSd && !filterEd) return true;
+    if (filterSd && h.endDate < filterSd) return false;
+    if (filterEd && h.startDate > filterEd) return false;
+    return true;
+  });
+
   if (!history.length) return <div style={S.card}><div style={S.empty}>No saved reports. Save from the Reports page.</div></div>;
   return (
     <div>
       {confirmEl}
-      {history.map(h => {
+      {/* Date filter bar */}
+      <div style={{ ...S.card, marginBottom:"14px", padding:"14px 20px" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"10px", flexWrap:"wrap" }}>
+          <span style={{ fontSize:"11px", fontWeight:"600", color:T.textSub }}>Filter by period:</span>
+          <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+            <input style={{ ...S.inp, width:"150px" }} type="date" value={filterSd} onChange={e=>setFilterSd(e.target.value)} placeholder="From"/>
+            <span style={{ fontSize:"12px", color:T.textMute }}>→</span>
+            <input style={{ ...S.inp, width:"150px" }} type="date" value={filterEd} onChange={e=>setFilterEd(e.target.value)} placeholder="To"/>
+          </div>
+          {(filterSd||filterEd) && (
+            <button style={S.bo} onClick={()=>{ setFilterSd(""); setFilterEd(""); }}>Clear</button>
+          )}
+          <span style={{ fontSize:"11px", color:T.textMute, marginLeft:"auto" }}>
+            {filtered.length} of {history.length} report{history.length!==1?"s":""}
+          </span>
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div style={S.card}><div style={S.empty}>No saved reports match the selected date range.</div></div>
+      ) : filtered.map(h => {
         const tot=h.data.reduce((s,l)=>s+Object.values(l.guards).reduce((s2,g)=>s2+g.regular+g.stat,0),0);
         const open=exp===h.id;
         return (
@@ -2390,13 +2499,14 @@ function addDays(dateStr, n) {
 function sendGmail(inv) {
   const clientEmail = inv.clientEmail || "";
   const subject = encodeURIComponent(`Invoice for ${inv.summary||inv.number} from ${inv.companyName||"SecureOps"}`);
+  const senderName = inv.senderName || inv.companyName || "Chris";
   const body = encodeURIComponent(
 `Hello,
 
 Please find attached Invoice for ${inv.summary||inv.number}.
 
 Best regards,
-Chris
+${senderName}
 ${inv.companyName||""}${inv.companyAddress?"\n"+inv.companyAddress:""}${inv.companyEmail?"\n"+inv.companyEmail:""}`
   );
   const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(clientEmail)}&su=${subject}&body=${body}`;
@@ -2558,7 +2668,7 @@ function printInvoiceHTML(inv) {
 }
 
 
-function Invoices({ locs, addLog, isGuest }) {
+function Invoices({ locs, addLog, isGuest, settings={} }) {
   const [invs, setInvs] = useState([]);
   const [rdy, setRdy]   = useState(false);
   const [view, setView] = useState("dashboard");
@@ -2798,7 +2908,7 @@ function Invoices({ locs, addLog, isGuest }) {
                     <td style={S.td}><div style={{ display:"flex", gap:"4px", flexWrap:"wrap" }}>
                       {!isGuest && <button style={S.bsm("#60a5fa")} onClick={()=>startEdit(inv)}>Edit</button>}
                       <button style={S.bsm("#a78bfa")} onClick={()=>printInvoiceHTML(inv)}>🖨 PDF</button>
-                      <button style={S.bsm("#ea4335")} title="Opens Gmail compose — remember to attach the PDF manually" onClick={()=>sendGmail(inv)}>✉ Send</button>
+                      <button style={S.bsm("#ea4335")} title="Opens Gmail compose — remember to attach the PDF manually" onClick={()=>sendGmail({...inv, senderName:settings.senderName})}>✉ Send</button>
                       {!isGuest && inv.status==="draft" && <button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"outstanding")}>Mark as Sent</button>}
                       {!isGuest && inv.status==="outstanding" && <button style={S.bsm("#10b981")} onClick={()=>setStatus(inv.id,"paid")}>Paid</button>}
                       {!isGuest && inv.status==="outstanding" && <button style={S.bsm("#ef4444")} onClick={()=>setStatus(inv.id,"overdue")}>Overdue</button>}
@@ -3070,7 +3180,7 @@ function Invoices({ locs, addLog, isGuest }) {
           <div style={{ display:"flex", gap:"8px", flexWrap:"wrap", alignItems:"center" }}>
             <button style={S.bp} onClick={submit}>Save Invoice</button>
             <button style={{ ...S.bsm("#a78bfa"), padding:"7px 13px", fontSize:"10px" }} onClick={()=>{ const {sub,discAmt,afterDisc,hstAmt,total}=calcTotals(); printInvoiceHTML({...form,...co,logo:logoB64,subtotal:sub,discAmt,afterDisc,hstAmt,total}); }}>🖨 Preview PDF</button>
-            <button style={{ ...S.bsm("#ea4335"), padding:"7px 13px", fontSize:"10px" }} title="Opens Gmail compose — remember to attach the PDF manually" onClick={()=>{ const {sub,discAmt,afterDisc,hstAmt,total}=calcTotals(); sendGmail({...form,...co,logo:logoB64,subtotal:sub,discAmt,afterDisc,hstAmt,total}); }}>✉ Send via Gmail</button>
+            <button style={{ ...S.bsm("#ea4335"), padding:"7px 13px", fontSize:"10px" }} title="Opens Gmail compose — remember to attach the PDF manually" onClick={()=>{ const {sub,discAmt,afterDisc,hstAmt,total}=calcTotals(); sendGmail({...form,...co,logo:logoB64,subtotal:sub,discAmt,afterDisc,hstAmt,total,senderName:settings.senderName}); }}>✉ Send via Gmail</button>
             <button style={S.bo} onClick={()=>setView(editing?"list":"dashboard")}>Cancel</button>
             {editing&&<button style={S.bd} onClick={()=>delInv(editing)}>Delete Invoice</button>}
           </div>
@@ -3269,7 +3379,7 @@ const SIGN_OUT_QUOTES = [
 
 // ─── dashboard greetings ──────────────────────────────────────────────────────
 const GREETINGS_MORNING = [
-  "Good morning", "Rise and grind", "Morning, boss",
+  "Good morning", "Rise and grind", "Morning, {name}",
   "Top of the morning", "Another day, another opportunity",
   "Morning! Coffee's not going to drink itself ☕",
   "Good morning. Let's make today count.",
@@ -3288,10 +3398,11 @@ const GREETINGS_EVENING = [
   "Evening mode: activated 🌆",
   "Night owl hours 🦉",
 ];
-function getGreeting() {
+function getGreeting(name="") {
   const h = new Date().getHours();
   const arr = h < 12 ? GREETINGS_MORNING : h < 17 ? GREETINGS_AFTERNOON : GREETINGS_EVENING;
-  return arr[Math.floor(Math.random()*arr.length)];
+  const g = arr[Math.floor(Math.random()*arr.length)];
+  return g.replace("{name}", name||"");
 }
 function QuoteFlash({ quote, onDone }) {
   const [phase, setPhase] = useState("in"); // in | show | out
@@ -3328,7 +3439,8 @@ function QuoteFlash({ quote, onDone }) {
 }
 
 // ─── App Dashboard ────────────────────────────────────────────────────────────
-function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, setTodos }) {
+function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, setTodos, settings={} }) {
+  const senderName = settings.senderName || "Chris";
   const today = todayStr();
   const todayShifts = locs.length > 0 || guards.length > 0 ? (() => {
     const dow = pDate(today).getDay();
@@ -3349,7 +3461,7 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
   const activeGuards = guards.filter(g=>g.status==="Active");
   const now = new Date();
   const hour = now.getHours();
-  const [greeting] = useState(() => getGreeting());
+  const [greeting] = useState(() => getGreeting(senderName));
   const guardColors = ["#0050ff","#7b61ff","#00b894","#f6ad55","#e53e3e","#00d4ff","#f472b6"];
 
   const [todoInput, setTodoInput] = useState("");
@@ -3385,7 +3497,7 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
     <div>
       {/* greeting */}
       <div style={{ marginBottom:"28px" }}>
-        <div style={{ fontSize:"26px", fontWeight:"700", color:T.text, letterSpacing:"-0.5px" }}>{greeting}, Chris 👋</div>
+        <div style={{ fontSize:"26px", fontWeight:"700", color:T.text, letterSpacing:"-0.5px" }}>{greeting}, {senderName} 👋</div>
         <div style={{ fontSize:"13px", color:T.textMute, marginTop:"4px" }}>
           {now.toLocaleDateString("en-CA", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}
         </div>
@@ -3525,16 +3637,209 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
             {!isGuest && <button style={{ ...S.bp, width:"100%", marginTop:"12px", padding:"9px" }} onClick={()=>setTab("inv")}>+ New Invoice</button>}
           </div>
 
-          {/* quick links */}
-          <div style={S.card}>
-            <div style={S.ct}>Quick Access</div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px" }}>
-              {[["📊 Reports","rep"],["💰 Revenue","pay"],["🗂 Saved Reports","his"],["🎯 Sales","sal"]].map(([l,id])=>(
-                <button key={id} style={{ ...S.bo, padding:"10px", fontSize:"12px", textAlign:"center", borderRadius:"10px" }} onClick={()=>setTab(id)}>{l}</button>
-              ))}
-            </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+const DEFAULT_SETTINGS = {
+  senderName: "Chris",
+  craEnabled: true,
+  craDueDay: 15,
+  ccEnabled: true,
+  ccDueDay: 15,
+  craQEnabled: false,
+  craQ1: "03-15",
+  craQ2: "06-15",
+  craQ3: "09-15",
+  craQ4: "12-15",
+  // WSIB Quarterly Payments (Ontario default: Apr 30, Jul 31, Oct 31, Jan 31)
+  wsibEnabled: false,
+  wsibQ1: "04-30",
+  wsibQ2: "07-31",
+  wsibQ3: "10-31",
+  wsibQ4: "01-31",
+};
+
+function Settings({ settings, setSettings }) {
+  const [form, setForm] = useState({ ...DEFAULT_SETTINGS, ...settings });
+  const [saved, setSaved] = useState(false);
+
+  function saveSettings() {
+    setSettings(form);
+    save(K.st, form);
+    setSaved(true); setTimeout(() => setSaved(false), 2500);
+  }
+
+  const toggle = k => setForm(p => ({ ...p, [k]: !p[k] }));
+  const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
+
+  return (
+    <div>
+      {saved && (
+        <div style={{ position:"fixed", bottom:"28px", right:"28px", background:T.green, color:"#fff", padding:"12px 20px", borderRadius:"10px", fontSize:"13px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.15)", zIndex:999 }}>
+          ✓ Settings saved
+        </div>
+      )}
+
+      {/* ── EMAIL SIGNATURE ── */}
+      <div style={S.card}>
+        <div style={S.ct}>✉ Email Signature</div>
+        <div style={{ marginBottom:"14px" }}>
+          <label style={S.lbl}>Your Name (used in Gmail invoice signature)</label>
+          <input style={{ ...S.inp, maxWidth:"300px" }} value={form.senderName} onChange={f("senderName")} placeholder="e.g. Chris"/>
+          <div style={{ fontSize:"11px", color:T.textMute, marginTop:"6px" }}>
+            Preview: <em>"Best regards, {form.senderName||"—"}"</em>
           </div>
         </div>
+      </div>
+
+      {/* ── REMINDERS ── */}
+      <div style={S.card}>
+        <div style={S.ct}>🔔 Calendar Reminders</div>
+        <div style={{ fontSize:"12px", color:T.textMute, marginBottom:"16px" }}>
+          Reminders appear on the Calendar page during the specified window each month. Each reminder can be dismissed individually once actioned.
+        </div>
+
+        {/* CRA Payroll Remittance */}
+        <div style={{ padding:"16px", background:"rgba(220,38,38,0.03)", border:"1px solid rgba(220,38,38,0.1)", borderRadius:"10px", marginBottom:"12px" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"10px" }}>
+            <div>
+              <div style={{ fontSize:"13px", fontWeight:"600", color:T.text }}>🇨🇦 CRA Payroll Remittance</div>
+              <div style={{ fontSize:"11px", color:T.textMute, marginTop:"2px" }}>Reminds you to submit CPP, EI, and income tax deductions to the CRA</div>
+            </div>
+            <label style={{ display:"flex", alignItems:"center", gap:"8px", cursor:"pointer" }}>
+              <div onClick={()=>toggle("craEnabled")} style={{ width:"40px", height:"22px", borderRadius:"11px", background:form.craEnabled?T.blue:"#cbd5e1", position:"relative", cursor:"pointer", transition:"background 0.2s", flexShrink:0 }}>
+                <div style={{ position:"absolute", top:"3px", left:form.craEnabled?"21px":"3px", width:"16px", height:"16px", borderRadius:"50%", background:"#fff", transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.2)" }}/>
+              </div>
+              <span style={{ fontSize:"12px", color:form.craEnabled?T.blue:T.textMute, fontWeight:"600" }}>{form.craEnabled?"On":"Off"}</span>
+            </label>
+          </div>
+          {form.craEnabled && (
+            <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+              <label style={{ ...S.lbl, marginBottom:0, whiteSpace:"nowrap" }}>Show reminder from day 1 until day</label>
+              <input style={{ ...S.inp, width:"70px" }} type="number" min="1" max="28" value={form.craDueDay} onChange={f("craDueDay")} />
+              <span style={{ fontSize:"12px", color:T.textMute }}>of each month</span>
+            </div>
+          )}
+        </div>
+
+        {/* CRA Quarterly Installments */}
+        <div style={{ padding:"16px", background:"rgba(124,58,237,0.03)", border:"1px solid rgba(124,58,237,0.1)", borderRadius:"10px", marginBottom:"12px" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"10px" }}>
+            <div>
+              <div style={{ fontSize:"13px", fontWeight:"600", color:T.text }}>📅 CRA Quarterly Tax Installments</div>
+              <div style={{ fontSize:"11px", color:T.textMute, marginTop:"2px" }}>Set your four custom due dates — varies by fiscal year end</div>
+            </div>
+            <label style={{ display:"flex", alignItems:"center", gap:"8px", cursor:"pointer" }}>
+              <div onClick={()=>toggle("craQEnabled")} style={{ width:"40px", height:"22px", borderRadius:"11px", background:form.craQEnabled?T.purple:"#cbd5e1", position:"relative", cursor:"pointer", transition:"background 0.2s", flexShrink:0 }}>
+                <div style={{ position:"absolute", top:"3px", left:form.craQEnabled?"21px":"3px", width:"16px", height:"16px", borderRadius:"50%", background:"#fff", transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.2)" }}/>
+              </div>
+              <span style={{ fontSize:"12px", color:form.craQEnabled?T.purple:T.textMute, fontWeight:"600" }}>{form.craQEnabled?"On":"Off"}</span>
+            </label>
+          </div>
+          {form.craQEnabled && (
+            <div>
+              <div style={{ fontSize:"11px", color:T.textMute, marginBottom:"10px" }}>
+                Enter each due date as <strong>MM-DD</strong> (e.g. 03-15 for March 15). The reminder will appear from the 1st of that month until the due date. Each quarter is dismissible independently.
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
+                {[["Q1 Due Date","craQ1"],["Q2 Due Date","craQ2"],["Q3 Due Date","craQ3"],["Q4 Due Date","craQ4"]].map(([label, key]) => (
+                  <div key={key}>
+                    <label style={S.lbl}>{label}</label>
+                    <input
+                      style={{ ...S.inp }}
+                      type="text"
+                      maxLength={5}
+                      placeholder="MM-DD"
+                      value={form[key]||""}
+                      onChange={e => setForm(p=>({...p,[key]:e.target.value}))}
+                    />
+                    {form[key] && (() => {
+                      const [mm,dd] = (form[key]||"").split("-").map(Number);
+                      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                      if (mm>=1&&mm<=12&&dd>=1&&dd<=31) return <div style={{ fontSize:"10px", color:T.purple, marginTop:"3px" }}>{months[mm-1]} {dd}</div>;
+                      return <div style={{ fontSize:"10px", color:T.red, marginTop:"3px" }}>Invalid — use MM-DD</div>;
+                    })()}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* WSIB Quarterly */}
+        <div style={{ padding:"16px", background:"rgba(0,184,148,0.03)", border:"1px solid rgba(0,184,148,0.15)", borderRadius:"10px", marginBottom:"12px" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"10px" }}>
+            <div>
+              <div style={{ fontSize:"13px", fontWeight:"600", color:T.text }}>🏥 WSIB Quarterly Payments</div>
+              <div style={{ fontSize:"11px", color:T.textMute, marginTop:"2px" }}>Ontario default: Apr 30, Jul 31, Oct 31, Jan 31 — customizable for your province/schedule</div>
+            </div>
+            <label style={{ display:"flex", alignItems:"center", gap:"8px", cursor:"pointer" }}>
+              <div onClick={()=>toggle("wsibEnabled")} style={{ width:"40px", height:"22px", borderRadius:"11px", background:form.wsibEnabled?T.green:"#cbd5e1", position:"relative", cursor:"pointer", transition:"background 0.2s", flexShrink:0 }}>
+                <div style={{ position:"absolute", top:"3px", left:form.wsibEnabled?"21px":"3px", width:"16px", height:"16px", borderRadius:"50%", background:"#fff", transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.2)" }}/>
+              </div>
+              <span style={{ fontSize:"12px", color:form.wsibEnabled?T.green:T.textMute, fontWeight:"600" }}>{form.wsibEnabled?"On":"Off"}</span>
+            </label>
+          </div>
+          {form.wsibEnabled && (
+            <div>
+              <div style={{ fontSize:"11px", color:T.textMute, marginBottom:"10px" }}>
+                Enter each due date as <strong>MM-DD</strong>. The reminder appears from the 1st of that month until the due date. Each quarter is dismissible independently.
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
+                {[["Q1 Due Date","wsibQ1"],["Q2 Due Date","wsibQ2"],["Q3 Due Date","wsibQ3"],["Q4 Due Date","wsibQ4"]].map(([label, key]) => (
+                  <div key={key}>
+                    <label style={S.lbl}>{label}</label>
+                    <input
+                      style={{ ...S.inp }}
+                      type="text"
+                      maxLength={5}
+                      placeholder="MM-DD"
+                      value={form[key]||""}
+                      onChange={e => setForm(p=>({...p,[key]:e.target.value}))}
+                    />
+                    {form[key] && (() => {
+                      const [mm,dd] = (form[key]||"").split("-").map(Number);
+                      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                      if (mm>=1&&mm<=12&&dd>=1&&dd<=31) return <div style={{ fontSize:"10px", color:T.green, marginTop:"3px" }}>{months[mm-1]} {dd}</div>;
+                      return <div style={{ fontSize:"10px", color:T.red, marginTop:"3px" }}>Invalid — use MM-DD</div>;
+                    })()}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Credit Card */}
+        <div style={{ padding:"16px", background:"rgba(0,80,255,0.03)", border:"1px solid rgba(0,80,255,0.08)", borderRadius:"10px", marginBottom:"16px" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"10px" }}>
+            <div>
+              <div style={{ fontSize:"13px", fontWeight:"600", color:T.text }}>💳 Company Credit Card Bill</div>
+              <div style={{ fontSize:"11px", color:T.textMute, marginTop:"2px" }}>Reminds you to pay the monthly company credit card bill</div>
+            </div>
+            <label style={{ display:"flex", alignItems:"center", gap:"8px", cursor:"pointer" }}>
+              <div onClick={()=>toggle("ccEnabled")} style={{ width:"40px", height:"22px", borderRadius:"11px", background:form.ccEnabled?T.blue:"#cbd5e1", position:"relative", cursor:"pointer", transition:"background 0.2s", flexShrink:0 }}>
+                <div style={{ position:"absolute", top:"3px", left:form.ccEnabled?"21px":"3px", width:"16px", height:"16px", borderRadius:"50%", background:"#fff", transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.2)" }}/>
+              </div>
+              <span style={{ fontSize:"12px", color:form.ccEnabled?T.blue:T.textMute, fontWeight:"600" }}>{form.ccEnabled?"On":"Off"}</span>
+            </label>
+          </div>
+          {form.ccEnabled && (
+            <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+              <label style={{ ...S.lbl, marginBottom:0, whiteSpace:"nowrap" }}>Show reminder from day 1 until day</label>
+              <input style={{ ...S.inp, width:"70px" }} type="number" min="1" max="28" value={form.ccDueDay} onChange={f("ccDueDay")} />
+              <span style={{ fontSize:"12px", color:T.textMute }}>of each month</span>
+            </div>
+          )}
+        </div>
+
+        <button style={S.bp} onClick={saveSettings}>Save Settings</button>
       </div>
     </div>
   );
@@ -3543,27 +3848,27 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
 const TABS = [
   { id:"home", label:"Dashboard",    icon:"▦", section:"Operations" },
   { id:"emp",  label:"Employees",     icon:"👤", section:"Operations" },
-  { id:"loc",  label:"Locations",     icon:"📍", section:"Operations" },
+  { id:"loc",  label:"Sites (Client)", icon:"📍", section:"Operations" },
   { id:"cal",  label:"Calendar",      icon:"📅", section:"Operations" },
-  { id:"rep",  label:"Reports",       icon:"📊", section:"Operations" },
+  { id:"rep",  label:"Hours & Reports",    icon:"📊", section:"Operations" },
   { id:"his",  label:"Saved Reports", icon:"🗂",  section:"Operations" },
   { id:"act",  label:"Activity Log",  icon:"📋", section:"Operations" },
   { id:"inv",  label:"Invoices",      icon:"🧾", section:"Finance" },
   { id:"pay",  label:"Revenue",       icon:"💰", section:"Finance" },
-  { id:"sal",  label:"Sales",         icon:"🎯", section:"Finance" },
+  { id:"cfg",  label:"Settings",      icon:"⚙️",  section:"Finance" },
 ];
 
 const PAGE_META = {
-  home: { title:"Dashboard",     subtitle:"Welcome back — here's what's happening today" },
-  emp: { title:"Employees",     subtitle:"Manage your employee records and personnel information" },
-  loc: { title:"Locations",     subtitle:"Client sites, contracts, and billing rates" },
-  cal: { title:"Calendar",      subtitle:"Schedules, shifts, and daily attendance" },
-  rep: { title:"Reports",       subtitle:"Export hours by location and time period" },
-  his: { title:"Saved Reports", subtitle:"Saved period reports" },
-  act: { title:"Activity Log",  subtitle:"A running record of every change made in the app" },
-  inv: { title:"Invoices",      subtitle:"Create and manage client invoices" },
-  pay: { title:"Revenue",       subtitle:"Invoice payments, pending collections, and revenue tracking" },
-  sal: { title:"Sales",         subtitle:"Lead pipeline and client acquisition" },
+  home: { title:"Dashboard",        subtitle:"Welcome back — here's what's happening today" },
+  emp:  { title:"Employees",        subtitle:"Manage your employee records and personnel information" },
+  loc:  { title:"Sites (Client)",     subtitle:"Client sites, contracts, and billing rates" },
+  cal:  { title:"Calendar",         subtitle:"Schedules, shifts, and daily attendance" },
+  rep:  { title:"Hours & Reports",  subtitle:"Track and export employee hours by location and time period" },
+  his:  { title:"Saved Reports",    subtitle:"Saved period reports" },
+  act:  { title:"Activity Log",     subtitle:"A running record of every change made in the app" },
+  inv:  { title:"Invoices",         subtitle:"Create and manage client invoices" },
+  pay:  { title:"Revenue",          subtitle:"Invoice payments, pending collections, and revenue tracking" },
+  cfg:  { title:"Settings",         subtitle:"Configure reminders, email signature, and app preferences" },
 };
 
 // ─── inject viewport meta and mobile CSS once ────────────────────────────────
@@ -3603,6 +3908,7 @@ export default function App() {
   const [logEntries, setLogEntries] = useState([]);
   const [invs, setInvsCache] = useState([]);
   const [todos, setTodos] = useState([]);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [loaded, setLoaded] = useState(false);
   const [fadeIn, setFadeIn] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -3615,9 +3921,10 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const [g,l,sc,ov,hi,lg,iv,td] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv),load(K.td)]);
+      const [g,l,sc,ov,hi,lg,iv,td,st] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv),load(K.td),load(K.st)]);
       if(g) setGuards(g); if(l) setLocs(l); if(sc) setScs(sc); if(ov) setOvs(ov); if(hi) setHistory(hi);
       if(lg) setLogEntries(lg); if(iv) setInvsCache(iv); if(td) setTodos(td);
+      if(st) setSettings({...DEFAULT_SETTINGS,...st});
       setLoaded(true);
     })();
   }, []);
@@ -3739,16 +4046,16 @@ export default function App() {
           <div style={S.pageTitle}>{meta.title}</div>
           <div style={S.pageSubtitle}>{meta.subtitle}</div>
         </>}
-        {tab==="home" && <AppDashboard guards={guards} locs={locs} scs={scs} ovs={ovs} invs={invs} isGuest={isGuest} setTab={setTab} todos={todos} setTodos={setTodos}/>}
+        {tab==="home" && <AppDashboard guards={guards} locs={locs} scs={scs} ovs={ovs} invs={invs} isGuest={isGuest} setTab={setTab} todos={todos} setTodos={setTodos} settings={settings}/>}
         {tab==="emp" && <Employees guards={guards} setGuards={setGuards} addLog={addLog} isGuest={isGuest} />}
         {tab==="loc" && <Locations locs={locs} setLocs={setLocs} addLog={addLog} isGuest={isGuest} />}
-        {tab==="cal" && <Calendar guards={guards} locs={locs} scs={scs} setScs={setScs} ovs={ovs} setOvs={setOvs} addLog={addLog} isGuest={isGuest} />}
+        {tab==="cal" && <Calendar guards={guards} locs={locs} scs={scs} setScs={setScs} ovs={ovs} setOvs={setOvs} addLog={addLog} isGuest={isGuest} settings={settings}/>}
         {tab==="rep" && <Reports guards={guards} locs={locs} scs={scs} ovs={ovs} history={history} setHistory={setHistory} addLog={addLog} isGuest={isGuest} sd={repSd} setSd={setRepSd} ed={repEd} setEd={setRepEd} sl={repSl} setSl={setRepSl}/>}
         {tab==="his" && <History history={history} setHistory={setHistory} addLog={addLog} isGuest={isGuest} />}
         {tab==="act" && !isGuest && <ActivityLog logEntries={logEntries} setLogEntries={setLogEntries} />}
-        {tab==="inv" && <Invoices locs={locs} addLog={addLog} isGuest={isGuest} onInvsChange={syncInvs}/>}
+        {tab==="inv" && <Invoices locs={locs} addLog={addLog} isGuest={isGuest} onInvsChange={syncInvs} settings={settings}/>}
         {tab==="pay" && <Revenue locs={locs} addLog={addLog} isGuest={isGuest} />}
-        {tab==="sal" && <Sales addLog={addLog} isGuest={isGuest} />}
+        {tab==="cfg" && <Settings settings={settings} setSettings={setSettings}/>}
       </main>
     </div>
   );
