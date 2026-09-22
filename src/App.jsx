@@ -558,8 +558,10 @@ function Locations({ locs, setLocs, addLog, isGuest }) {
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const blankRate = { effectiveDate:"", rate:"", notes:"" };
+  const blankRate = { effectiveDate:"", rate:"", endDate:"", notes:"" };
   const [rateForm, setRateForm] = useState(blankRate);
+  const [editingRateId, setEditingRateId] = useState(null);
+  const [editRateForm, setEditRateForm] = useState(blankRate);
   const [confirmEl, ask] = useConfirm();
   const [saved, setSaved] = useState(false);
   const formRef = useRef(null);
@@ -618,6 +620,17 @@ function Locations({ locs, setLocs, addLog, isGuest }) {
       setLocs(u); save(K.l, u);
       addLog("Deleted","Location",`Deleted billing rate for ${loc?.name||loc?.client||"location"}`,rate?`$${rate.rate}/hr from ${rate.effectiveDate}`:"");
     });
+  }
+  function updateRate(locId, rateId, updated) {
+    const loc = locs.find(l=>l.id===locId);
+    const u = locs.map(l => {
+      if (l.id!==locId) return l;
+      const rates = (l.rates||[]).map(r => r.id===rateId ? { ...r, ...updated } : r)
+        .sort((a,b)=>a.effectiveDate.localeCompare(b.effectiveDate));
+      return { ...l, rates };
+    });
+    setLocs(u); save(K.l, u); setEditingRateId(null); setEditRateForm(blankRate);
+    addLog("Updated","Location",`Updated billing rate for ${loc?.name||loc?.client||"location"}`,`$${updated.rate}/hr effective ${updated.effectiveDate}`);
   }
 
   function currentRate(loc) {
@@ -708,21 +721,47 @@ function Locations({ locs, setLocs, addLog, isGuest }) {
                   <div style={{ background:"#f8faff", borderRadius:"7px", padding:"12px" }}>
                     <div style={{ fontSize:"10px", fontWeight:"700", color:"#475569", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"8px" }}>Billing Rate History</div>
                     {(l.rates||[]).length===0 && <div style={{ fontSize:"11px", color:"#94a3b8", marginBottom:"8px" }}>No rates recorded yet.</div>}
-                    {(l.rates||[]).sort((a,b)=>b.effectiveDate.localeCompare(a.effectiveDate)).map(r=>(
-                      <div key={r.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:"1px solid #e2e8f0" }}>
-                        <div>
-                          <span style={{ fontWeight:"700", color:"#34d399" }}>${parseFloat(r.rate).toFixed(2)}/hr</span>
-                          <span style={{ fontSize:"10px", color:"#475569", marginLeft:"10px" }}>Effective: {r.effectiveDate}</span>
-                          {r.notes && <span style={{ fontSize:"10px", color:"#94a3b8", marginLeft:"8px" }}>— {r.notes}</span>}
+                    {(l.rates||[]).sort((a,b)=>b.effectiveDate.localeCompare(a.effectiveDate)).map(r=>{
+                      const isEditingThis = editingRateId===r.id;
+                      const today2 = todayStr();
+                      const isExpired = r.endDate && r.endDate < today2;
+                      const expiresSOon = r.endDate && !isExpired && r.endDate <= (() => { const d=new Date(); d.setDate(d.getDate()+30); return d.toISOString().slice(0,10); })();
+                      return (
+                        <div key={r.id} style={{ padding:"8px 0", borderBottom:"1px solid #e2e8f0" }}>
+                          {isEditingThis ? (
+                            <div style={{ display:"flex", gap:"7px", flexWrap:"wrap", alignItems:"flex-end" }}>
+                              <div><label style={S.lbl}>Effective Date</label><input style={{ ...S.inp, width:"140px" }} type="date" value={editRateForm.effectiveDate} onChange={e=>setEditRateForm(p=>({...p,effectiveDate:e.target.value}))}/></div>
+                              <div><label style={S.lbl}>Rate ($/hr)</label><input style={{ ...S.inp, width:"100px" }} type="number" step="0.01" value={editRateForm.rate} onChange={e=>setEditRateForm(p=>({...p,rate:e.target.value}))} placeholder="23.00"/></div>
+                              <div><label style={S.lbl}>End Date (optional)</label><input style={{ ...S.inp, width:"140px" }} type="date" value={editRateForm.endDate||""} onChange={e=>setEditRateForm(p=>({...p,endDate:e.target.value}))}/></div>
+                              <div style={{ flex:1 }}><label style={S.lbl}>Note</label><input style={S.inp} value={editRateForm.notes||""} onChange={e=>setEditRateForm(p=>({...p,notes:e.target.value}))}/></div>
+                              <button style={S.bs} onClick={()=>updateRate(l.id, r.id, editRateForm)}>Save</button>
+                              <button style={S.bd} onClick={()=>{ setEditingRateId(null); setEditRateForm(blankRate); }}>Cancel</button>
+                            </div>
+                          ) : (
+                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                              <div>
+                                <span style={{ fontWeight:"700", color: isExpired?"#94a3b8":"#34d399" }}>${parseFloat(r.rate).toFixed(2)}/hr</span>
+                                <span style={{ fontSize:"10px", color:"#475569", marginLeft:"10px" }}>From: {r.effectiveDate}</span>
+                                {r.endDate && <span style={{ fontSize:"10px", marginLeft:"8px", color:isExpired?"#94a3b8":expiresSOon?"#f59e0b":"#475569", fontWeight:expiresSOon?"700":"400" }}>
+                                  → {r.endDate}{isExpired?" (expired)":expiresSOon?" ⚠ expiring soon":""}
+                                </span>}
+                                {r.notes && <span style={{ fontSize:"10px", color:"#94a3b8", marginLeft:"8px" }}>— {r.notes}</span>}
+                              </div>
+                              {!isGuest && <div style={{ display:"flex", gap:"6px" }}>
+                                <button style={{ ...S.bs, fontSize:"11px", padding:"3px 10px" }} onClick={()=>{ setEditingRateId(r.id); setEditRateForm({ effectiveDate:r.effectiveDate, rate:r.rate, endDate:r.endDate||"", notes:r.notes||"" }); }}>Edit</button>
+                                <button style={S.bd} onClick={()=>delRate(l.id,r.id)}>✕</button>
+                              </div>}
+                            </div>
+                          )}
                         </div>
-                        <button style={S.bd} onClick={()=>delRate(l.id,r.id)}>✕</button>
-                      </div>
-                    ))}
+                      );
+                    })}
                     {!isGuest && <div style={{ marginTop:"10px" }}>
                       <div style={{ fontSize:"9px", color:"#94a3b8", marginBottom:"5px", textTransform:"uppercase", letterSpacing:"0.5px" }}>Add New Rate</div>
                       <div style={{ display:"flex", gap:"7px", flexWrap:"wrap", alignItems:"flex-end" }}>
                         <div><label style={S.lbl}>Effective Date</label><input style={{ ...S.inp, width:"140px" }} type="date" value={rateForm.effectiveDate} onChange={e=>setRateForm(p=>({...p,effectiveDate:e.target.value}))}/></div>
                         <div><label style={S.lbl}>Rate ($/hr)</label><input style={{ ...S.inp, width:"100px" }} type="number" step="0.01" value={rateForm.rate} onChange={e=>setRateForm(p=>({...p,rate:e.target.value}))} placeholder="23.00"/></div>
+                        <div><label style={S.lbl}>End Date (optional)</label><input style={{ ...S.inp, width:"140px" }} type="date" value={rateForm.endDate||""} onChange={e=>setRateForm(p=>({...p,endDate:e.target.value}))}/></div>
                         <div style={{ flex:1 }}><label style={S.lbl}>Note (optional)</label><input style={S.inp} value={rateForm.notes} onChange={e=>setRateForm(p=>({...p,notes:e.target.value}))} placeholder="e.g. Rate increase Jan 2026"/></div>
                         <button style={S.bs} onClick={()=>addRate(l.id)}>Add Rate</button>
                       </div>
@@ -3507,7 +3546,7 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
   return (
     <div>
       {/* greeting */}
-      <div style={{ marginBottom:"28px" }}>
+      <div style={{ marginBottom:"20px" }}>
         <div style={{ fontSize:"28px", fontWeight:"700", color:T.text, letterSpacing:"-0.6px", lineHeight:1.15 }}>{greeting}, {senderName} 👋</div>
         <div style={{ fontSize:"13px", color:T.textMute, marginTop:"6px", display:"flex", alignItems:"center", gap:"6px" }}>
           <span>{now.toLocaleDateString("en-CA", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}</span>
@@ -3516,6 +3555,36 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
         </div>
       </div>
 
+      {/* ── BILLING RATE EXPIRY REMINDERS ── */}
+      {(() => {
+        const soon = new Date(); soon.setDate(soon.getDate()+30);
+        const soonStr = soon.toISOString().slice(0,10);
+        const alerts = [];
+        locs.forEach(loc => {
+          (loc.rates||[]).forEach(r => {
+            if (!r.endDate) return;
+            const locLabel = loc.name||loc.client||"a site";
+            if (r.endDate < today) {
+              alerts.push({ type:"expired", msg:`Billing rate of $${parseFloat(r.rate).toFixed(2)}/hr for ${locLabel} expired on ${r.endDate}`, loc });
+            } else if (r.endDate <= soonStr) {
+              alerts.push({ type:"soon", msg:`Billing rate of $${parseFloat(r.rate).toFixed(2)}/hr for ${locLabel} expires on ${r.endDate}`, loc });
+            }
+          });
+        });
+        if (!alerts.length) return null;
+        return (
+          <div style={{ marginBottom:"16px", display:"flex", flexDirection:"column", gap:"8px" }}>
+            {alerts.map((a,i) => (
+              <div key={i} onClick={()=>setTab("loc")} style={{ display:"flex", alignItems:"center", gap:"10px", padding:"10px 14px", borderRadius:"10px", background:a.type==="expired"?"rgba(229,62,62,0.07)":"rgba(245,158,11,0.07)", border:`1px solid ${a.type==="expired"?"rgba(229,62,62,0.2)":"rgba(245,158,11,0.25)"}`, cursor:"pointer" }}>
+                <span style={{ fontSize:"16px" }}>{a.type==="expired"?"🔴":"⚠️"}</span>
+                <span style={{ fontSize:"12px", fontWeight:"600", color:a.type==="expired"?T.red:"#b45309", flex:1 }}>{a.msg}</span>
+                <span style={{ fontSize:"11px", color:T.textMute }}>View Sites →</span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* top stat cards */}
       {(() => {
         const totalOutstanding = invs.filter(x=>x.status==="outstanding"||x.status==="overdue").reduce((s,x)=>s+(parseFloat(x.total)||0),0);
@@ -3523,13 +3592,13 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
         const expiredLocs = locs.filter(l=>l.contractEnd&&l.contractEnd<todayStr()).length;
         const statCards = [
           { label:"Active Employees", value:activeGuards.length, icon:"👥", onClick:()=>setTab("emp"),
-            sub: activeGuards.length===0?"No active staff":`${activeGuards.length} on your roster`, subColor:T.blue },
+            sub: activeGuards.length===0?"No active staff":null, subColor:T.blue },
           { label:"Active Sites", value:locs.length, icon:"🏢", onClick:()=>setTab("loc"),
             sub: expiredLocs>0?`${expiredLocs} contract${expiredLocs>1?"s":""} expired`:"All contracts current", subColor:expiredLocs>0?T.red:T.green },
           { label:"Unpaid Invoices", value:outstanding.length+overdue.length, icon:"📄", onClick:()=>setTab("inv"),
             sub: totalOutstanding>0?`${fmtCAD(totalOutstanding)} outstanding`:"All invoices settled", subColor:overdue.length>0?T.red:T.amber },
           { label:"On Shift Today", value:todayShifts.length, icon:"⏱", onClick:()=>setTab("cal"),
-            sub: todayShifts.length===0?"No shifts today":`${todayShifts.length} guard${todayShifts.length>1?"s":""} working`, subColor:T.green },
+            sub: todayShifts.length===0?"No shifts today":null, subColor:T.green },
         ];
         return (
           <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"12px", marginBottom:"20px" }}>
@@ -3538,7 +3607,7 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
                 <div style={{ fontSize:"22px", marginBottom:"10px", opacity:0.7 }}>{icon}</div>
                 <div style={{ fontSize:"30px", fontWeight:"800", color:T.text, letterSpacing:"-1.5px", lineHeight:1 }}>{value}</div>
                 <div style={{ fontSize:"12px", color:T.textMute, marginTop:"7px", fontWeight:"500", lineHeight:1.3 }}>{label}</div>
-                <div style={{ fontSize:"12px", fontWeight:"600", color:subColor, marginTop:"5px", lineHeight:1.3 }}>{sub}</div>
+                {sub && <div style={{ fontSize:"12px", fontWeight:"600", color:subColor, marginTop:"5px", lineHeight:1.3 }}>{sub}</div>}
               </div>
             ))}
           </div>
