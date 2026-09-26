@@ -462,7 +462,7 @@ function Employees({ guards, setGuards, addLog, isGuest }) {
     origRef.current = {...blank,...g};
     setTimeout(() => formRef.current?.scrollIntoView({ behavior:"smooth", block:"start" }), 50);
   };
-  const rows = guards.filter(g => g.name.toLowerCase().includes(search.toLowerCase())||(g.badge||"").includes(search));
+  const rows = guards.filter(g => g.name.toLowerCase().includes(search.toLowerCase())||(g.badge||"").includes(search)).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:"base"}));
   return (
     <div>
       {confirmEl}
@@ -684,7 +684,7 @@ function Locations({ locs, setLocs, addLog, isGuest }) {
 
       {/* ── LOCATION CARDS ── */}
       {locs.length===0 ? <div style={S.card}><div style={S.empty}>No locations added yet.</div></div> :
-        locs.map(l => {
+        [...locs].sort((a,b)=>(a.name||a.client||"").localeCompare(b.name||b.client||"",undefined,{numeric:true,sensitivity:"base"})).map(l => {
           const cr = currentRate(l);
           const isExp = expanded===l.id;
           const contractExpired = l.contractEnd && l.contractEnd < todayStr();
