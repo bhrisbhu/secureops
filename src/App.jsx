@@ -323,7 +323,7 @@ function MassWageUpdate({ guards, setGuards, ask }) {
 
   function applyUpdate() {
     const updated = guards.map(g => {
-      if (scope === "active" && g.status !== "Active") return g;
+      if (scope === "active" && g.status !== "Active" && g.status !== "On-Call") return g;
       return { ...g, wage: String(calcNew(g.wage)) };
     });
     setGuards(updated); save(K.g, updated);
@@ -367,7 +367,7 @@ function MassWageUpdate({ guards, setGuards, ask }) {
             <div>
               <label style={S.lbl}>Apply To</label>
               <select style={S.sel} value={scope} onChange={e=>{ setScope(e.target.value); setPreview(false); }}>
-                <option value="active">Active employees only ({guards.filter(g=>g.status==="Active").length})</option>
+                <option value="active">Active & On-Call ({guards.filter(g=>g.status==="Active"||g.status==="On-Call").length})</option>
                 <option value="all">All employees ({guards.length})</option>
               </select>
             </div>
@@ -479,7 +479,7 @@ function Employees({ guards, setGuards, addLog, isGuest }) {
         </div>
       )}
       <F style={{ marginBottom:"14px", flexWrap:"wrap" }}>
-        {[["Total",guards.length],["Active",guards.filter(g=>g.status==="Active").length],["Inactive",guards.filter(g=>g.status==="Inactive").length],["On Leave",guards.filter(g=>g.status==="On Leave").length]].map(([l,v])=><Stat key={l} label={l} value={v} />)}
+        {[["Total",guards.length],["Active",guards.filter(g=>g.status==="Active").length],["On-Call",guards.filter(g=>g.status==="On-Call").length],["Inactive",guards.filter(g=>g.status==="Inactive").length],["On Leave",guards.filter(g=>g.status==="On Leave").length],["Terminated",guards.filter(g=>g.status==="Terminated").length]].map(([l,v])=><Stat key={l} label={l} value={v} />)}
       </F>
       <div ref={formRef} style={S.card}>
         <div style={S.ct}>{editing?"Edit Employee":"Add Employee"}</div>
@@ -499,7 +499,7 @@ function Employees({ guards, setGuards, addLog, isGuest }) {
         </div>
         <div style={{ ...S.g3, marginTop:"8px" }}>
           <Inp label="Address" value={form.address} onChange={f("address")} />
-          <Sel label="Status" value={form.status} onChange={f("status")}><option>Active</option><option>Inactive</option><option>On Leave</option></Sel>
+          <Sel label="Status" value={form.status} onChange={f("status")}><option>Active</option><option>On-Call</option><option>Inactive</option><option>On Leave</option><option>Terminated</option></Sel>
           <Inp label="Notes" value={form.notes} onChange={f("notes")} placeholder="Certifications…" />
         </div>
         <F style={{ marginTop:"10px" }}>
@@ -529,7 +529,7 @@ function Employees({ guards, setGuards, addLog, isGuest }) {
                     <td style={S.td}>{g.startDate||"—"}</td>
                     <td style={S.td}>{g.endDate?<span style={{ color:"#f87171" }}>{g.endDate}</span>:"—"}</td>
                     <td style={S.td}>{g.wage?`$${parseFloat(g.wage).toFixed(2)}/hr`:"—"}</td>
-                    <td style={S.td}><span style={S.pill(g.status==="Active"?"#10b981":g.status==="On Leave"?"#f59e0b":"#6b7280")}>{g.status}</span></td>
+                    <td style={S.td}><span style={S.pill(g.status==="Active"?"#10b981":g.status==="On-Call"?"#0050ff":g.status==="On Leave"?"#f59e0b":g.status==="Terminated"?"#e53e3e":"#6b7280")}>{g.status}</span></td>
                     <td style={S.td}>{!isGuest && <F><button style={S.bsm()} onClick={()=>edit(g)}>Edit</button><button style={S.bd} onClick={()=>del(g.id)}>✕</button></F>}</td>
                   </tr>
                   {exp===g.id && <tr><td colSpan={8} style={{ ...S.td, background:"#f8faff" }}><F style={{ fontSize:"10px", color:"#475569" }}>{[["Email",g.email],["SIN",g.sin],["Address",g.address],["Notes",g.notes]].map(([l,v])=><span key={l}><span style={{ color:"#94a3b8" }}>{l}: </span>{v||"—"}</span>)}</F></td></tr>}
@@ -1049,7 +1049,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest, set
           <div style={S.card}>
             <div style={S.ct}>Set Recurring Schedule</div>
             <div style={S.g4}>
-              <Sel label="Employee" value={sf.guardId} onChange={e=>setSf(p=>({...p,guardId:e.target.value}))}><option value="">Select…</option>{guards.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</Sel>
+              <Sel label="Employee" value={sf.guardId} onChange={e=>setSf(p=>({...p,guardId:e.target.value}))}><option value="">Select…</option>{guards.filter(g=>g.status!=="Terminated").map(g=><option key={g.id} value={g.id}>{g.name}{g.status==="On-Call"?" (On-Call)":""}</option>)}</Sel>
               <Sel label="Location" value={sf.locationId} onChange={e=>setSf(p=>({...p,locationId:e.target.value}))}><option value="">Select…</option>{locs.map(l=><option key={l.id} value={l.id}>{l.name}</option>)}</Sel>
               <Inp label="Shift Start" type="time" value={sf.startTime} onChange={e=>setSf(p=>({...p,startTime:e.target.value}))} />
               <Inp label="Shift End" type="time" value={sf.endTime} onChange={e=>setSf(p=>({...p,endTime:e.target.value}))} />
@@ -1645,8 +1645,8 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest, set
           {/* ── UNSCHEDULED EMPLOYEE ALERT ── */}
           {(() => {
             const activeGuards = guards.filter(g => g.status === "Active");
+            const onCallGuards = guards.filter(g => g.status === "On-Call");
             const unscheduled = activeGuards.filter(g => {
-              // Check if this employee has any shift in the current month
               for (let d = 1; d <= dim; d++) {
                 const ds = dStr(yr, mo, d);
                 const sh = effShift(ds, g.id, scs, ovs);
@@ -1654,22 +1654,39 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest, set
               }
               return true;
             });
-            if (unscheduled.length === 0) return null;
             return (
-              <div style={{ background:"#fffbeb", border:`1px solid ${T.amber}66`, borderRadius:"10px", padding:"12px 16px", marginBottom:"14px", display:"flex", alignItems:"flex-start", gap:"10px" }}>
-                <span style={{ fontSize:"18px", marginTop:"1px" }}>⚠️</span>
-                <div>
-                  <div style={{ fontWeight:"700", color:T.amber, fontSize:"13px", marginBottom:"4px" }}>
-                    {unscheduled.length} active employee{unscheduled.length!==1?" are":" is"} unscheduled in {MONTHS[mo]} {yr}
+              <>
+                {unscheduled.length > 0 && (
+                  <div style={{ background:"#fffbeb", border:`1px solid ${T.amber}66`, borderRadius:"10px", padding:"12px 16px", marginBottom:"10px", display:"flex", alignItems:"flex-start", gap:"10px" }}>
+                    <span style={{ fontSize:"18px", marginTop:"1px" }}>⚠️</span>
+                    <div>
+                      <div style={{ fontWeight:"700", color:T.amber, fontSize:"13px", marginBottom:"4px" }}>
+                        {unscheduled.length} active employee{unscheduled.length!==1?" are":" is"} unscheduled in {MONTHS[mo]} {yr}
+                      </div>
+                      <div style={{ fontSize:"12px", color:T.textSub, lineHeight:1.6 }}>{unscheduled.map(g=>g.name).join(", ")}</div>
+                      <div style={{ fontSize:"11px", color:T.textMute, marginTop:"4px" }}>Go to the 🔁 Schedules tab to create a recurring schedule, or click a day on the calendar to add them manually.</div>
+                    </div>
                   </div>
-                  <div style={{ fontSize:"12px", color:T.textSub, lineHeight:1.6 }}>
-                    {unscheduled.map(g=>g.name).join(", ")}
+                )}
+                {onCallGuards.length > 0 && (
+                  <div style={{ background:"rgba(0,80,255,0.04)", border:"1px solid rgba(0,80,255,0.15)", borderRadius:"10px", padding:"12px 16px", marginBottom:"14px", display:"flex", alignItems:"flex-start", gap:"10px" }}>
+                    <span style={{ fontSize:"18px", marginTop:"1px" }}>📋</span>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:"700", color:T.blue, fontSize:"13px", marginBottom:"6px" }}>
+                        {onCallGuards.length} On-Call guard{onCallGuards.length!==1?"s":""} available
+                      </div>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:"6px" }}>
+                        {onCallGuards.map(g => (
+                          <span key={g.id} style={{ fontSize:"11px", fontWeight:"600", padding:"3px 10px", borderRadius:"20px", background:"rgba(0,80,255,0.08)", color:T.blue }}>
+                            {g.name}{g.phone ? ` · ${g.phone}` : ""}
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ fontSize:"11px", color:T.textMute, marginTop:"6px" }}>Click a day on the calendar to schedule an on-call guard for a specific shift.</div>
+                    </div>
                   </div>
-                  <div style={{ fontSize:"11px", color:T.textMute, marginTop:"4px" }}>
-                    Go to the 🔁 Schedules tab to create a recurring schedule, or click a day on the calendar to add them manually.
-                  </div>
-                </div>
-              </div>
+                )}
+              </>
             );
           })()}
 
@@ -1827,12 +1844,26 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest, set
                   <label style={S.lbl}>Add / adjust employee for this day</label>
                   <select style={S.sel} value="" onChange={e=>{ if(e.target.value){ const g=guards.find(x=>x.id===e.target.value); if(g) openAdj(g); } }}>
                     <option value="">Select employee…</option>
-                    {guards.filter(g=>g.status==="Active").map(g => {
-                      const alreadyOn = allOn.find(x=>x.id===g.id);
-                      return <option key={g.id} value={g.id}>{g.name}{alreadyOn?" (already scheduled)":""}</option>;
-                    })}
+                    {/* Active employees first */}
+                    {guards.filter(g=>g.status==="Active").length > 0 && (
+                      <optgroup label="── Active">
+                        {guards.filter(g=>g.status==="Active").map(g => {
+                          const alreadyOn = allOn.find(x=>x.id===g.id);
+                          return <option key={g.id} value={g.id}>{g.name}{alreadyOn?" (already scheduled)":""}</option>;
+                        })}
+                      </optgroup>
+                    )}
+                    {/* On-Call employees second */}
+                    {guards.filter(g=>g.status==="On-Call").length > 0 && (
+                      <optgroup label="── On-Call (available)">
+                        {guards.filter(g=>g.status==="On-Call").map(g => {
+                          const alreadyOn = allOn.find(x=>x.id===g.id);
+                          return <option key={g.id} value={g.id}>{g.name}{alreadyOn?" (already scheduled)":""}</option>;
+                        })}
+                      </optgroup>
+                    )}
                   </select>
-                  <div style={{ fontSize:"10px", color:T.textMute, marginTop:"4px" }}>Already-scheduled employees are shown with a note — selecting them will open their adjustment modal to edit or add a second entry.</div>
+                  <div style={{ fontSize:"10px", color:T.textMute, marginTop:"4px" }}>On-call guards are available to be scheduled for individual days. Already-scheduled employees are shown with a note.</div>
                 </div>}
               </div>
             </div>
@@ -3508,7 +3539,7 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
   const outstanding = invs.filter(x=>x.status==="outstanding");
   const overdue     = invs.filter(x=>x.status==="overdue");
   const drafts      = invs.filter(x=>x.status==="draft");
-  const activeGuards = guards.filter(g=>g.status==="Active");
+  const activeGuards = guards.filter(g=>g.status==="Active"||g.status==="On-Call");
   const now = new Date();
   const hour = now.getHours();
   const [greeting] = useState(() => getGreeting(senderName));
