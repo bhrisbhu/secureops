@@ -4102,8 +4102,9 @@ export default function App() {
       if (session) { setRole("admin"); }
       setAuthChecked(true);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) { setRole(null); setLoaded(false); }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") { setRole(null); setLoaded(false); }
+      if (event === "SIGNED_IN" && session) { setRole("admin"); }
     });
     return () => subscription.unsubscribe();
   }, []);
