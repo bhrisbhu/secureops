@@ -1730,7 +1730,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest, set
                       <span style={{ fontSize:"10px", fontWeight:"700", color:isTod?"#60a5fa":"#475569" }}>{d}</span>
                       <span style={{ display:"flex", alignItems:"center", gap:"2px" }}>
                         {hasSt && <span style={{ fontSize:"7px" }}>🌟</span>}
-                        {hasOv && <span style={{ width:"7px", height:"7px", borderRadius:"2px", background:"#f97316", display:"inline-block", flexShrink:0, boxShadow:"0 0 4px #f9731688" }} title="Day has manual adjustments" />}
+                        {hasOv && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" title="Day has manual adjustments" style={{ flexShrink:0, filter:"drop-shadow(0 0 3px #f9731699)" }}><path d="M16.862 3.487a2.25 2.25 0 0 1 3.182 3.182L8.5 18.213l-4.5 1 1-4.5L16.862 3.487z" fill="#f97316"/><path d="M19 7L17 5" stroke="#ea6a00" strokeWidth="1.5" strokeLinecap="round"/></svg>}
                       </span>
                     </div>
                     <div style={{ display:"flex", flexWrap:"wrap", gap:"2px" }}>{shfts.slice(0,5).map(s=><div key={s.guardId} style={{ width:"6px", height:"6px", borderRadius:"50%", background:gc(gIdx(s.guardId)) }} title={s.guard.name} />)}{shfts.length>5&&<span style={{ fontSize:"7px", color:"#94a3b8" }}>+{shfts.length-5}</span>}</div>
@@ -3807,6 +3807,7 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
 // ═══════════════════════════════════════════════════════════════════════════════
 const DEFAULT_SETTINGS = {
   senderName: "Chris",
+  showQuotes: true,
   craEnabled: true,
   craDueDay: 15,
   ccEnabled: true,
@@ -3854,6 +3855,23 @@ function Settings({ settings, setSettings }) {
           <div style={{ fontSize:"11px", color:T.textMute, marginTop:"6px" }}>
             Preview: <em>"Best regards, {form.senderName||"—"}"</em>
           </div>
+        </div>
+      </div>
+
+      {/* ── QUOTES ── */}
+      <div style={S.card}>
+        <div style={S.ct}>💬 Login &amp; Sign-Out Quotes</div>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div>
+            <div style={{ fontSize:"13px", color:T.text, fontWeight:"500" }}>Show motivational quotes on sign-in and sign-out</div>
+            <div style={{ fontSize:"11px", color:T.textMute, marginTop:"3px" }}>Displays a brief quote overlay each time you log in or log out</div>
+          </div>
+          <label style={{ display:"flex", alignItems:"center", gap:"8px", cursor:"pointer" }}>
+            <div onClick={()=>toggle("showQuotes")} style={{ width:"40px", height:"22px", borderRadius:"11px", background:form.showQuotes?T.blue:"#cbd5e1", position:"relative", cursor:"pointer", transition:"background 0.2s", flexShrink:0 }}>
+              <div style={{ position:"absolute", top:"3px", left:form.showQuotes?"21px":"3px", width:"16px", height:"16px", borderRadius:"50%", background:"#fff", transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.2)" }}/>
+            </div>
+            <span style={{ fontSize:"12px", color:form.showQuotes?T.blue:T.textMute, fontWeight:"600" }}>{form.showQuotes?"On":"Off"}</span>
+          </label>
         </div>
       </div>
 
@@ -4102,18 +4120,24 @@ export default function App() {
   };
 
   function handleLogin(r) {
-    const q = QUOTES[Math.floor(Math.random()*QUOTES.length)];
     setRole(r);
     setTab("home");
     setFadeIn(false);
-    setQuote(q);
+    if (settings.showQuotes !== false) {
+      const q = QUOTES[Math.floor(Math.random()*QUOTES.length)];
+      setQuote(q);
+    }
     setTimeout(() => setFadeIn(true), 50);
   }
 
   function handleSignOut() {
-    const q = SIGN_OUT_QUOTES[Math.floor(Math.random()*SIGN_OUT_QUOTES.length)];
-    setQuote(q);
-    setTimeout(() => { setRole(null); setTab("home"); setFadeIn(false); }, 2800);
+    if (settings.showQuotes !== false) {
+      const q = SIGN_OUT_QUOTES[Math.floor(Math.random()*SIGN_OUT_QUOTES.length)];
+      setQuote(q);
+      setTimeout(() => { setRole(null); setTab("home"); setFadeIn(false); }, 2800);
+    } else {
+      setRole(null); setTab("home"); setFadeIn(false);
+    }
   }
 
   if (!role) return <Login onLogin={handleLogin} />;
