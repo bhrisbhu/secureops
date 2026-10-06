@@ -4107,6 +4107,7 @@ export default function App() {
         if(st) setSettings({...DEFAULT_SETTINGS,...st});
         setLoaded(true);
         setRole("admin");
+        setTimeout(() => setFadeIn(true), 50);
       }
       setAuthChecked(true);
     })();
