@@ -4098,27 +4098,19 @@ export default function App() {
 
   // Check if already logged in on page load
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) { setRole("admin"); }
-      setAuthChecked(true);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT") { setRole(null); setLoaded(false); }
-      if (event === "SIGNED_IN" && session) { setRole("admin"); }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!role) return;
     (async () => {
-      const [g,l,sc,ov,hi,lg,iv,td,st] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv),load(K.td),load(K.st)]);
-      if(g) setGuards(g); if(l) setLocs(l); if(sc) setScs(sc); if(ov) setOvs(ov); if(hi) setHistory(hi);
-      if(lg) setLogEntries(lg); if(iv) setInvsCache(iv); if(td) setTodos(td);
-      if(st) setSettings({...DEFAULT_SETTINGS,...st});
-      setLoaded(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const [g,l,sc,ov,hi,lg,iv,td,st] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv),load(K.td),load(K.st)]);
+        if(g) setGuards(g); if(l) setLocs(l); if(sc) setScs(sc); if(ov) setOvs(ov); if(hi) setHistory(hi);
+        if(lg) setLogEntries(lg); if(iv) setInvsCache(iv); if(td) setTodos(td);
+        if(st) setSettings({...DEFAULT_SETTINGS,...st});
+        setLoaded(true);
+        setRole("admin");
+      }
+      setAuthChecked(true);
     })();
-  }, [role]);
+  }, []);
 
   // Keep invs cache in sync when invoices change (passed via context trick)
   const syncInvs = (u) => setInvsCache(u);
@@ -4133,7 +4125,7 @@ export default function App() {
     });
   };
 
-  function handleLogin(r) {
+  async function handleLogin(r) {
     setRole(r);
     setTab("home");
     setFadeIn(false);
@@ -4142,15 +4134,20 @@ export default function App() {
       setQuote(q);
     }
     setTimeout(() => setFadeIn(true), 50);
+    const [g,l,sc,ov,hi,lg,iv,td,st] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv),load(K.td),load(K.st)]);
+    if(g) setGuards(g); if(l) setLocs(l); if(sc) setScs(sc); if(ov) setOvs(ov); if(hi) setHistory(hi);
+    if(lg) setLogEntries(lg); if(iv) setInvsCache(iv); if(td) setTodos(td);
+    if(st) setSettings({...DEFAULT_SETTINGS,...st});
+    setLoaded(true);
   }
 
   function handleSignOut() {
     if (settings.showQuotes !== false) {
       const q = SIGN_OUT_QUOTES[Math.floor(Math.random()*SIGN_OUT_QUOTES.length)];
       setQuote(q);
-      setTimeout(() => { signOut(); setRole(null); setTab("home"); setFadeIn(false); }, 2800);
+      setTimeout(() => { signOut(); setRole(null); setTab("home"); setFadeIn(false); setLoaded(false); }, 2800);
     } else {
-      signOut(); setRole(null); setTab("home"); setFadeIn(false);
+      signOut(); setRole(null); setTab("home"); setFadeIn(false); setLoaded(false);
     }
   }
 
