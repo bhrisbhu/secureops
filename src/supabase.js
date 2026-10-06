@@ -5,21 +5,26 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    autoRefreshToken: false,
-    detectSessionInUrl: false
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+    persistSession: true
   }
 });
 
-// Get the current user's company_id from their profile
+// Cached company_id — fetched once per session
+let cachedCompanyId = null;
+
 async function getCompanyId() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (cachedCompanyId) return cachedCompanyId;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return null;
   const { data } = await supabase
     .from('user_profiles')
     .select('company_id')
-    .eq('id', user.id)
+    .eq('id', session.user.id)
     .maybeSingle();
-  return data?.company_id || null;
+  cachedCompanyId = data?.company_id || null;
+  return cachedCompanyId;
 }
 
 export async function load(key) {
@@ -48,10 +53,12 @@ export async function save(key, value) {
 }
 
 export async function signIn(email, password) {
+  cachedCompanyId = null;
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   return { data, error };
 }
 
 export async function signOut() {
+  cachedCompanyId = null;
   await supabase.auth.signOut();
 }
