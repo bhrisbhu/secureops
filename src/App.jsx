@@ -1728,7 +1728,10 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest, set
                   <div key={d} onClick={()=>{setSel(isSel?null:d); setDaySearch("");}} style={{ minHeight:"58px", borderRadius:"5px", padding:"4px", cursor:"pointer", background:isSel?"#eff6ff":isTod?"#eff6ff":"#ffffff", border:`1px solid ${isSel?"#2563eb":isTod?"#bfdbfe":"#e2e8f0"}` }}>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"2px" }}>
                       <span style={{ fontSize:"10px", fontWeight:"700", color:isTod?"#60a5fa":"#475569" }}>{d}</span>
-                      <span style={{ fontSize:"7px" }}>{hasSt?"🌟":""}{hasOv?"✎":""}</span>
+                      <span style={{ display:"flex", alignItems:"center", gap:"2px" }}>
+                        {hasSt && <span style={{ fontSize:"7px" }}>🌟</span>}
+                        {hasOv && <span style={{ width:"7px", height:"7px", borderRadius:"2px", background:"#f97316", display:"inline-block", flexShrink:0, boxShadow:"0 0 4px #f9731688" }} title="Day has manual adjustments" />}
+                      </span>
                     </div>
                     <div style={{ display:"flex", flexWrap:"wrap", gap:"2px" }}>{shfts.slice(0,5).map(s=><div key={s.guardId} style={{ width:"6px", height:"6px", borderRadius:"50%", background:gc(gIdx(s.guardId)) }} title={s.guard.name} />)}{shfts.length>5&&<span style={{ fontSize:"7px", color:"#94a3b8" }}>+{shfts.length-5}</span>}</div>
                     {shfts.length>0&&<div style={{ fontSize:"7px", color:"#94a3b8", marginTop:"1px" }}>{shfts.length}g</div>}
@@ -3530,7 +3533,7 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
     ovs.filter(o=>o.date===today&&!o.absent).forEach(o=>ids.add(o.guardId));
     return [...ids].map(id => {
       const g = guards.find(x=>x.id===id); if(!g) return null;
-      const sh = effShift(today,id,scs,ovs); if(!sh) return null;
+      const sh = effShift(today,id,scs,ovs); if(!sh||sh.absent) return null;
       const loc = locs.find(l=>l.id===sh.locationId);
       return { ...sh, guard:g, locName:loc?.name||loc?.client||"—" };
     }).filter(Boolean);
