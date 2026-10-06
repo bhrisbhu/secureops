@@ -4098,35 +4098,18 @@ export default function App() {
 
   // Check if already logged in on page load
   useEffect(() => {
-    let dataLoaded = false;
-
-    async function loadData() {
-      if (dataLoaded) return;
-      dataLoaded = true;
-      const [g,l,sc,ov,hi,lg,iv,td,st] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv),load(K.td),load(K.st)]);
-      if(g) setGuards(g); if(l) setLocs(l); if(sc) setScs(sc); if(ov) setOvs(ov); if(hi) setHistory(hi);
-      if(lg) setLogEntries(lg); if(iv) setInvsCache(iv); if(td) setTodos(td);
-      if(st) setSettings({...DEFAULT_SETTINGS,...st});
-      setLoaded(true);
-      setRole("admin");
-    }
-
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) await loadData();
+      if (session) {
+        const [g,l,sc,ov,hi,lg,iv,td,st] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv),load(K.td),load(K.st)]);
+        if(g) setGuards(g); if(l) setLocs(l); if(sc) setScs(sc); if(ov) setOvs(ov); if(hi) setHistory(hi);
+        if(lg) setLogEntries(lg); if(iv) setInvsCache(iv); if(td) setTodos(td);
+        if(st) setSettings({...DEFAULT_SETTINGS,...st});
+        setLoaded(true);
+        setRole("admin");
+      }
       setAuthChecked(true);
     })();
-
-    // Listen only for hard sign-outs — return to login screen
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") {
-        setRole(null);
-        setLoaded(false);
-        dataLoaded = false;
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   // Keep invs cache in sync when invoices change (passed via context trick)
