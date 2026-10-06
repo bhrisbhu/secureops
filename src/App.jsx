@@ -46,7 +46,7 @@ const LogoMark = ({ size = 32, radius = 8 }) => {
 
 // ─── storage ──────────────────────────────────────────────────────────────────
 const K = { g:"so_g", l:"so_l", sc:"so_sc", ov:"so_ov", hi:"so_hi", pay:"so_pay", leads:"so_lds", inv:"so_inv", co:"so_co", log:"so_log", td:"so_td", st:"so_st" };
-import { load, save } from './supabase.js';
+import { load, save, signIn, signOut, supabase } from './supabase.js';
 
 // ─── utils ────────────────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -259,14 +259,13 @@ function useConfirm() {
 // LOGIN
 // ═══════════════════════════════════════════════════════════════════════════════
 function Login({ onLogin }) {
-  const [u, setU] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState(""); const [loading, setLoading] = useState(false);
-  const go = () => {
-    setLoading(true);
-    setTimeout(() => {
-      if (u==="security" && p==="security") { onLogin("admin"); }
-      else if (u==="guest" && p==="guest") { onLogin("guest"); }
-      else { setErr("Invalid username or password."); setP(""); setLoading(false); }
-    }, 400);
+  const [email, setEmail] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState(""); const [loading, setLoading] = useState(false);
+  const go = async () => {
+    if (!email.trim() || !p.trim()) { setErr("Please enter your email and password."); return; }
+    setLoading(true); setErr("");
+    const { error } = await signIn(email.trim(), p);
+    if (error) { setErr("Invalid email or password."); setP(""); setLoading(false); return; }
+    onLogin("admin");
   };
   return (
     <div style={{ minHeight:"100vh", minHeight:"100dvh", background:"linear-gradient(145deg, #f0eee9 0%, #eef2f9 40%, #ece9f4 70%, #eef2f9 100%)", backgroundAttachment:"fixed", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Plus Jakarta Sans',-apple-system,'Segoe UI',sans-serif" }}>
@@ -281,8 +280,8 @@ function Login({ onLogin }) {
         <div style={{ background:"rgba(255,255,255,0.85)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", border:"1px solid rgba(255,255,255,0.9)", borderRadius:"20px", padding:"36px", boxShadow:"0 8px 40px rgba(0,80,255,0.12)" }}>
           <div style={{ fontSize:"16px", fontWeight:"600", color:T.text, marginBottom:"24px" }}>Sign in to your account</div>
           <div style={{ marginBottom:"16px" }}>
-            <label style={S.lbl}>Username</label>
-            <input style={{ ...S.inp, padding:"11px 14px" }} value={u} onChange={e=>setU(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} autoFocus placeholder="Enter username"/>
+            <label style={S.lbl}>Email</label>
+            <input style={{ ...S.inp, padding:"11px 14px" }} type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} autoFocus placeholder="Enter email"/>
           </div>
           <div style={{ marginBottom:"24px" }}>
             <label style={S.lbl}>Password</label>
@@ -4087,16 +4086,30 @@ export default function App() {
   const [todos, setTodos] = useState([]);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [loaded, setLoaded] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const [fadeIn, setFadeIn] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [quote, setQuote] = useState(null); // { text, author } | null
+  const [quote, setQuote] = useState(null);
   const [repSd, setRepSd] = useState(() => new Date(Date.now()-14*86400000).toISOString().slice(0,10));
   const [repEd, setRepEd] = useState(() => todayStr());
   const [repSl, setRepSl] = useState("all");
 
   const isGuest = role === "guest";
 
+  // Check if already logged in on page load
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) { setRole("admin"); }
+      setAuthChecked(true);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) { setRole(null); setLoaded(false); }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!role) return;
     (async () => {
       const [g,l,sc,ov,hi,lg,iv,td,st] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv),load(K.td),load(K.st)]);
       if(g) setGuards(g); if(l) setLocs(l); if(sc) setScs(sc); if(ov) setOvs(ov); if(hi) setHistory(hi);
@@ -4104,7 +4117,7 @@ export default function App() {
       if(st) setSettings({...DEFAULT_SETTINGS,...st});
       setLoaded(true);
     })();
-  }, []);
+  }, [role]);
 
   // Keep invs cache in sync when invoices change (passed via context trick)
   const syncInvs = (u) => setInvsCache(u);
@@ -4134,12 +4147,20 @@ export default function App() {
     if (settings.showQuotes !== false) {
       const q = SIGN_OUT_QUOTES[Math.floor(Math.random()*SIGN_OUT_QUOTES.length)];
       setQuote(q);
-      setTimeout(() => { setRole(null); setTab("home"); setFadeIn(false); }, 2800);
+      setTimeout(() => { signOut(); setRole(null); setTab("home"); setFadeIn(false); }, 2800);
     } else {
-      setRole(null); setTab("home"); setFadeIn(false);
+      signOut(); setRole(null); setTab("home"); setFadeIn(false);
     }
   }
 
+  if (!authChecked) return (
+    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"linear-gradient(145deg, #f0eee9 0%, #eef2f9 100%)" }}>
+      <div style={{ textAlign:"center" }}>
+        <div style={{ display:"flex", justifyContent:"center", margin:"0 auto 16px" }}><LogoMark size={48} radius={12}/></div>
+        <div style={{ color:T.textSub, fontSize:"13px" }}>Loading…</div>
+      </div>
+    </div>
+  );
   if (!role) return <Login onLogin={handleLogin} />;
   if (!loaded) return (
     <div style={{ ...S.app, display:"flex", alignItems:"center", justifyContent:"center", height:"100vh" }}>
