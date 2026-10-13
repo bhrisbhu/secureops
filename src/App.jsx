@@ -256,41 +256,116 @@ function useConfirm() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// LOGIN
+// LOGIN / SIGNUP
 // ═══════════════════════════════════════════════════════════════════════════════
 function Login({ onLogin }) {
-  const [email, setEmail] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState(""); const [loading, setLoading] = useState(false);
-  const go = async () => {
+  const [mode, setMode] = useState("login"); // "login" | "signup"
+  const [email, setEmail] = useState("");
+  const [p, setP] = useState("");
+  const [p2, setP2] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [signupDone, setSignupDone] = useState(false);
+
+  const switchMode = (m) => { setMode(m); setErr(""); setEmail(""); setP(""); setP2(""); setCompanyName(""); };
+
+  const doLogin = async () => {
     if (!email.trim() || !p.trim()) { setErr("Please enter your email and password."); return; }
     setLoading(true); setErr("");
     const { error } = await signIn(email.trim(), p);
     if (error) { setErr("Invalid email or password."); setP(""); setLoading(false); return; }
     onLogin("admin");
   };
+
+  const doSignup = async () => {
+    if (!companyName.trim()) { setErr("Please enter your company name."); return; }
+    if (!email.trim()) { setErr("Please enter your email address."); return; }
+    if (p.length < 8) { setErr("Password must be at least 8 characters."); return; }
+    if (p !== p2) { setErr("Passwords do not match."); return; }
+    setLoading(true); setErr("");
+    const { error } = await signUp(companyName.trim(), email.trim(), p);
+    if (error) { setErr(error); setLoading(false); return; }
+    setSignupDone(true);
+    setLoading(false);
+  };
+
+  const cardStyle = { background:"rgba(255,255,255,0.85)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", border:"1px solid rgba(255,255,255,0.9)", borderRadius:"20px", padding:"36px", boxShadow:"0 8px 40px rgba(0,80,255,0.12)" };
+  const inpStyle = { ...S.inp, padding:"11px 14px" };
+
   return (
-    <div style={{ minHeight:"100vh", minHeight:"100dvh", background:"linear-gradient(145deg, #f0eee9 0%, #eef2f9 40%, #ece9f4 70%, #eef2f9 100%)", backgroundAttachment:"fixed", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Plus Jakarta Sans',-apple-system,'Segoe UI',sans-serif" }}>
-      <div style={{ width:"100%", maxWidth:"400px", padding:"0 20px" }}>
-        <div style={{ textAlign:"center", marginBottom:"40px" }}>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(145deg, #f0eee9 0%, #eef2f9 40%, #ece9f4 70%, #eef2f9 100%)", backgroundAttachment:"fixed", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Plus Jakarta Sans',-apple-system,'Segoe UI',sans-serif" }}>
+      <div style={{ width:"100%", maxWidth:"420px", padding:"0 20px" }}>
+        {/* Logo */}
+        <div style={{ textAlign:"center", marginBottom:"32px" }}>
           <div style={{ margin:"0 auto 16px", display:"flex", justifyContent:"center", filter:"drop-shadow(0 8px 28px rgba(0,0,0,0.22))" }}>
             <LogoMark size={64} radius={16}/>
           </div>
           <div style={{ fontSize:"24px", fontWeight:"700", color:T.text, letterSpacing:"-0.5px" }}>SecureOps</div>
           <div style={{ fontSize:"13px", color:T.textSub, marginTop:"4px" }}>The #1 Business Administration Platform</div>
         </div>
-        <div style={{ background:"rgba(255,255,255,0.85)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", border:"1px solid rgba(255,255,255,0.9)", borderRadius:"20px", padding:"36px", boxShadow:"0 8px 40px rgba(0,80,255,0.12)" }}>
-          <div style={{ fontSize:"16px", fontWeight:"600", color:T.text, marginBottom:"24px" }}>Sign in to your account</div>
-          <div style={{ marginBottom:"16px" }}>
-            <label style={S.lbl}>Email</label>
-            <input style={{ ...S.inp, padding:"11px 14px" }} type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} autoFocus placeholder="Enter email"/>
-          </div>
-          <div style={{ marginBottom:"24px" }}>
-            <label style={S.lbl}>Password</label>
-            <input style={{ ...S.inp, padding:"11px 14px" }} type="password" value={p} onChange={e=>setP(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} placeholder="Enter password"/>
-          </div>
-          {err && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"8px", padding:"10px 14px", fontSize:"13px", color:"#dc2626", marginBottom:"16px" }}>{err}</div>}
-          <button style={{ ...S.bp, width:"100%", padding:"12px", fontSize:"14px", borderRadius:"10px", opacity:loading?0.7:1 }} onClick={go} disabled={loading}>
-            {loading ? "Signing in…" : "Sign In"}
-          </button>
+
+        {/* Tab switcher */}
+        <div style={{ display:"flex", background:"rgba(255,255,255,0.5)", borderRadius:"12px", padding:"4px", marginBottom:"16px", gap:"4px" }}>
+          {[["login","Sign In"],["signup","Create Account"]].map(([m,label])=>(
+            <button key={m} onClick={()=>switchMode(m)} style={{ flex:1, padding:"9px", borderRadius:"8px", border:"none", cursor:"pointer", fontSize:"13px", fontWeight:"600", transition:"0.15s", background:mode===m?"#fff":"transparent", color:mode===m?T.text:T.textSub, boxShadow:mode===m?"0 1px 6px rgba(0,0,0,0.1)":"none" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div style={cardStyle}>
+          {mode === "login" ? (
+            <>
+              <div style={{ fontSize:"15px", fontWeight:"600", color:T.text, marginBottom:"20px" }}>Welcome back</div>
+              <div style={{ marginBottom:"14px" }}>
+                <label style={S.lbl}>Email</label>
+                <input style={inpStyle} type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()} autoFocus placeholder="you@company.com"/>
+              </div>
+              <div style={{ marginBottom:"22px" }}>
+                <label style={S.lbl}>Password</label>
+                <input style={inpStyle} type="password" value={p} onChange={e=>setP(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()} placeholder="Enter password"/>
+              </div>
+              {err && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"8px", padding:"10px 14px", fontSize:"13px", color:"#dc2626", marginBottom:"16px" }}>{err}</div>}
+              <button style={{ ...S.bp, width:"100%", padding:"12px", fontSize:"14px", borderRadius:"10px", opacity:loading?0.7:1 }} onClick={doLogin} disabled={loading}>
+                {loading ? "Signing in…" : "Sign In"}
+              </button>
+            </>
+          ) : signupDone ? (
+            <div style={{ textAlign:"center", padding:"12px 0" }}>
+              <div style={{ fontSize:"36px", marginBottom:"16px" }}>🎉</div>
+              <div style={{ fontSize:"16px", fontWeight:"700", color:T.text, marginBottom:"8px" }}>Account Created!</div>
+              <div style={{ fontSize:"13px", color:T.textSub, lineHeight:1.6, marginBottom:"24px" }}>Your SecureOps account is ready. Sign in to get started.</div>
+              <button style={{ ...S.bp, padding:"11px 28px", borderRadius:"10px" }} onClick={()=>switchMode("login")}>Go to Sign In</button>
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize:"15px", fontWeight:"600", color:T.text, marginBottom:"20px" }}>Set up your account</div>
+              <div style={{ marginBottom:"14px" }}>
+                <label style={S.lbl}>Company Name</label>
+                <input style={inpStyle} type="text" value={companyName} onChange={e=>setCompanyName(e.target.value)} autoFocus placeholder="e.g. Acme Security Inc."/>
+              </div>
+              <div style={{ marginBottom:"14px" }}>
+                <label style={S.lbl}>Email Address</label>
+                <input style={inpStyle} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@company.com"/>
+              </div>
+              <div style={{ marginBottom:"14px" }}>
+                <label style={S.lbl}>Password</label>
+                <input style={inpStyle} type="password" value={p} onChange={e=>setP(e.target.value)} placeholder="Minimum 8 characters"/>
+              </div>
+              <div style={{ marginBottom:"22px" }}>
+                <label style={S.lbl}>Confirm Password</label>
+                <input style={inpStyle} type="password" value={p2} onChange={e=>setP2(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doSignup()} placeholder="Re-enter password"/>
+              </div>
+              {err && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"8px", padding:"10px 14px", fontSize:"13px", color:"#dc2626", marginBottom:"16px" }}>{err}</div>}
+              <button style={{ ...S.bp, width:"100%", padding:"12px", fontSize:"14px", borderRadius:"10px", opacity:loading?0.7:1 }} onClick={doSignup} disabled={loading}>
+                {loading ? "Creating account…" : "Create Account"}
+              </button>
+              <div style={{ fontSize:"11px", color:T.textMute, textAlign:"center", marginTop:"14px", lineHeight:1.5 }}>
+                By creating an account you agree to our terms of service.
+              </div>
+            </>
+          )}
         </div>
         <div style={{ textAlign:"center", marginTop:"20px", fontSize:"11px", color:T.textMute }}>
           Developed by Christopher Hu
@@ -3525,6 +3600,11 @@ function QuoteFlash({ quote, onDone }) {
 function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, setTodos, settings={} }) {
   const senderName = settings.senderName || "Chris";
   const today = todayStr();
+
+  // Birthday popup
+  const todayMMDD = today.slice(5); // "MM-DD"
+  const birthdayGuards = guards.filter(g => g.dob && g.dob.slice(5) === todayMMDD && (g.status === "Active" || g.status === "On-Call"));
+  const [bdDismissed, setBdDismissed] = useState(false);
   const todayShifts = locs.length > 0 || guards.length > 0 ? (() => {
     const dow = pDate(today).getDay();
     const ids = new Set();
@@ -3587,6 +3667,26 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
           <span>Magic Shield Security Corporation</span>
         </div>
       </div>
+
+      {/* ── BIRTHDAY POPUP ── */}
+      {birthdayGuards.length > 0 && !bdDismissed && (
+        <div style={{ marginBottom:"16px", background:"linear-gradient(135deg, rgba(251,191,36,0.12) 0%, rgba(251,146,60,0.12) 100%)", border:"1px solid rgba(251,191,36,0.4)", borderRadius:"14px", padding:"16px 18px", display:"flex", alignItems:"center", gap:"14px", position:"relative" }}>
+          <div style={{ fontSize:"32px", flexShrink:0, lineHeight:1 }}>🎂</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:"13px", fontWeight:"700", color:"#92400e", marginBottom:"3px" }}>
+              {birthdayGuards.length === 1
+                ? `It's ${birthdayGuards[0].name}'s birthday today!`
+                : `It's a birthday day! ${birthdayGuards.map(g=>g.name).join(" & ")} are celebrating today.`}
+            </div>
+            <div style={{ fontSize:"12px", color:"#a16207" }}>
+              {birthdayGuards.length === 1
+                ? `Don't forget to wish ${birthdayGuards[0].name.split(" ")[0]} a happy birthday 🎉`
+                : `Don't forget to wish them a happy birthday 🎉`}
+            </div>
+          </div>
+          <button onClick={()=>setBdDismissed(true)} style={{ position:"absolute", top:"10px", right:"12px", background:"none", border:"none", cursor:"pointer", fontSize:"16px", color:"#a16207", lineHeight:1, padding:"2px 4px", borderRadius:"4px", opacity:0.7 }} title="Dismiss">✕</button>
+        </div>
+      )}
 
       {/* ── BILLING RATE EXPIRY REMINDERS ── */}
       {(() => {
