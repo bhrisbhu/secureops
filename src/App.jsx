@@ -553,7 +553,7 @@ function Employees({ guards, setGuards, addLog, isGuest }) {
         </div>
       )}
       <F style={{ marginBottom:"14px", flexWrap:"wrap" }}>
-        {[["Total",guards.length],["Active",guards.filter(g=>g.status==="Active").length],["On-Call",guards.filter(g=>g.status==="On-Call").length],["Inactive",guards.filter(g=>g.status==="Inactive").length],["On Leave",guards.filter(g=>g.status==="On Leave").length],["Terminated",guards.filter(g=>g.status==="Terminated").length]].map(([l,v])=><Stat key={l} label={l} value={v} />)}
+        {[["Total",guards.length],["Active",guards.filter(g=>g.status==="Active").length],["On-Call",guards.filter(g=>g.status==="On-Call").length],["PI",guards.filter(g=>g.status==="Private Investigator").length],["Inactive",guards.filter(g=>g.status==="Inactive").length],["On Leave",guards.filter(g=>g.status==="On Leave").length],["Terminated",guards.filter(g=>g.status==="Terminated").length]].map(([l,v])=><Stat key={l} label={l} value={v} />)}
       </F>
       <div ref={formRef} style={S.card}>
         <div style={S.ct}>{editing?"Edit Employee":"Add Employee"}</div>
@@ -573,7 +573,7 @@ function Employees({ guards, setGuards, addLog, isGuest }) {
         </div>
         <div style={{ ...S.g3, marginTop:"8px" }}>
           <Inp label="Address" value={form.address} onChange={f("address")} />
-          <Sel label="Status" value={form.status} onChange={f("status")}><option>Active</option><option>On-Call</option><option>Inactive</option><option>On Leave</option><option>Terminated</option></Sel>
+          <Sel label="Status" value={form.status} onChange={f("status")}><option>Active</option><option>On-Call</option><option>Private Investigator</option><option>Inactive</option><option>On Leave</option><option>Terminated</option></Sel>
           <Inp label="Notes" value={form.notes} onChange={f("notes")} placeholder="Certifications…" />
         </div>
         <F style={{ marginTop:"10px" }}>
@@ -603,7 +603,7 @@ function Employees({ guards, setGuards, addLog, isGuest }) {
                     <td style={S.td}>{g.startDate||"—"}</td>
                     <td style={S.td}>{g.endDate?<span style={{ color:"#f87171" }}>{g.endDate}</span>:"—"}</td>
                     <td style={S.td}>{g.wage?`$${parseFloat(g.wage).toFixed(2)}/hr`:"—"}</td>
-                    <td style={S.td}><span style={S.pill(g.status==="Active"?"#10b981":g.status==="On-Call"?"#0050ff":g.status==="On Leave"?"#f59e0b":g.status==="Terminated"?"#e53e3e":"#6b7280")}>{g.status}</span></td>
+                    <td style={S.td}><span style={S.pill(g.status==="Active"?"#10b981":g.status==="On-Call"?"#0050ff":g.status==="Private Investigator"?"#7b61ff":g.status==="On Leave"?"#f59e0b":g.status==="Terminated"?"#e53e3e":"#6b7280")}>{g.status==="Private Investigator"?"PI":g.status}</span></td>
                     <td style={S.td}>{!isGuest && <F><button style={S.bsm()} onClick={()=>edit(g)}>Edit</button><button style={S.bd} onClick={()=>del(g.id)}>✕</button></F>}</td>
                   </tr>
                   {exp===g.id && <tr><td colSpan={8} style={{ ...S.td, background:"#f8faff" }}><F style={{ fontSize:"10px", color:"#475569" }}>{[["Email",g.email],["SIN",g.sin],["Address",g.address],["Notes",g.notes]].map(([l,v])=><span key={l}><span style={{ color:"#94a3b8" }}>{l}: </span>{v||"—"}</span>)}</F></td></tr>}
@@ -1743,7 +1743,7 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest, set
                   </div>
                 )}
                 {onCallGuards.length > 0 && (
-                  <div style={{ background:"rgba(0,80,255,0.04)", border:"1px solid rgba(0,80,255,0.15)", borderRadius:"10px", padding:"12px 16px", marginBottom:"14px", display:"flex", alignItems:"flex-start", gap:"10px" }}>
+                  <div style={{ background:"rgba(0,80,255,0.04)", border:"1px solid rgba(0,80,255,0.15)", borderRadius:"10px", padding:"12px 16px", marginBottom:"10px", display:"flex", alignItems:"flex-start", gap:"10px" }}>
                     <span style={{ fontSize:"18px", marginTop:"1px" }}>📋</span>
                     <div style={{ flex:1 }}>
                       <div style={{ fontWeight:"700", color:T.blue, fontSize:"13px", marginBottom:"6px" }}>
@@ -1757,6 +1757,24 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest, set
                         ))}
                       </div>
                       <div style={{ fontSize:"11px", color:T.textMute, marginTop:"6px" }}>Click a day on the calendar to schedule an on-call guard for a specific shift.</div>
+                    </div>
+                  </div>
+                )}
+                {guards.filter(g=>g.status==="Private Investigator").length > 0 && (
+                  <div style={{ background:"rgba(123,97,255,0.04)", border:"1px solid rgba(123,97,255,0.2)", borderRadius:"10px", padding:"12px 16px", marginBottom:"14px", display:"flex", alignItems:"flex-start", gap:"10px" }}>
+                    <span style={{ fontSize:"18px", marginTop:"1px" }}>🔍</span>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:"700", color:"#7b61ff", fontSize:"13px", marginBottom:"6px" }}>
+                        {guards.filter(g=>g.status==="Private Investigator").length} Private Investigator{guards.filter(g=>g.status==="Private Investigator").length!==1?"s":""} available
+                      </div>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:"6px" }}>
+                        {guards.filter(g=>g.status==="Private Investigator").map(g => (
+                          <span key={g.id} style={{ fontSize:"11px", fontWeight:"600", padding:"3px 10px", borderRadius:"20px", background:"rgba(123,97,255,0.08)", color:"#7b61ff" }}>
+                            {g.name}{g.phone ? ` · ${g.phone}` : ""}
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ fontSize:"11px", color:T.textMute, marginTop:"6px" }}>Click a day on the calendar to assign a PI to a specific shift.</div>
                     </div>
                   </div>
                 )}
@@ -3603,7 +3621,7 @@ function AppDashboard({ guards, locs, scs, ovs, invs, isGuest, setTab, todos, se
 
   // Birthday popup
   const todayMMDD = today.slice(5); // "MM-DD"
-  const birthdayGuards = guards.filter(g => g.dob && g.dob.slice(5) === todayMMDD && (g.status === "Active" || g.status === "On-Call"));
+  const birthdayGuards = guards.filter(g => g.dob && g.dob.slice(5) === todayMMDD && (g.status === "Active" || g.status === "On-Call" || g.status === "Private Investigator"));
   const [bdDismissed, setBdDismissed] = useState(false);
   const todayShifts = locs.length > 0 || guards.length > 0 ? (() => {
     const dow = pDate(today).getDay();
