@@ -626,8 +626,8 @@ function Employees({ guards, setGuards, addLog, isGuest }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // LOCATIONS
 // ═══════════════════════════════════════════════════════════════════════════════
-function Locations({ locs, setLocs, addLog, isGuest }) {
-  const blankL = { name:"", client:"", contactName:"", contactEmail:"", contactPhone:"", clientAddress:"", contractStart:"", contractEnd:"", notes:"", rates:[] };
+function Locations({ locs, setLocs, addLog, isGuest, settings={} }) {
+  const blankL = { name:"", client:"", contactName:"", contactEmail:"", contactPhone:"", clientAddress:"", contractStart:"", contractEnd:"", notes:"", rates:[], clientNotes:[] };
   const [form, setForm] = useState(blankL);
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState(null);
@@ -640,6 +640,41 @@ function Locations({ locs, setLocs, addLog, isGuest }) {
   const [saved, setSaved] = useState(false);
   const formRef = useRef(null);
   const origRef = useRef(null);
+  const [noteInputs, setNoteInputs] = useState({}); // locId -> text
+  const [editingNote, setEditingNote] = useState(null); // { locId, noteId, text }
+  const authorName = settings.senderName || "Chris";
+
+  function addClientNote(locId) {
+    const text = (noteInputs[locId]||"").trim();
+    if (!text) return;
+    const note = { id:uid(), text, author:authorName, createdAt:new Date().toISOString(), updatedAt:null };
+    const loc = locs.find(l=>l.id===locId);
+    const u = locs.map(l => l.id!==locId ? l : { ...l, clientNotes:[...(l.clientNotes||[]), note] });
+    setLocs(u); save(K.l, u);
+    setNoteInputs(p=>({...p,[locId]:""}));
+    addLog("Created","Location",`Added note for ${loc?.name||loc?.client||"client"}`,text.slice(0,80)+(text.length>80?"…":""));
+  }
+
+  function saveEditNote(locId, noteId) {
+    const text = (editingNote?.text||"").trim();
+    if (!text) return;
+    const loc = locs.find(l=>l.id===locId);
+    const u = locs.map(l => l.id!==locId ? l : {
+      ...l, clientNotes:(l.clientNotes||[]).map(n => n.id!==noteId ? n : { ...n, text, updatedAt:new Date().toISOString(), updatedBy:authorName })
+    });
+    setLocs(u); save(K.l, u); setEditingNote(null);
+    addLog("Updated","Location",`Edited note for ${loc?.name||loc?.client||"client"}`,text.slice(0,80)+(text.length>80?"…":""));
+  }
+
+  function delClientNote(locId, noteId) {
+    const loc = locs.find(l=>l.id===locId);
+    const note = (loc?.clientNotes||[]).find(n=>n.id===noteId);
+    ask("Delete this note? This cannot be undone.", () => {
+      const u = locs.map(l => l.id!==locId ? l : { ...l, clientNotes:(l.clientNotes||[]).filter(n=>n.id!==noteId) });
+      setLocs(u); save(K.l, u);
+      addLog("Deleted","Location",`Deleted note for ${loc?.name||loc?.client||"client"}`,note?.text?.slice(0,80)||(note?.text?.length>80?"…":""));
+    });
+  }
 
   const ff = k => e => setForm(p=>({...p,[k]:e.target.value}));
 
@@ -841,6 +876,69 @@ function Locations({ locs, setLocs, addLog, isGuest }) {
                       </div>
                     </div>}
                   </div>
+
+                  {/* ── Client Notes ── */}
+                  <div style={{ marginTop:"14px", background:"#f8faff", borderRadius:"7px", padding:"12px" }}>
+                    <div style={{ fontSize:"10px", fontWeight:"700", color:"#475569", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"10px" }}>
+                      📋 Client Notes
+                    </div>
+
+                    {/* Existing notes list */}
+                    {(l.clientNotes||[]).length === 0 && (
+                      <div style={{ fontSize:"11px", color:"#94a3b8", marginBottom:"10px" }}>No notes yet.</div>
+                    )}
+                    {(l.clientNotes||[]).map(n => (
+                      <div key={n.id} style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:"6px", padding:"9px 11px", marginBottom:"8px" }}>
+                        {editingNote?.locId===l.id && editingNote?.noteId===n.id ? (
+                          <div>
+                            <textarea
+                              value={editingNote.text}
+                              onChange={e=>setEditingNote(p=>({...p,text:e.target.value}))}
+                              style={{ ...S.inp, width:"100%", height:"64px", resize:"vertical", fontFamily:"inherit", fontSize:"12px" }}
+                            />
+                            <div style={{ display:"flex", gap:"6px", marginTop:"5px" }}>
+                              <button style={{ ...S.bs, fontSize:"11px", padding:"3px 12px" }} onClick={()=>saveEditNote(l.id, n.id)}>Save</button>
+                              <button style={{ ...S.bd, fontSize:"11px", padding:"3px 10px" }} onClick={()=>setEditingNote(null)}>Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div style={{ fontSize:"12px", color:"#1e293b", lineHeight:"1.5", whiteSpace:"pre-wrap", marginBottom:"5px" }}>{n.text}</div>
+                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"4px" }}>
+                              <div style={{ fontSize:"10px", color:"#94a3b8" }}>
+                                Added by <span style={{ color:"#64748b", fontWeight:"600" }}>{n.author}</span>
+                                {" · "}{new Date(n.createdAt).toLocaleString("en-CA",{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}
+                                {n.updatedAt && <span style={{ color:"#f59e0b" }}> · edited {new Date(n.updatedAt).toLocaleString("en-CA",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})} by {n.updatedBy}</span>}
+                              </div>
+                              {!isGuest && (
+                                <div style={{ display:"flex", gap:"5px" }}>
+                                  <button style={{ ...S.bs, fontSize:"10px", padding:"2px 9px" }} onClick={()=>setEditingNote({locId:l.id,noteId:n.id,text:n.text})}>Edit</button>
+                                  <button style={{ ...S.bd, fontSize:"10px", padding:"2px 9px" }} onClick={()=>delClientNote(l.id, n.id)}>Delete</button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Add new note */}
+                    {!isGuest && (
+                      <div style={{ marginTop:"6px" }}>
+                        <textarea
+                          placeholder="Write a note about this client…"
+                          value={noteInputs[l.id]||""}
+                          onChange={e=>setNoteInputs(p=>({...p,[l.id]:e.target.value}))}
+                          style={{ ...S.inp, width:"100%", height:"60px", resize:"vertical", fontFamily:"inherit", fontSize:"12px" }}
+                          onKeyDown={e=>{ if(e.key==="Enter" && (e.ctrlKey||e.metaKey)) addClientNote(l.id); }}
+                        />
+                        <div style={{ display:"flex", justifyContent:"flex-end", marginTop:"5px" }}>
+                          <button style={{ ...S.bs, fontSize:"11px" }} onClick={()=>addClientNote(l.id)}>Add Note</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               )}
             </div>
@@ -4372,7 +4470,7 @@ export default function App() {
         </>}
         {tab==="home" && <AppDashboard guards={guards} locs={locs} scs={scs} ovs={ovs} invs={invs} isGuest={isGuest} setTab={setTab} todos={todos} setTodos={setTodos} settings={settings}/>}
         {tab==="emp" && <Employees guards={guards} setGuards={setGuards} addLog={addLog} isGuest={isGuest} />}
-        {tab==="loc" && <Locations locs={locs} setLocs={setLocs} addLog={addLog} isGuest={isGuest} />}
+        {tab==="loc" && <Locations locs={locs} setLocs={setLocs} addLog={addLog} isGuest={isGuest} settings={settings} />}
         {tab==="cal" && <Calendar guards={guards} locs={locs} scs={scs} setScs={setScs} ovs={ovs} setOvs={setOvs} addLog={addLog} isGuest={isGuest} settings={settings}/>}
         {tab==="rep" && <Reports guards={guards} locs={locs} scs={scs} ovs={ovs} history={history} setHistory={setHistory} addLog={addLog} isGuest={isGuest} sd={repSd} setSd={setRepSd} ed={repEd} setEd={setRepEd} sl={repSl} setSl={setRepSl}/>}
         {tab==="his" && <History history={history} setHistory={setHistory} addLog={addLog} isGuest={isGuest} />}
