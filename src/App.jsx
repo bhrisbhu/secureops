@@ -45,7 +45,7 @@ const LogoMark = ({ size = 32, radius = 8 }) => {
 };
 
 // ─── storage ──────────────────────────────────────────────────────────────────
-const K = { g:"so_g", l:"so_l", sc:"so_sc", ov:"so_ov", hi:"so_hi", pay:"so_pay", leads:"so_lds", inv:"so_inv", co:"so_co", log:"so_log", td:"so_td", st:"so_st" };
+const K = { g:"so_g", l:"so_l", sc:"so_sc", ov:"so_ov", hi:"so_hi", pay:"so_pay", leads:"so_lds", inv:"so_inv", co:"so_co", log:"so_log", td:"so_td", st:"so_st", rem:"so_rem" };
 import { load, save, signIn, signOut, supabase } from './supabase.js';
 
 // ─── utils ────────────────────────────────────────────────────────────────────
@@ -952,7 +952,7 @@ function Locations({ locs, setLocs, addLog, isGuest, settings={} }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // CALENDAR
 // ═══════════════════════════════════════════════════════════════════════════════
-function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest, settings={} }) {
+function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest, settings={}, reminders=[] }) {
   const cfg = { ...DEFAULT_SETTINGS, ...settings };
   const today = new Date();
   const [yr, setYr] = useState(today.getFullYear()); const [mo, setMo] = useState(today.getMonth());
@@ -994,6 +994,15 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest, set
     const updated = [...wsibDismissed, key];
     setWsibDismissed(updated);
     try { localStorage.setItem("so_wsib_dismissed", JSON.stringify(updated)); } catch {}
+  };
+  // Custom reminders dismissal (key = remId + occurrence key so same reminder can fire again)
+  const [customRemDismissed, setCustomRemDismissed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("so_crem_dismissed")||"[]"); } catch { return []; }
+  });
+  const dismissCustomRem = (key) => {
+    const updated = [...customRemDismissed, key];
+    setCustomRemDismissed(updated);
+    try { localStorage.setItem("so_crem_dismissed", JSON.stringify(updated)); } catch {}
   };
 
   const dim = new Date(yr,mo+1,0).getDate();
@@ -1813,6 +1822,55 @@ function Calendar({ guards, locs, scs, setScs, ovs, setOvs, addLog, isGuest, set
                 <button style={{ flexShrink:0, background:"transparent", border:"1px solid #bbf7d0", borderRadius:"6px", padding:"5px 12px", fontSize:"11px", color:"#15803d", cursor:"pointer", fontWeight:"600", whiteSpace:"nowrap" }} onClick={()=>dismissWsib(wsibKey)}>✓ Already Paid</button>
               </div>
             );
+          })()}
+          {/* ── CUSTOM REMINDERS ── */}
+          {reminders.length > 0 && (() => {
+            const now = new Date();
+            const todayDay = now.getDay();       // 0=Sun..6=Sat
+            const todayDom = now.getDate();      // 1–31
+            const todayMo = now.getMonth();      // 0–11
+            const todayYr = now.getFullYear();
+            const todayStr2 = now.toISOString().slice(0,10);
+            const isCurrentMonth = (mo===todayMo && yr===todayYr);
+            if (!isCurrentMonth) return null;
+            const active = reminders.filter(r => {
+              if (r.freq==="one-time") return r.date === todayStr2;
+              if (r.freq==="daily")    return true;
+              if (r.freq==="weekly")   return String(todayDay) === String(r.weekday||"0");
+              if (r.freq==="monthly")  return todayDom === parseInt(r.dayOfMonth||1);
+              if (r.freq==="yearly") {
+                const [mm,dd] = (r.mmdd||"").split("-").map(Number);
+                return mm===todayMo+1 && dd===todayDom;
+              }
+              return false;
+            });
+            return active.map(r => {
+              // Occurrence key — unique per reminder per day so it re-fires tomorrow
+              const occKey = `crem-${r.id}-${todayStr2}`;
+              if (customRemDismissed.includes(occKey)) return null;
+              const color = r.color||"#f59e0b";
+              const bgHex = color+"18";
+              const borderHex = color+"55";
+              return (
+                <div key={r.id} style={{ background:bgHex, border:`1px solid ${borderHex}`, borderRadius:"10px", padding:"12px 16px", marginBottom:"14px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"10px" }}>
+                  <div style={{ display:"flex", alignItems:"flex-start", gap:"10px" }}>
+                    <span style={{ fontSize:"20px", marginTop:"1px" }}>{r.icon||"🔔"}</span>
+                    <div>
+                      <div style={{ fontWeight:"700", color, fontSize:"13px", marginBottom:"3px" }}>{r.title}</div>
+                      {r.note && <div style={{ fontSize:"12px", color:T.textSub, lineHeight:1.5 }}>{r.note}</div>}
+                      <div style={{ fontSize:"11px", color:T.textMute, marginTop:"2px" }}>
+                        {r.freq==="daily" && "Daily reminder"}
+                        {r.freq==="weekly" && `Weekly — every ${["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][parseInt(r.weekday||0)]}`}
+                        {r.freq==="monthly" && `Monthly — day ${r.dayOfMonth||1} of each month`}
+                        {r.freq==="yearly" && `Yearly — ${r.mmdd||""}`}
+                        {r.freq==="one-time" && `One-time — ${r.date||""}`}
+                      </div>
+                    </div>
+                  </div>
+                  <button style={{ flexShrink:0, background:"transparent", border:`1px solid ${borderHex}`, borderRadius:"6px", padding:"5px 12px", fontSize:"11px", color, cursor:"pointer", fontWeight:"600", whiteSpace:"nowrap" }} onClick={()=>dismissCustomRem(occKey)}>✓ Dismiss</button>
+                </div>
+              );
+            });
           })()}
           {/* ── UNSCHEDULED EMPLOYEE ALERT ── */}
           {(() => {
@@ -4040,9 +4098,43 @@ const DEFAULT_SETTINGS = {
   wsibQ4: "01-31",
 };
 
-function Settings({ settings, setSettings }) {
+function Settings({ settings, setSettings, reminders=[], setReminders }) {
   const [form, setForm] = useState({ ...DEFAULT_SETTINGS, ...settings });
   const [saved, setSaved] = useState(false);
+
+  // ── Custom Reminders state ──
+  const FREQ_OPTS = [
+    { value:"one-time", label:"One-time (specific date)" },
+    { value:"daily",    label:"Daily" },
+    { value:"weekly",   label:"Weekly (pick a day)" },
+    { value:"monthly",  label:"Monthly (pick day of month)" },
+    { value:"yearly",   label:"Yearly (pick MM-DD)" },
+  ];
+  const WEEKDAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const blankRem = { title:"", note:"", freq:"monthly", dayOfMonth:"1", weekday:"1", date:"", mmdd:"", color:"#f59e0b", icon:"🔔" };
+  const [remForm, setRemForm] = useState(blankRem);
+  const [editingRemId, setEditingRemId] = useState(null);
+  const [remSaved, setRemSaved] = useState(false);
+  const ICON_OPTS = ["🔔","📌","⚠️","💡","📅","✅","🗓","💳","📞","📝","🏢","💰"];
+  const COLOR_OPTS = ["#f59e0b","#3b82f6","#10b981","#ef4444","#8b5cf6","#f97316","#06b6d4","#ec4899"];
+
+  function saveRem() {
+    if (!remForm.title.trim()) return;
+    const entry = { ...remForm, id: editingRemId || uid(), createdAt: editingRemId ? (reminders.find(r=>r.id===editingRemId)?.createdAt||new Date().toISOString()) : new Date().toISOString() };
+    const u = editingRemId ? reminders.map(r=>r.id===editingRemId?entry:r) : [...reminders, entry];
+    setReminders(u); save(K.rem, u);
+    setRemForm(blankRem); setEditingRemId(null);
+    setRemSaved(true); setTimeout(()=>setRemSaved(false), 2000);
+  }
+  function delRem(id) {
+    const u = reminders.filter(r=>r.id!==id);
+    setReminders(u); save(K.rem, u);
+  }
+  function editRem(r) {
+    setRemForm({ title:r.title, note:r.note||"", freq:r.freq||"monthly", dayOfMonth:r.dayOfMonth||"1", weekday:r.weekday||"1", date:r.date||"", mmdd:r.mmdd||"", color:r.color||"#f59e0b", icon:r.icon||"🔔" });
+    setEditingRemId(r.id);
+  }
+  const rf = k => e => setRemForm(p=>({...p,[k]:e.target.value}));
 
   function saveSettings() {
     setSettings(form);
@@ -4233,6 +4325,123 @@ function Settings({ settings, setSettings }) {
 
         <button style={S.bp} onClick={saveSettings}>Save Settings</button>
       </div>
+
+      {/* ── CUSTOM REMINDERS ── */}
+      <div style={S.card}>
+        <div style={S.ct}>🔔 Custom Reminders</div>
+        <div style={{ fontSize:"12px", color:T.textMute, marginBottom:"16px" }}>
+          Create your own reminders with a custom frequency. They appear as banners on the Calendar page and can be dismissed each time they appear.
+        </div>
+
+        {/* Existing reminders list */}
+        {reminders.length === 0 && (
+          <div style={{ fontSize:"12px", color:T.textMute, marginBottom:"16px", padding:"10px", background:"#f8faff", borderRadius:"8px", textAlign:"center" }}>
+            No custom reminders yet. Add one below.
+          </div>
+        )}
+        {reminders.map(r => (
+          <div key={r.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:"10px", padding:"10px 14px", background:"#f8faff", border:`2px solid ${r.color||"#f59e0b"}22`, borderLeft:`4px solid ${r.color||"#f59e0b"}`, borderRadius:"8px", marginBottom:"8px", flexWrap:"wrap" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:"10px", flex:1, minWidth:0 }}>
+              <span style={{ fontSize:"18px", flexShrink:0 }}>{r.icon||"🔔"}</span>
+              <div style={{ minWidth:0 }}>
+                <div style={{ fontWeight:"700", fontSize:"13px", color:T.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.title}</div>
+                <div style={{ fontSize:"11px", color:T.textMute, marginTop:"2px" }}>
+                  {r.freq==="one-time" && `One-time: ${r.date||"(no date set)"}`}
+                  {r.freq==="daily" && "Every day"}
+                  {r.freq==="weekly" && `Every ${["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][parseInt(r.weekday)||0]}`}
+                  {r.freq==="monthly" && `Monthly on the ${r.dayOfMonth||"1"}${["st","nd","rd"][((parseInt(r.dayOfMonth||1)-1)%10)]||"th"}`}
+                  {r.freq==="yearly" && `Yearly on ${r.mmdd||"(no date set)"}`}
+                  {r.note && <span style={{ marginLeft:"8px", color:"#94a3b8" }}>— {r.note}</span>}
+                </div>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:"6px", flexShrink:0 }}>
+              <button style={{ ...S.bsm(), fontSize:"11px" }} onClick={()=>editRem(r)}>Edit</button>
+              <button style={S.bd} onClick={()=>delRem(r.id)}>Delete</button>
+            </div>
+          </div>
+        ))}
+
+        {/* Add / Edit form */}
+        <div style={{ marginTop:"16px", padding:"16px", background:"#f1f5f9", borderRadius:"10px", border:"1px solid #e2e8f0" }}>
+          <div style={{ fontSize:"12px", fontWeight:"700", color:T.text, marginBottom:"12px", textTransform:"uppercase", letterSpacing:"0.4px" }}>
+            {editingRemId ? "✏️ Edit Reminder" : "➕ New Reminder"}
+          </div>
+
+          {/* Title + Icon row */}
+          <div style={{ display:"flex", gap:"10px", marginBottom:"10px", flexWrap:"wrap" }}>
+            <div style={{ flex:1, minWidth:"180px" }}>
+              <label style={S.lbl}>Title <span style={{ color:T.red }}>*</span></label>
+              <input style={S.inp} value={remForm.title} onChange={rf("title")} placeholder="e.g. Insurance renewal, License renewal…"/>
+            </div>
+            <div>
+              <label style={S.lbl}>Icon</label>
+              <select style={{ ...S.inp, width:"auto" }} value={remForm.icon} onChange={rf("icon")}>
+                {ICON_OPTS.map(ic => <option key={ic} value={ic}>{ic}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Note */}
+          <div style={{ marginBottom:"10px" }}>
+            <label style={S.lbl}>Note (optional)</label>
+            <input style={S.inp} value={remForm.note} onChange={rf("note")} placeholder="e.g. Contact broker before renewal"/>
+          </div>
+
+          {/* Frequency */}
+          <div style={{ marginBottom:"10px" }}>
+            <label style={S.lbl}>Frequency</label>
+            <select style={{ ...S.inp, maxWidth:"280px" }} value={remForm.freq} onChange={rf("freq")}>
+              {FREQ_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+
+          {/* Frequency-specific fields */}
+          {remForm.freq==="one-time" && (
+            <div style={{ marginBottom:"10px" }}>
+              <label style={S.lbl}>Date</label>
+              <input style={{ ...S.inp, maxWidth:"200px" }} type="date" value={remForm.date} onChange={rf("date")}/>
+            </div>
+          )}
+          {remForm.freq==="weekly" && (
+            <div style={{ marginBottom:"10px" }}>
+              <label style={S.lbl}>Day of the week</label>
+              <select style={{ ...S.inp, maxWidth:"200px" }} value={remForm.weekday} onChange={rf("weekday")}>
+                {WEEKDAYS.map((d,i) => <option key={i} value={String(i)}>{d}</option>)}
+              </select>
+            </div>
+          )}
+          {remForm.freq==="monthly" && (
+            <div style={{ marginBottom:"10px" }}>
+              <label style={S.lbl}>Day of the month (1–28)</label>
+              <input style={{ ...S.inp, maxWidth:"100px" }} type="number" min="1" max="28" value={remForm.dayOfMonth} onChange={rf("dayOfMonth")}/>
+            </div>
+          )}
+          {remForm.freq==="yearly" && (
+            <div style={{ marginBottom:"10px" }}>
+              <label style={S.lbl}>Date (MM-DD, e.g. 06-15 for June 15)</label>
+              <input style={{ ...S.inp, maxWidth:"130px" }} type="text" maxLength={5} placeholder="MM-DD" value={remForm.mmdd} onChange={rf("mmdd")}/>
+            </div>
+          )}
+
+          {/* Color */}
+          <div style={{ marginBottom:"14px" }}>
+            <label style={S.lbl}>Colour</label>
+            <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
+              {COLOR_OPTS.map(c => (
+                <div key={c} onClick={()=>setRemForm(p=>({...p,color:c}))} style={{ width:"26px", height:"26px", borderRadius:"50%", background:c, cursor:"pointer", border:remForm.color===c?"3px solid #0f172a":"3px solid transparent", boxShadow:remForm.color===c?"0 0 0 2px #fff inset":"none" }}/>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display:"flex", gap:"8px" }}>
+            <button style={S.bp} onClick={saveRem}>{editingRemId?"Save Changes":"Add Reminder"}</button>
+            {editingRemId && <button style={{ ...S.bd, padding:"8px 16px" }} onClick={()=>{ setEditingRemId(null); setRemForm(blankRem); }}>Cancel</button>}
+          </div>
+          {remSaved && <div style={{ marginTop:"8px", fontSize:"12px", color:T.green, fontWeight:"600" }}>✓ Saved!</div>}
+        </div>
+      </div>
+
     </div>
   );
 }
@@ -4301,6 +4510,7 @@ export default function App() {
   const [invs, setInvsCache] = useState([]);
   const [todos, setTodos] = useState([]);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [reminders, setReminders] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [fadeIn, setFadeIn] = useState(false);
@@ -4317,10 +4527,11 @@ export default function App() {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const [g,l,sc,ov,hi,lg,iv,td,st] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv),load(K.td),load(K.st)]);
+        const [g,l,sc,ov,hi,lg,iv,td,st,rem] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv),load(K.td),load(K.st),load(K.rem)]);
         if(g) setGuards(g); if(l) setLocs(l); if(sc) setScs(sc); if(ov) setOvs(ov); if(hi) setHistory(hi);
         if(lg) setLogEntries(lg); if(iv) setInvsCache(iv); if(td) setTodos(td);
         if(st) setSettings({...DEFAULT_SETTINGS,...st});
+        if(rem) setReminders(rem);
         setLoaded(true);
         setRole("admin");
         setTimeout(() => setFadeIn(true), 50);
@@ -4351,10 +4562,11 @@ export default function App() {
       setQuote(q);
     }
     setTimeout(() => setFadeIn(true), 50);
-    const [g,l,sc,ov,hi,lg,iv,td,st] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv),load(K.td),load(K.st)]);
+    const [g,l,sc,ov,hi,lg,iv,td,st,rem] = await Promise.all([load(K.g),load(K.l),load(K.sc),load(K.ov),load(K.hi),load(K.log),load(K.inv),load(K.td),load(K.st),load(K.rem)]);
     if(g) setGuards(g); if(l) setLocs(l); if(sc) setScs(sc); if(ov) setOvs(ov); if(hi) setHistory(hi);
     if(lg) setLogEntries(lg); if(iv) setInvsCache(iv); if(td) setTodos(td);
     if(st) setSettings({...DEFAULT_SETTINGS,...st});
+    if(rem) setReminders(rem);
     setLoaded(true);
   }
 
@@ -4471,13 +4683,13 @@ export default function App() {
         {tab==="home" && <AppDashboard guards={guards} locs={locs} scs={scs} ovs={ovs} invs={invs} isGuest={isGuest} setTab={setTab} todos={todos} setTodos={setTodos} settings={settings}/>}
         {tab==="emp" && <Employees guards={guards} setGuards={setGuards} addLog={addLog} isGuest={isGuest} />}
         {tab==="loc" && <Locations locs={locs} setLocs={setLocs} addLog={addLog} isGuest={isGuest} settings={settings} />}
-        {tab==="cal" && <Calendar guards={guards} locs={locs} scs={scs} setScs={setScs} ovs={ovs} setOvs={setOvs} addLog={addLog} isGuest={isGuest} settings={settings}/>}
+        {tab==="cal" && <Calendar guards={guards} locs={locs} scs={scs} setScs={setScs} ovs={ovs} setOvs={setOvs} addLog={addLog} isGuest={isGuest} settings={settings} reminders={reminders}/>}
         {tab==="rep" && <Reports guards={guards} locs={locs} scs={scs} ovs={ovs} history={history} setHistory={setHistory} addLog={addLog} isGuest={isGuest} sd={repSd} setSd={setRepSd} ed={repEd} setEd={setRepEd} sl={repSl} setSl={setRepSl}/>}
         {tab==="his" && <History history={history} setHistory={setHistory} addLog={addLog} isGuest={isGuest} />}
         {tab==="act" && !isGuest && <ActivityLog logEntries={logEntries} setLogEntries={setLogEntries} />}
         {tab==="inv" && <Invoices locs={locs} addLog={addLog} isGuest={isGuest} onInvsChange={syncInvs} settings={settings}/>}
         {tab==="pay" && <Revenue locs={locs} addLog={addLog} isGuest={isGuest} />}
-        {tab==="cfg" && <Settings settings={settings} setSettings={setSettings}/>}
+        {tab==="cfg" && <Settings settings={settings} setSettings={setSettings} reminders={reminders} setReminders={setReminders}/>}
       </main>
     </div>
   );
