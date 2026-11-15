@@ -4098,6 +4098,76 @@ const DEFAULT_SETTINGS = {
   wsibQ4: "01-31",
 };
 
+function ChangePassword() {
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [status, setStatus] = useState(null); // null | "saving" | "success" | "error"
+  const [errMsg, setErrMsg] = useState("");
+  const [show, setShow] = useState(false);
+
+  async function handleChange() {
+    setErrMsg("");
+    if (!newPw.trim()) { setErrMsg("Please enter a new password."); return; }
+    if (newPw.length < 8) { setErrMsg("Password must be at least 8 characters."); return; }
+    if (newPw !== confirmPw) { setErrMsg("Passwords do not match."); return; }
+    setStatus("saving");
+    const { error } = await supabase.auth.updateUser({ password: newPw });
+    if (error) {
+      setErrMsg(error.message || "Something went wrong. Please try again.");
+      setStatus("error");
+    } else {
+      setStatus("success");
+      setNewPw(""); setConfirmPw("");
+      setTimeout(() => setStatus(null), 4000);
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ fontSize:"12px", color:T.textMute, marginBottom:"14px" }}>
+        Set a new password for your account. You'll use it next time you sign in.
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:"10px", maxWidth:"360px" }}>
+        <div>
+          <label style={S.lbl}>New Password</label>
+          <div style={{ position:"relative" }}>
+            <input
+              style={{ ...S.inp, paddingRight:"40px" }}
+              type={show ? "text" : "password"}
+              value={newPw}
+              onChange={e => setNewPw(e.target.value)}
+              placeholder="Min. 8 characters"
+              autoComplete="new-password"
+            />
+            <span onClick={()=>setShow(p=>!p)} style={{ position:"absolute", right:"10px", top:"50%", transform:"translateY(-50%)", cursor:"pointer", fontSize:"14px", color:T.textMute, userSelect:"none" }}>{show?"🙈":"👁"}</span>
+          </div>
+        </div>
+        <div>
+          <label style={S.lbl}>Confirm New Password</label>
+          <input
+            style={S.inp}
+            type={show ? "text" : "password"}
+            value={confirmPw}
+            onChange={e => setConfirmPw(e.target.value)}
+            placeholder="Re-enter new password"
+            autoComplete="new-password"
+            onKeyDown={e => { if(e.key==="Enter") handleChange(); }}
+          />
+        </div>
+        {errMsg && <div style={{ fontSize:"12px", color:T.red, fontWeight:"500" }}>⚠ {errMsg}</div>}
+        {status==="success" && <div style={{ fontSize:"12px", color:T.green, fontWeight:"600" }}>✓ Password updated! Use it next time you sign in.</div>}
+        <button
+          style={{ ...S.bp, maxWidth:"180px", opacity: status==="saving" ? 0.6 : 1 }}
+          onClick={handleChange}
+          disabled={status==="saving"}
+        >
+          {status==="saving" ? "Saving…" : "Update Password"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Settings({ settings, setSettings, reminders=[], setReminders }) {
   const [form, setForm] = useState({ ...DEFAULT_SETTINGS, ...settings });
   const [saved, setSaved] = useState(false);
@@ -4152,6 +4222,12 @@ function Settings({ settings, setSettings, reminders=[], setReminders }) {
           ✓ Settings saved
         </div>
       )}
+
+      {/* ── CHANGE PASSWORD ── */}
+      <div style={S.card}>
+        <div style={S.ct}>🔑 Change Password</div>
+        <ChangePassword />
+      </div>
 
       {/* ── EMAIL SIGNATURE ── */}
       <div style={S.card}>
